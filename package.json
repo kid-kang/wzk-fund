@@ -1,0 +1,13 @@
+{
+  "name": "wzk-fund",
+  "version": "1.0.0",
+  "private": true,
+  "description": "定制化基金看板：持仓 / 自选 / AU9999 / 指数 / A股大盘",
+  "scripts": {
+    "dev": "npm run dev --prefix server",
+    "dev:web": "npm run dev --prefix web",
+    "dev:server": "npm run dev --prefix server",
+    "build": "npm run build --prefix web",
+    "start": "npm run start --prefix server"
+  }
+}

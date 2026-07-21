@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Syne', 'Noto Sans SC', sans-serif;
+  --font-sans: 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --color-ink: #15202b;
+  --color-ink-soft: #3d4f5f;
+  --color-paper: #eef3f6;
+  --color-paper-deep: #e2eaf0;
+  --color-line: #c5d2dc;
+  --color-panel: #f7fafc;
+  --color-rise: #d7263d;
+  --color-fall: #0f8a5f;
+  --color-accent: #1f6f8b;
+  --color-gold: #b8860b;
+  --color-muted: #6b7c8a;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  body {
+    margin: 0;
+    width: 100%;
+    max-width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background:
+      radial-gradient(1200px 600px at 8% -10%, rgba(31, 111, 139, 0.12), transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, rgba(184, 134, 11, 0.1), transparent 50%),
+      linear-gradient(180deg, #f4f8fa 0%, var(--color-paper) 40%, #e8eef3 100%);
+    background-attachment: fixed;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background: rgba(31, 111, 139, 0.2);
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .ticker-grid {
+    background-image:
+      linear-gradient(rgba(197, 210, 220, 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(197, 210, 220, 0.35) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .rise {
+    color: var(--color-rise);
+  }
+
+  .fall {
+    color: var(--color-fall);
+  }
+
+  .flat {
+    color: var(--color-muted);
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "funds": {
+    "001618": {
+      "code": "001618",
+      "name": "天弘中证电子ETF联接C",
+      "fundKey": "20150728000230030000000000003630",
+      "type": "hold",
+      "amount": 10000,
+      "shares": 0,
+      "sectors": ["电子", "半导体"],
+      "updatedAt": "2026-07-21T00:00:00.000Z"
+    },
+    "110022": {
+      "code": "110022",
+      "name": "易方达消费行业股票",
+      "fundKey": "",
+      "type": "watch",
+      "amount": 0,
+      "shares": 0,
+      "sectors": ["消费"],
+      "updatedAt": "2026-07-21T00:00:00.000Z"
+    }
+  },
+  "gold": {
+    "holding": 50,
+    "avgPrice": 620
+  }
+}
