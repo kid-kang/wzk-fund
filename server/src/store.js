@@ -79,6 +79,7 @@ export function importConfig(payload) {
       amountAsOf: raw.amountAsOf || '',
       shares: Number(raw.shares) || 0,
       sectors: Array.isArray(raw.sectors) ? raw.sectors : [],
+      createdAt: raw.createdAt || raw.updatedAt || new Date().toISOString(),
       updatedAt: raw.updatedAt || new Date().toISOString(),
     }
   }
@@ -106,10 +107,28 @@ export function updateSettings(patch = {}) {
 
 export function listFunds({type} = {}) {
   const store = readStore()
-  let list = Object.values(store.funds)
+  // 保留 store 写入顺序，供无 createdAt 的存量数据回退
+  const ordered = Object.entries(store.funds).map(([_, f], idx) => ({
+    ...f,
+    _order: idx,
+  }))
+  let list = ordered
   if (type === 'hold') list = list.filter((f) => f.type === 'hold')
-  if (type === 'watch') list = list.filter((f) => f.type === 'watch')
-  return list.sort((a, b) => (a.code > b.code ? 1 : -1))
+  if (type === 'watch') {
+    list = list.filter((f) => f.type === 'watch')
+    // 自选：严格按添加顺序（createdAt，否则按入库顺序）
+    return list
+      .sort((a, b) => {
+        const ac = a.createdAt || ''
+        const bc = b.createdAt || ''
+        if (ac && bc && ac !== bc) return ac < bc ? -1 : 1
+        return a._order - b._order
+      })
+      .map(({_order, ...rest}) => rest)
+  }
+  return list
+    .sort((a, b) => (a.code > b.code ? 1 : -1))
+    .map(({_order, ...rest}) => rest)
 }
 
 export function upsertFund(payload) {
@@ -118,6 +137,7 @@ export function upsertFund(payload) {
   if (!/^\d{6}$/.test(code)) throw new Error('基金代码须为6位数字')
 
   const prev = store.funds[code] || {}
+  const now = new Date().toISOString()
   const next = {
     code,
     name: payload.name ?? prev.name ?? code,
@@ -133,7 +153,8 @@ export function upsertFund(payload) {
     sectors: Array.isArray(payload.sectors)
       ? payload.sectors
       : prev.sectors || [],
-    updatedAt: new Date().toISOString(),
+    createdAt: prev.createdAt || payload.createdAt || now,
+    updatedAt: now,
   }
 
   store.funds[code] = next

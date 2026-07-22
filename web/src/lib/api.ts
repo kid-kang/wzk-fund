@@ -104,8 +104,29 @@ export async function fetchWatchlist() {
   return data.data.list;
 }
 
+export type IndexHistoryRange = '1m' | '3m' | '6m' | '1y' | '3y';
+
+export type IndexHistoryPayload = {
+  code: string;
+  name: string;
+  range: IndexHistoryRange;
+  periodPercent: number | null;
+  points: { date: string; close: number; percent: number | null }[];
+};
+
 export async function fetchIndices() {
   const { data } = await api.get<{ success: boolean; data: IndexItem[] }>('/indices');
+  return data.data;
+}
+
+export async function fetchIndexHistory(code: string, range: IndexHistoryRange = '1m') {
+  const { data } = await api.get<{ success: boolean; data: IndexHistoryPayload }>(
+    `/indices/${encodeURIComponent(code)}/history`,
+    { params: { range } },
+  );
+  if (data.success === false) {
+    throw new Error((data as { message?: string }).message || '加载指数趋势失败');
+  }
   return data.data;
 }
 

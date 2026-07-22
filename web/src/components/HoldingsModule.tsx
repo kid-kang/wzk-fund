@@ -31,7 +31,11 @@ function buildHoldingsView(
   const baseSummary = data?.summary
   const baseList = data?.list || []
   if (!baseSummary) {
-    return {summary: null as HoldingsPayload['summary'] | null, list: baseList}
+    return {
+      summary: null as HoldingsPayload['summary'] | null,
+      list: baseList,
+      goldWeight: null as number | null,
+    }
   }
 
   let goldAmount = 0
@@ -62,9 +66,13 @@ function buildHoldingsView(
     weight: totalAmount > 0 ? round2(((row.amount || 0) / totalAmount) * 100) : 0,
   }))
 
+  const goldWeight =
+    showGold && totalAmount > 0 ? round2((goldAmount / totalAmount) * 100) : null
+
   return {
     summary: {totalAmount, bodTotal, totalPnl, totalPnlPercent},
     list,
+    goldWeight,
   }
 }
 
@@ -87,7 +95,7 @@ export function HoldingsModule({
   const [editing, setEditing] = useState<FundQuoteRow | null>(null)
   const [togglingGold, setTogglingGold] = useState(false)
 
-  const {summary, list} = useMemo(
+  const {summary, list, goldWeight} = useMemo(
     () => buildHoldingsView(data, gold, showGold),
     [data, gold, showGold],
   )
@@ -158,7 +166,12 @@ export function HoldingsModule({
       {/* 移动端 */}
       <div className="space-y-2 px-3 pb-4 md:hidden">
         {showGold ? (
-          <GoldMobileCard data={gold} loading={loading} onChanged={onChanged} />
+          <GoldMobileCard
+            data={gold}
+            weight={goldWeight}
+            loading={loading}
+            onChanged={onChanged}
+          />
         ) : null}
         {list.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted">暂无基金持仓</div>
@@ -247,15 +260,20 @@ export function HoldingsModule({
                 <span className="ml-0.5 font-normal text-muted normal-case">ⓘ</span>
               </th>
               <th className="px-3 py-2 font-medium">实时收益</th>
-              <th className="px-3 py-2 font-medium">占比/持有</th>
-              <th className="px-3 py-2 font-medium">板块/均价</th>
-              <th className="w-[28%] min-w-[220px] px-3 py-2 font-medium">走势（涨幅）</th>
-              <th className="w-28 whitespace-nowrap pl-8 pr-4 py-2 text-center font-medium">操作</th>
+              <th className="px-3 py-2 font-medium">占比</th>
+              <th className="px-3 py-2 font-medium">板块</th>
+              <th className="px-3 py-2 font-medium">走势（涨幅）</th>
+              <th className="whitespace-nowrap px-3 py-2 text-center font-medium">操作</th>
             </tr>
           </thead>
           <tbody>
             {showGold ? (
-              <GoldTableRow data={gold} loading={loading} onChanged={onChanged} />
+              <GoldTableRow
+                data={gold}
+                weight={goldWeight}
+                loading={loading}
+                onChanged={onChanged}
+              />
             ) : null}
             {list.length === 0 ? (
               <tr>
@@ -282,7 +300,7 @@ export function HoldingsModule({
                   <td className="px-3 py-3">
                     <SectorTags sectors={row.sectors} />
                   </td>
-                  <td className="min-w-[220px] px-3 py-2">
+                  <td className="px-3 py-2">
                     <SparkTrend
                       height={64}
                       title={`${row.name} 分时涨幅`}
@@ -291,7 +309,7 @@ export function HoldingsModule({
                         .map((p) => ({time: p.time, value: p.growth as number}))}
                     />
                   </td>
-                  <td className="w-28 whitespace-nowrap pl-8 pr-4 py-2">
+                  <td className="whitespace-nowrap px-3 py-2">
                     <div className="flex justify-center gap-1">
                       <Button
                         size="icon"

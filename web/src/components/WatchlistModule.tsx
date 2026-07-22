@@ -22,7 +22,7 @@ export function WatchlistModule({
     <Panel className="min-w-0">
       <PanelHeader
         title="自选基金"
-        desc="只看实时涨跌与走势"
+        desc="按添加顺序固定排列 · 只看实时涨跌与走势"
         action={
           <Button
             size="sm"

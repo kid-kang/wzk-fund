@@ -49,6 +49,7 @@ npm run dev
 - `GET /api/funds/quotes?type=hold|watch`
 - `POST /api/funds` / `PUT /api/funds/:code` / `DELETE /api/funds/:code`
 - `GET /api/indices`
+- `GET /api/indices/:code/history?range=1m|3m|6m|1y|3y`
 - `GET /api/market/overview`
 - `GET /api/gold` / `PUT /api/gold/config`
 - `GET|PUT /api/settings`（如 `showGold`）

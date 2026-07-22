@@ -8,7 +8,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-export type TrendPoint = {time: string; value: number}
+export type TrendPoint = {
+  time: string
+  value: number
+  /** 可选：金价等绝对价格，用于角标/tooltip 一并展示 */
+  price?: number | null
+}
 
 function chartAxisColors() {
   const styles = getComputedStyle(document.documentElement)
@@ -31,14 +36,21 @@ function buildOption(
   const max = Math.max(...values)
   const pad = Math.max((max - min) * 0.12, 0.05)
   const axisColors = chartAxisColors()
+  const showPrice = points.some((p) => p.price != null)
 
   return {
     animation: false,
-    grid: showAxis
-      ? compact
-        ? {left: 8, right: 8, top: 18, bottom: 22}
-        : {left: 48, right: 16, top: 28, bottom: 36}
-      : {left: 0, right: 0, top: 4, bottom: 0},
+    grid: compact
+      ? {
+        left: 2,
+        right: 2,
+        // 顶部留给角标，底部贴边占满高度
+        top: showPrice ? 26 : 14,
+        bottom: 2,
+      }
+      : showAxis
+        ? {left: 48, right: 16, top: 28, bottom: 36}
+        : {left: 0, right: 0, top: 4, bottom: 0},
     tooltip: {
       trigger: 'axis',
       appendToBody: true,
@@ -49,43 +61,48 @@ function buildOption(
       textStyle: {color: '#fff', fontSize: 11},
       formatter: (params: unknown) => {
         const list = Array.isArray(params) ? params : [params]
-        const p = list[0] as {axisValue?: string; value?: number | string}
+        const p = list[0] as {
+          axisValue?: string
+          value?: number | string
+          dataIndex?: number
+        }
         if (!p || p.value == null || p.value === '') return ''
         const n = Number(p.value)
         const sign = n > 0 ? '+' : ''
-        return `${p.axisValue ?? ''}<br/><b>${sign}${n.toFixed(2)}%</b>`
+        const price = points[p.dataIndex ?? 0]?.price
+        const priceText =
+          price != null ? `<br/>金价 ${Number(price).toFixed(2)}` : ''
+        return `${p.axisValue ?? ''}<br/><b>${sign}${n.toFixed(2)}%</b>${priceText}`
       },
     },
     xAxis: {
       type: 'category',
       data: points.map((p) => p.time),
-      show: showAxis,
+      // 列表迷你图不显示横坐标，放大弹窗再显示
+      show: showAxis && !compact,
       boundaryGap: false,
       axisLine: {lineStyle: {color: axisColors.line}},
       axisTick: {show: false},
       axisLabel: {
         color: axisColors.muted,
-        fontSize: compact ? 9 : 11,
-        interval: Math.max(0, Math.floor(points.length / (compact ? 3 : 6)) - 1),
+        fontSize: 11,
+        interval: Math.max(0, Math.floor(points.length / 6) - 1),
       },
     },
     yAxis: {
       type: 'value',
-      show: showAxis,
+      show: showAxis && !compact,
       scale: true,
       min: Number((min - pad).toFixed(2)),
       max: Number((max + pad).toFixed(2)),
-      splitNumber: compact ? 2 : 4,
+      splitNumber: 4,
       axisLine: {show: false},
       axisTick: {show: false},
-      // 列表高度有限：不标纵坐标，放大弹窗再显示
-      axisLabel: compact
-        ? {show: false}
-        : {
-          color: axisColors.muted,
-          fontSize: 11,
-          formatter: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
-        },
+      axisLabel: {
+        color: axisColors.muted,
+        fontSize: 11,
+        formatter: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
+      },
       splitLine: {
         show: showAxis && !compact,
         lineStyle: {color: axisColors.line, type: 'dashed'},
@@ -140,10 +157,13 @@ export function SparkTrend({
 }) {
   const [open, setOpen] = useState(false)
 
-  const last = points[points.length - 1]?.value ?? 0
+  const lastPoint = points[points.length - 1]
+  const last = lastPoint?.value ?? 0
+  const lastPrice = lastPoint?.price
   // 以最新涨跌幅正负定色：红涨绿跌（A股习惯）
   const up = positiveIsUp ? last >= 0 : last < 0
   const color = accentColor || (up ? '#d7263d' : '#0f8a5f')
+  const showPrice = points.some((p) => p.price != null)
 
   const themeKey =
     typeof document !== 'undefined' ? document.documentElement.dataset.theme : 'light'
@@ -176,8 +196,9 @@ export function SparkTrend({
         onClick={() => setOpen(true)}
         title="点击放大查看"
       >
-        <div className="pointer-events-none absolute right-0 top-0 z-10">
+        <div className="pointer-events-none absolute right-0 top-0 z-10 flex flex-col items-end gap-0.5">
           <MiniPct value={last} />
+          {showPrice ? <MiniPrice value={lastPrice} /> : null}
         </div>
         <ReactECharts
           option={miniOption}
@@ -192,10 +213,17 @@ export function SparkTrend({
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between gap-3 pr-6">
               <span className="truncate">{title}</span>
-              <MiniPct value={last} />
+              <span className="flex shrink-0 flex-col items-end gap-0.5">
+                <MiniPct value={last} />
+                {showPrice ? <MiniPrice value={lastPrice} /> : null}
+              </span>
             </DialogTitle>
           </DialogHeader>
-          <p className="mb-2 text-xs text-muted">横轴为时间，纵轴为涨跌幅（%）</p>
+          <p className="mb-2 text-xs text-muted">
+            {showPrice
+              ? '横轴为时间，纵轴为涨跌幅（%）；角标与悬停可查看金价'
+              : '横轴为时间，纵轴为涨跌幅（%）'}
+          </p>
           <ReactECharts
             option={fullOption}
             style={{height: 320, width: '100%'}}
@@ -216,6 +244,15 @@ export function MiniPct({value}: {value: number | null | undefined}) {
     <span className={`font-mono text-xs font-semibold tabular-nums ${cls}`}>
       {sign}
       {value.toFixed(2)}%
+    </span>
+  )
+}
+
+function MiniPrice({value}: {value: number | null | undefined}) {
+  if (value == null) return null
+  return (
+    <span className="font-mono text-[10px] tabular-nums text-ink-soft sm:text-xs">
+      {value.toFixed(2)}
     </span>
   )
 }

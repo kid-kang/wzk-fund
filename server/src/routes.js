@@ -18,7 +18,7 @@ import {
   getFundMatiaria,
   fetchFundSectorsQueued,
 } from './services/fund.js'
-import {getIndices, getMarketOverview} from './services/market.js'
+import {getIndices, getIndexHistory, getMarketOverview} from './services/market.js'
 import {getGoldRealtime} from './services/gold.js'
 
 const router = new Router({prefix: '/api'})
@@ -281,11 +281,10 @@ router.get('/funds/quotes', async (ctx) => {
           sectors,
         }
       })
+      // 自选顺序由 listFunds 按添加顺序固定，不再按涨跌幅重排
       ctx.body = {
         success: true,
-        data: {
-          list: list.sort((a, b) => (b.percent ?? -999) - (a.percent ?? -999)),
-        },
+        data: {list},
       }
       return
     }
@@ -422,6 +421,17 @@ router.get('/indices', async (ctx) => {
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 500
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+router.get('/indices/:code/history', async (ctx) => {
+  try {
+    const range = String(ctx.query.range || '1m')
+    const data = await getIndexHistory(ctx.params.code, range)
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 400
     ctx.body = {success: false, message: e.message}
   }
 })

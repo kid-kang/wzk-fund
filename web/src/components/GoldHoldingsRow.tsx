@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import {Settings2} from 'lucide-react'
 import {updateGoldConfig, type GoldPayload} from '@/lib/api'
-import {formatAmount, formatMoney, pctClass} from '@/lib/utils'
+import {formatAmount, formatMoney, formatPct, pctClass} from '@/lib/utils'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
@@ -99,15 +99,21 @@ function useGoldSettings(data: GoldPayload | null, onChanged: () => void) {
 function goldTrendPoints(data: GoldPayload | null) {
   return (data?.trend || [])
     .filter((p) => p.percent != null)
-    .map((p) => ({time: p.time, value: p.percent as number}))
+    .map((p) => ({
+      time: p.time,
+      value: p.percent as number,
+      price: p.price,
+    }))
 }
 
 export function GoldMobileCard({
   data,
+  weight,
   loading,
   onChanged,
 }: {
   data: GoldPayload | null
+  weight?: number | null
   loading?: boolean
   onChanged: () => void
 }) {
@@ -148,22 +154,24 @@ export function GoldMobileCard({
             </div>
           </div>
           <div>
-            <div className="text-[11px] text-muted">均价</div>
-            <div className="font-mono tabular-nums">
-              {data?.avgPrice ? data.avgPrice.toFixed(2) : '--'}
+            <div className="text-[11px] text-muted">占比</div>
+            <div className="font-mono tabular-nums text-ink-soft">
+              {formatPct(weight, 1).replace('+', '')}
             </div>
           </div>
           <div>
-            <div className="text-[11px] text-muted">持有</div>
-            <div className="font-mono tabular-nums">
+            <div className="text-[11px] text-muted">克数 / 均价</div>
+            <div className="font-mono tabular-nums text-ink-soft">
               {data?.holding ? `${data.holding}克` : '--'}
+              {' · '}
+              {data?.avgPrice ? data.avgPrice.toFixed(2) : '--'}
             </div>
           </div>
         </div>
         <div className="mt-2">
           <SparkTrend
             height={56}
-            title="AU9999 分时涨幅"
+            title="AU9999 分时"
             accentColor="#b8860b"
             points={goldTrendPoints(data)}
           />
@@ -176,10 +184,12 @@ export function GoldMobileCard({
 
 export function GoldTableRow({
   data,
+  weight,
   loading,
   onChanged,
 }: {
   data: GoldPayload | null
+  weight?: number | null
   loading?: boolean
   onChanged: () => void
 }) {
@@ -202,23 +212,28 @@ export function GoldTableRow({
         <td className={`px-3 py-3 font-mono tabular-nums ${pctClass(data?.pnl)}`}>
           {formatMoney(data?.pnl)}
         </td>
-        <td className="px-3 py-3 font-mono text-xs tabular-nums text-ink-soft">
-          {data?.holding ? `${data.holding}克` : '--'}
+        <td className="px-3 py-3 font-mono tabular-nums text-ink-soft">
+          {formatPct(weight, 1).replace('+', '')}
         </td>
         <td className="px-3 py-3">
-          <span className="rounded border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-[11px] text-ink-soft">
-            均价 {data?.avgPrice ? data.avgPrice.toFixed(2) : '--'}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded border border-gold/40 bg-gold/10 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-ink-soft">
+              {data?.holding ? `${data.holding}克` : '--'}
+            </span>
+            <span className="rounded border border-gold/40 bg-gold/10 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-ink-soft">
+              均价 {data?.avgPrice ? data.avgPrice.toFixed(2) : '--'}
+            </span>
+          </div>
         </td>
-        <td className="min-w-[200px] px-3 py-2">
+        <td className="px-3 py-2">
           <SparkTrend
             height={64}
-            title="AU9999 分时涨幅"
+            title="AU9999 分时"
             accentColor="#b8860b"
             points={goldTrendPoints(data)}
           />
         </td>
-        <td className="w-28 whitespace-nowrap pl-8 pr-4 py-2">
+        <td className="whitespace-nowrap px-3 py-2">
           <div className="flex justify-center">
             <Button
               size="icon"

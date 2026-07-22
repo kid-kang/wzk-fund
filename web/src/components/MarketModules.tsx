@@ -1,56 +1,68 @@
-import type { IndexItem, MarketOverview } from '@/lib/api';
-import { formatPct, pctClass } from '@/lib/utils';
-import { Panel, PanelHeader } from '@/components/ui/panel';
-import { MiniPct } from '@/components/SparkTrend';
+import {useState} from 'react'
+import type {IndexItem, MarketOverview} from '@/lib/api'
+import {formatPct, pctClass} from '@/lib/utils'
+import {Panel, PanelHeader} from '@/components/ui/panel'
+import {MiniPct} from '@/components/SparkTrend'
+import {IndexTrendDialog} from '@/components/IndexTrendDialog'
 
 export function IndicesModule({
   list,
   loading,
 }: {
-  list: IndexItem[];
-  loading?: boolean;
+  list: IndexItem[]
+  loading?: boolean
 }) {
+  const [active, setActive] = useState<IndexItem | null>(null)
+  const [open, setOpen] = useState(false)
+
   return (
     <Panel className="w-full min-w-0">
-      <PanelHeader title="指数看板" desc="仅展示实时涨跌幅" />
+      <PanelHeader title="指数看板" desc="点击查看历史趋势 · 仅强调涨跌幅" />
       <div className="grid grid-cols-2 gap-2 px-3 py-3 sm:grid-cols-3 sm:px-4 sm:py-4 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-10">
         {loading && !list.length
-          ? Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-paper-deep/80 sm:h-20" />
-            ))
+          ? Array.from({length: 10}).map((_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-paper-deep/80 sm:h-20" />
+          ))
           : list.map((item) => (
-              <div
-                key={item.code}
-                className="rounded-xl border border-line/70 bg-paper/50 px-3 py-3 transition-transform duration-300 hover:-translate-y-0.5"
-              >
-                <div className="truncate text-xs text-muted">{item.name}</div>
-                <div className="mt-2">
-                  <MiniPct value={item.percent} />
-                </div>
+            <button
+              key={item.code}
+              type="button"
+              className="rounded-xl border border-line/70 bg-paper/50 px-3 py-3 text-left transition-transform duration-300 hover:-translate-y-0.5 active:scale-[0.98]"
+              onClick={() => {
+                setActive(item)
+                setOpen(true)
+              }}
+            >
+              <div className="truncate text-xs text-muted">{item.name}</div>
+              <div className="mt-2">
+                <MiniPct value={item.percent} />
               </div>
-            ))}
+            </button>
+          ))}
       </div>
+
+      <IndexTrendDialog item={active} open={open} onOpenChange={setOpen} />
     </Panel>
-  );
+  )
 }
 
 export function MarketModule({
   data,
   loading,
 }: {
-  data: MarketOverview | null;
-  loading?: boolean;
+  data: MarketOverview | null
+  loading?: boolean
 }) {
-  const up = data?.upDown.up ?? 0;
-  const down = data?.upDown.down ?? 0;
-  const flat = data?.upDown.flat ?? 0;
-  const total = Math.max(up + down + flat, 1);
-  const upPct = (up / total) * 100;
-  const downPct = (down / total) * 100;
-  const barPct = ((up + down) > 0 ? (up / (up + down)) * 100 : 50);
+  const up = data?.upDown.up ?? 0
+  const down = data?.upDown.down ?? 0
+  const flat = data?.upDown.flat ?? 0
+  const total = Math.max(up + down + flat, 1)
+  const upPct = (up / total) * 100
+  const downPct = (down / total) * 100
+  const barPct = up + down > 0 ? (up / (up + down)) * 100 : 50
 
   return (
-    <Panel className="min-w-0 h-full">
+    <Panel className="h-full min-w-0">
       <PanelHeader title="A股大盘" desc="涨跌家数占比 · 板块指数涨跌前十" />
       <div className="space-y-3 px-3 py-3 sm:space-y-4 sm:px-5 sm:py-4">
         <div className="rounded-xl border border-line/70 bg-paper/50 p-3 sm:p-4">
@@ -75,7 +87,7 @@ export function MarketModule({
             <div className="text-xs text-muted">{data?.upDown.time || ''}</div>
           </div>
           <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-fall/20">
-            <div className="bg-rise transition-all duration-700" style={{ width: `${barPct}%` }} />
+            <div className="bg-rise transition-all duration-700" style={{width: `${barPct}%`}} />
           </div>
         </div>
 
@@ -85,7 +97,7 @@ export function MarketModule({
         </div>
       </div>
     </Panel>
-  );
+  )
 }
 
 function SectorList({
@@ -93,9 +105,9 @@ function SectorList({
   items,
   tone,
 }: {
-  title: string;
-  items: { code: string; name: string; percent: number | null }[];
-  tone: 'rise' | 'fall';
+  title: string
+  items: {code: string; name: string; percent: number | null}[]
+  tone: 'rise' | 'fall'
 }) {
   return (
     <div className="rounded-xl border border-line/70 bg-panel p-3">
@@ -123,5 +135,5 @@ function SectorList({
         )}
       </div>
     </div>
-  );
+  )
 }
