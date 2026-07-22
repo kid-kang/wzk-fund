@@ -1,10 +1,5 @@
 # WZK Fund · 定制化基金看板
 
-## 技术栈
-
-- 前端：Rsbuild + React + Tailwind CSS + Shadcn 风格组件 + ECharts + Axios
-- 代理：Node.js + Koa（转发第三方行情，持久化本地基金配置）
-
 ## 模块
 
 | 模块 | 说明 |
@@ -17,6 +12,20 @@
 
 基金配置支持本地增删改，数据文件：`data/store.json`。
 
+添加持仓只需「代码 + 金额」，添加自选只需「代码」；名称与板块自动拉取。顶部「配置」可导入/导出完整本地配置；持仓区可开关黄金栏（默认开）。
+
+## API 摘要
+
+- `GET /api/funds/quotes?type=hold|watch`
+- `POST /api/funds` / `PUT /api/funds/:code` / `DELETE /api/funds/:code`
+- `GET /api/indices`
+- `GET /api/indices/:code/history?range=1m|3m|6m|1y|3y`
+- `GET /api/market/overview`
+- `GET /api/gold` / `PUT /api/gold/config`
+- `GET|PUT /api/settings`（如 `showGold`）
+- `GET|PUT /api/config`（整包导入导出）
+
+
 **展示约定**：行情侧以实时涨跌幅为主（指数/板块不强调点位与市值）；持仓金额与收益按你本地填写的持仓金额估算。
 
 ## 数据源
@@ -25,6 +34,11 @@
 - 指数 / 板块：东方财富 push2
 - 涨跌家数：东财 NXFXB
 - AU9999：新浪 `gds_AU9999`（分时优先东财）
+
+## 技术栈
+
+- 前端：Rsbuild + React + Tailwind CSS + Shadcn 风格组件 + ECharts + Axios
+- 代理：Node.js + Koa（转发第三方行情，持久化本地基金配置）
 
 ## 启动
 
@@ -41,16 +55,3 @@ npm run dev
 ```
 
 浏览器打开 http://127.0.0.1:5173 ，前端通过 `/api` 代理到 Koa。
-
-添加持仓只需「代码 + 金额」，添加自选只需「代码」；名称与板块自动拉取。顶部「配置」可导入/导出完整本地配置；持仓区可开关黄金栏（默认开）。
-
-## API 摘要
-
-- `GET /api/funds/quotes?type=hold|watch`
-- `POST /api/funds` / `PUT /api/funds/:code` / `DELETE /api/funds/:code`
-- `GET /api/indices`
-- `GET /api/indices/:code/history?range=1m|3m|6m|1y|3y`
-- `GET /api/market/overview`
-- `GET /api/gold` / `PUT /api/gold/config`
-- `GET|PUT /api/settings`（如 `showGold`）
-- `GET|PUT /api/config`（整包导入导出）
