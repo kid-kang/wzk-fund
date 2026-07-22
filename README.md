@@ -1,5 +1,16 @@
 # WZK Fund · 定制化基金看板
 
+个人自建的基金 / 行情看板。开源协议见 [LICENSE](./LICENSE)（MIT）。
+
+多人可共用同一代理服务：行情由服务端转发，**持仓 / 自选 / 黄金 / 开关等个人配置保存在各自浏览器的 localStorage**，互不串数据。
+
+## 免责声明
+
+- **非投资建议**：本项目仅供学习与个人自用展示，不构成任何投资、理财或交易建议；据此决策的盈亏由使用者自行承担。
+- **数据仅供参考**：行情、估值、涨跌幅、估算收益等来自第三方公开接口的抓取/转发，**非官方授权数据源**，可能延迟、缺失或出错；请以基金公司、交易所及正规行情商披露为准。
+- **配置在浏览器**：个人配置不落服务端；换设备或清缓存会丢失，请用顶部「配置」导出备份。请勿将未加固的代理无限制暴露为公共滥用接口。
+- **无担保**：软件按「现状」提供，作者不对可用性、准确性、连续性或适用性作任何明示或默示保证。
+
 ## 模块
 
 | 模块 | 说明 |
@@ -10,35 +21,36 @@
 | 指数看板 | 上证/深证/创业板/北证50/科创50/上证50/沪深300/中证500/纳斯达克100/标普500 |
 | A股大盘 | 涨跌家数 + 行业板块指数涨/跌幅前十 |
 
-基金配置支持本地增删改，数据文件：`data/store.json`。
-
 添加持仓只需「代码 + 金额」，添加自选只需「代码」；名称与板块自动拉取。顶部「配置」可导入/导出完整本地配置；持仓区可开关黄金栏（默认开）。
 
 ## API 摘要
 
-- `GET /api/funds/quotes?type=hold|watch`
-- `POST /api/funds` / `PUT /api/funds/:code` / `DELETE /api/funds/:code`
+行情代理（无状态，个人组合由客户端传入）：
+
+- `POST /api/funds/quotes` body: `{ type: 'hold'|'watch', funds: [...] }`
+- `POST /api/funds/resolve` body: `{ code, type? }` → 名称/板块/净值日（不落库）
+- `GET /api/funds/search?code=`
+- `POST /api/gold/quote` body: `{ holding, avgPrice }`
 - `GET /api/indices`
 - `GET /api/indices/:code/history?range=1m|3m|6m|1y|3y`
 - `GET /api/market/overview`
-- `GET /api/gold` / `PUT /api/gold/config`
-- `GET|PUT /api/settings`（如 `showGold`）
-- `GET|PUT /api/config`（整包导入导出）
-
 
 **展示约定**：行情侧以实时涨跌幅为主（指数/板块不强调点位与市值）；持仓金额与收益按你本地填写的持仓金额估算。
 
 ## 数据源
 
+以下均为非官方接口，仅作自建参考；使用前请自行评估对方服务条款：
+
 - 基金估值/分时：天天基金 fund123（search + estimate intraday）
 - 指数 / 板块：东方财富 push2
 - 涨跌家数：东财 NXFXB
+- 指数历史：腾讯日线 / 新浪 K 线
 - AU9999：新浪 `gds_AU9999`（分时优先东财）
 
 ## 技术栈
 
 - 前端：Rsbuild + React + Tailwind CSS + Shadcn 风格组件 + ECharts + Axios
-- 代理：Node.js + Koa（转发第三方行情，持久化本地基金配置）
+- 代理：Node.js + Koa（转发第三方行情；个人配置在浏览器）
 
 ## 启动
 

@@ -7,5 +7,5 @@ web/dist/
 .probe*
 server/probe*.mjs
 
-# 本地个人配置（持仓/自选/黄金等），勿提交
-data/store.json
+# 遗留目录（个人配置已改存浏览器，勿再提交）
+data/

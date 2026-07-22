@@ -144,8 +144,9 @@ export default function App() {
           <WatchlistModule list={watchlist} loading={loading} onChanged={() => load(true)} />
         </div>
 
-        <footer className="pb-6 pt-1 text-center text-xs text-muted">
-          数据来自公开行情接口，仅供展示，不构成投资建议。
+        <footer className="mx-auto max-w-3xl space-y-1 pb-6 pt-1 text-center text-[11px] leading-relaxed text-muted sm:text-xs">
+          <p>数据来自第三方公开接口，可能延迟或不准确，仅供个人展示参考，不构成投资建议。</p>
+          <p>持仓等个人配置保存在本机浏览器；请以官方披露为准。</p>
         </footer>
       </main>
 

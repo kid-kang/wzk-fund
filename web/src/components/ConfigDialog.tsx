@@ -75,7 +75,7 @@ export function ConfigDialog({
           <DialogTitle>个人配置导入/导出</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted">
-          导出包含持仓、自选、黄金仓位与展示开关；导入将覆盖当前本地配置。
+          持仓、自选、黄金与开关保存在本机浏览器（localStorage）。导出可备份或换设备导入；导入将覆盖当前本机配置。清浏览器数据会丢失，请定期导出。
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button type="button" variant="outline" disabled={busy} onClick={handleExport}>
