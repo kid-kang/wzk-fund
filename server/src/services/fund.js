@@ -1,45 +1,45 @@
-import axios from 'axios';
-import https from 'https';
+import axios from 'axios'
+import https from 'https'
 
 const ua =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
-const agent = new https.Agent({ rejectUnauthorized: false });
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+const agent = new https.Agent({rejectUnauthorized: false})
 
 let session = {
   csrf: '',
   cookie: '',
   expiresAt: 0,
-};
+}
 
 function cookieHeader(setCookie = []) {
-  return setCookie.map((c) => c.split(';')[0]).join('; ');
+  return setCookie.map((c) => c.split(';')[0]).join('; ')
 }
 
 function fmtDate(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 async function ensureSession(force = false) {
-  if (!force && session.csrf && Date.now() < session.expiresAt) return session;
+  if (!force && session.csrf && Date.now() < session.expiresAt) return session
 
   const res = await axios.get('https://www.fund123.cn/fund', {
     httpsAgent: agent,
     timeout: 15000,
-    headers: { 'User-Agent': ua, Referer: 'https://www.fund123.cn/' },
-  });
-  const csrf = res.data.match(/"csrf":"([^"]+)"/)?.[1];
-  if (!csrf) throw new Error('获取 fund123 CSRF 失败');
+    headers: {'User-Agent': ua, Referer: 'https://www.fund123.cn/'},
+  })
+  const csrf = res.data.match(/"csrf":"([^"]+)"/)?.[1]
+  if (!csrf) throw new Error('获取 fund123 CSRF 失败')
   session = {
     csrf,
     cookie: cookieHeader(res.headers['set-cookie']),
     expiresAt: Date.now() + 10 * 60 * 1000,
-  };
-  return session;
+  }
+  return session
 }
 
 async function fund123Post(path, body) {
   const run = async (force) => {
-    const s = await ensureSession(force);
+    const s = await ensureSession(force)
     return axios.post(`https://www.fund123.cn${path}?_csrf=${s.csrf}`, body, {
       httpsAgent: agent,
       timeout: 15000,
@@ -53,61 +53,334 @@ async function fund123Post(path, body) {
         Accept: 'application/json, text/plain, */*',
       },
       validateStatus: () => true,
-    });
-  };
+    })
+  }
 
-  let res = await run(false);
-  if (res.status === 403 || res.status === 401) res = await run(true);
-  return res;
+  let res = await run(false)
+  if (res.status === 403 || res.status === 401) res = await run(true)
+  return res
 }
 
 export async function searchFund(code) {
-  const padded = String(code).padStart(6, '0');
-  const res = await fund123Post('/api/fund/searchFund', { fundCode: padded });
+  const padded = String(code).padStart(6, '0')
+  const res = await fund123Post('/api/fund/searchFund', {fundCode: padded})
   if (!res.data?.success || !res.data?.fundInfo) {
-    throw new Error(res.data?.message || `未找到基金 ${padded}`);
+    throw new Error(res.data?.message || `未找到基金 ${padded}`)
   }
-  const info = res.data.fundInfo;
+  const info = res.data.fundInfo
   return {
     code: info.fundCode || padded,
     name: info.fundName || padded,
     fundKey: info.key || '',
     netValue: parseFloat(info.netValue) || null,
     dayGrowth: parsePct(info.dayOfGrowth),
-  };
+  }
+}
+
+const mobileUa =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148'
+
+/** 东财一级行业偏粗，仅在无更细分标签时兜底 */
+const COARSE_SECTORS = new Set([
+  '有色金属',
+  '化学制药',
+  '医药生物',
+  '食品饮料',
+  '公用事业',
+  '通信设备',
+  '元件',
+  '银行',
+  '非银金融',
+  '房地产',
+  '电子',
+  '计算机',
+  '机械设备',
+  '基础化工',
+  '混业',
+  '综合',
+])
+
+/** 旧版过粗标签：结合基金名判断是否需要重拉一次 */
+function sectorsNeedRefresh(sectors, name = '') {
+  if (!Array.isArray(sectors) || !sectors.length) return true
+  const n = String(name)
+  if (sectors.includes('有色金属')) return true
+  if (sectors.includes('医药') || sectors.includes('化学制药')) {
+    if (/创新药/.test(n)) return true
+  }
+  if (sectors.includes('半导体') && /半导体材料|半导体设备/.test(n)) return true
+  if (sectors.includes('电力') && /绿色电力|绿电/.test(n)) return true
+  if (sectors.includes('食品饮料') && /白酒/.test(n)) return true
+  return false
+}
+
+async function eastmoneyFundGet(path, params = {}) {
+  let lastErr
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await axios.get(`https://fundmobapi.eastmoney.com/FundMNewApi/${path}`, {
+        timeout: 12000,
+        headers: {
+          'User-Agent': mobileUa,
+          Referer: 'https://fund.eastmoney.com/',
+          Origin: 'https://fund.eastmoney.com',
+          Accept: 'application/json, text/plain, */*',
+        },
+        params: {
+          deviceid: 'Wap',
+          plat: 'Wap',
+          product: 'EFund',
+          version: '2.0.0',
+          appType: 'ttjj',
+          _: Date.now(),
+          ...params,
+        },
+      })
+      if (res.data?.Success) return res.data.Datas
+      lastErr = new Error(res.data?.ErrMsg || `${path} 暂不可用`)
+    } catch (e) {
+      lastErr = e
+    }
+    await new Promise((r) => setTimeout(r, 400 * (i + 1)))
+  }
+  throw lastErr || new Error(`${path} 获取失败`)
+}
+
+async function fetchFundBasicInfo(code) {
+  return eastmoneyFundGet('FundMNBasicInformation', {
+    FCODE: String(code).padStart(6, '0'),
+  })
+}
+
+/** 跟踪指数名 → 细分主题，如「中证创新药产业指数」→「创新药」 */
+function themeFromIndexName(indexName = '') {
+  let s = String(indexName || '').trim()
+  if (!s || s === '--') return []
+  // 反复去掉指数公司/口径前缀
+  for (let i = 0; i < 3; i++) {
+    const next = s.replace(/^(中证|国证|沪深|上证|深证|标普|恒生|MSCI|富时|全指)/i, '')
+    if (next === s) break
+    s = next
+  }
+  s = s
+    .replace(
+      /(交易型开放式指数证券投资基金|全收益指数|净收益指数|价格指数|主题指数|产业指数|策略指数|指数)$/g,
+      '',
+    )
+    .replace(/(主题|产业)$/g, '')
+    .replace(/[()（）\s]/g, '')
+    .trim()
+  if (!s || s.length < 2 || s.length > 10) return []
+  return [s]
+}
+
+/** 合并去重：保留更细标签，去掉被覆盖的粗标签/冗长指数名 */
+function finalizeThemes(list) {
+  let out = [...new Set(list.map((s) => String(s || '').trim()).filter(Boolean))]
+
+  out = out.filter((a) => {
+    if (a === '半导体' && out.some((x) => x !== a && x.includes('半导体'))) return false
+    if (a === '半导体设备' && out.some((x) => x.includes('半导体材料'))) return false
+    if (a === '医药' && out.includes('创新药')) return false
+    if (a === '电力' && out.includes('绿色电力')) return false
+    if (
+      a === '新能源' &&
+      out.some((x) => ['锂矿', '光伏', '储能', '绿色电力'].includes(x))
+    ) {
+      return false
+    }
+    if (COARSE_SECTORS.has(a) && out.some((x) => !COARSE_SECTORS.has(x))) return false
+    return true
+  })
+
+  const shorts = out.filter((s) => s.length <= 4)
+  if (shorts.length) {
+    // 「电力公用事业」这类长指数残留，有短标签时丢掉
+    out = out.filter(
+      (s) => !(s.length > 4 && shorts.some((sh) => s !== sh && s.includes(sh))),
+    )
+  }
+
+  return out.slice(0, 3)
+}
+
+/**
+ * 从基金名 / 指数名抽细分标签。
+ * 规则按「更具体优先」排列；命中具体标签后不再回落宽泛标签。
+ */
+function inferSpecificThemesFromText(text = '') {
+  const t = String(text)
+  if (!t) return []
+  const rules = [
+    [/创新药/, '创新药'],
+    [/白酒/, '白酒'],
+    [/锂矿|锂业|碳酸锂|锂盐|盐湖提锂/, '锂矿'],
+    [/半导体材料|半导体设备|芯片设备|半导体材料设备/, '半导体设备'],
+    [/绿色电力|绿电/, '绿色电力'],
+    [/光伏|太阳能/, '光伏'],
+    [/储能/, '储能'],
+    [/新能源车|智能车|汽车/, '汽车'],
+    [/人工智能|算力|AI/, '人工智能'],
+    [/军工|国防/, '军工'],
+    [/黄金|贵金属/, '黄金'],
+    [/消费电子/, '消费电子'],
+    [/半导体|芯片|集成电路/, '半导体'],
+    [/电力|公用事业/, '电力'],
+    [/医药|医疗|生物/, '医药'],
+    [/新能源|锂电/, '新能源'],
+    [/银行|证券|保险|金融/, '金融'],
+    [/地产|房地产/, '地产'],
+    [/食品饮料|食品/, '食品饮料'],
+    [/煤炭|钢铁|有色/, '周期'],
+  ]
+  const out = []
+  for (const [re, label] of rules) {
+    if (re.test(t)) out.push(label)
+  }
+  // 已有更细标签时去掉宽泛上位词
+  const dropIfFiner = [
+    ['医药', ['创新药']],
+    ['半导体', ['半导体设备']],
+    ['电力', ['绿色电力']],
+    ['新能源', ['锂矿', '光伏', '储能', '绿色电力']],
+    ['周期', ['锂矿']],
+    ['食品饮料', ['白酒']],
+  ]
+  return out.filter((label) => {
+    const pair = dropIfFiner.find(([coarse]) => coarse === label)
+    if (!pair) return true
+    return !pair[1].some((fine) => out.includes(fine))
+  })
+}
+
+/** 主动基金：用重仓股名称投票推断细分主题（如锂矿） */
+async function inferThemesFromHoldings(code) {
+  try {
+    const data = await eastmoneyFundGet('FundMNInverstPosition', {
+      FCODE: String(code).padStart(6, '0'),
+    })
+    const stocks = data?.fundStocks || []
+    const texts = stocks
+      .slice(0, 10)
+      .map((s) => `${s.GPJC || ''} ${s.GPNAME || ''}`)
+      .join(' ')
+    const etfName = data?.ETFSHORTNAME || ''
+    const votes = new Map()
+
+    const holdingRules = [
+      [/锂|盐湖|赣锋|天齐|雅化|中矿|永兴材料|西藏矿业|西藏珠峰|天华新能|盛新锂能/, '锂矿'],
+      [/创新药|药明|百济|信达|恒瑞|科伦|复星医药|君实|康方/, '创新药'],
+      [/茅台|五粮液|泸州老窖|汾酒|洋河|白酒/, '白酒'],
+      [/宁德时代|比亚迪|理想|小鹏|蔚来|新能源车/, '汽车'],
+      [/隆基|通威|阳光电源|晶澳|光伏/, '光伏'],
+      [/中芯|韦尔|北方华创|中微|拓荆|半导体|芯片/, '半导体'],
+      [/贵州茅台/, '白酒'],
+    ]
+
+    const hay = `${texts} ${etfName}`
+    for (const [re, label] of holdingRules) {
+      if (re.test(hay)) votes.set(label, (votes.get(label) || 0) + 1)
+    }
+
+    // 按命中强度排序；至少命中一次
+    return [...votes.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([label]) => label)
+      .slice(0, 2)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 细分板块标签优先级：
+ * 1) 跟踪指数名（指数/联接基金最准）
+ * 2) 基金名称关键词（创新药 > 医药）
+ * 3) 重仓股主题投票（主动基金，如锂矿）
+ * 4) 东财 TTYPENAME / FUNDSUBJECTLIST 仅作无细分时的兜底
+ */
+export async function fetchFundSectors(code, nameHint = '') {
+  const specific = []
+  const pushUnique = (list) => {
+    for (const s of list) {
+      const t = String(s || '').trim()
+      if (t && !specific.includes(t)) specific.push(t)
+    }
+  }
+
+  let basic = null
+  try {
+    basic = await fetchFundBasicInfo(code)
+  } catch {
+    basic = null
+  }
+
+  const shortName = nameHint || basic?.SHORTNAME || ''
+  const indexName = basic?.INDEXNAME && basic.INDEXNAME !== '--' ? basic.INDEXNAME : ''
+
+  pushUnique(themeFromIndexName(indexName))
+  pushUnique(inferSpecificThemesFromText(`${shortName} ${indexName}`))
+
+  if (!specific.length) {
+    pushUnique(await inferThemesFromHoldings(code))
+  } else {
+    // 指数/名称已有标签时，仍可用重仓补充更细标签（不覆盖）
+    const fromHoldings = await inferThemesFromHoldings(code)
+    pushUnique(fromHoldings.filter((s) => !COARSE_SECTORS.has(s)))
+  }
+
+  if (!specific.length && basic) {
+    if (basic.TTYPENAME) pushUnique([basic.TTYPENAME])
+    for (const item of basic.FUNDSUBJECTLIST || []) {
+      if (item?.TTYPENAME) pushUnique([item.TTYPENAME])
+    }
+  }
+
+  return finalizeThemes(specific)
+}
+
+/** 串行化板块请求，降低东财限流概率 */
+let sectorChain = Promise.resolve()
+export function fetchFundSectorsQueued(code, nameHint = '') {
+  const job = sectorChain.then(() => fetchFundSectors(code, nameHint))
+  sectorChain = job.then(
+    () => undefined,
+    () => undefined,
+  )
+  return job
 }
 
 function parsePct(v) {
-  if (v == null || v === '--' || v === '') return null;
-  const n = parseFloat(String(v).replace('%', ''));
-  return Number.isFinite(n) ? n : null;
+  if (v == null || v === '--' || v === '') return null
+  const n = parseFloat(String(v).replace('%', ''))
+  return Number.isFinite(n) ? n : null
 }
 
 export async function getFundMatiaria(code) {
-  const padded = String(code).padStart(6, '0');
+  const padded = String(code).padStart(6, '0')
   const res = await axios.get(`https://www.fund123.cn/matiaria?fundCode=${padded}`, {
     httpsAgent: agent,
     timeout: 15000,
-    headers: { 'User-Agent': ua, Referer: 'https://www.fund123.cn/' },
-  });
-  const html = res.data || '';
-  const dayGrowth = parsePct(html.match(/dayOfGrowth":"([^"]+)/)?.[1]);
-  const netValue = parseFloat(html.match(/netValue":"([^"]+)/)?.[1]);
-  const netValueDate = html.match(/netValueDate":"([^"]+)/)?.[1] || '';
-  const fundName = html.match(/fundName":"([^"]+)/)?.[1];
+    headers: {'User-Agent': ua, Referer: 'https://www.fund123.cn/'},
+  })
+  const html = res.data || ''
+  const dayGrowth = parsePct(html.match(/dayOfGrowth":"([^"]+)/)?.[1])
+  const netValue = parseFloat(html.match(/netValue":"([^"]+)/)?.[1])
+  const netValueDate = html.match(/netValueDate":"([^"]+)/)?.[1] || ''
+  const fundName = html.match(/fundName":"([^"]+)/)?.[1]
   return {
     code: padded,
     name: fundName,
     dayGrowth: Number.isFinite(dayGrowth) ? dayGrowth : null,
     netValue: Number.isFinite(netValue) ? netValue : null,
     netValueDate,
-  };
+  }
 }
 
 export async function getFundEstimateIntraday(fundKey) {
-  if (!fundKey) return { points: [], latest: null };
-  const today = new Date();
-  const tomorrow = new Date(today.getTime() + 86400000);
+  if (!fundKey) return {points: [], latest: null}
+  const today = new Date()
+  const tomorrow = new Date(today.getTime() + 86400000)
   const res = await fund123Post('/api/fund/queryFundEstimateIntraday', {
     startTime: fmtDate(today),
     endTime: fmtDate(tomorrow),
@@ -115,66 +388,81 @@ export async function getFundEstimateIntraday(fundKey) {
     productId: fundKey,
     format: true,
     source: 'WEALTHBFFWEB',
-  });
+  })
 
-  const list = res.data?.list || [];
+  const list = res.data?.list || []
   const points = list.map((p) => {
-    const t = new Date(p.time);
-    const hh = String(t.getHours()).padStart(2, '0');
-    const mm = String(t.getMinutes()).padStart(2, '0');
-    const growth = parseFloat(p.forecastGrowth);
+    const t = new Date(p.time)
+    const hh = String(t.getHours()).padStart(2, '0')
+    const mm = String(t.getMinutes()).padStart(2, '0')
+    const growth = parseFloat(p.forecastGrowth)
     return {
       time: `${hh}:${mm}`,
       growth: Number.isFinite(growth) ? growth * 100 : null,
       netValue: parseFloat(p.forecastNetValue) || null,
-    };
-  }).filter((p) => p.growth != null);
+    }
+  }).filter((p) => p.growth != null)
 
-  const latest = points.length ? points[points.length - 1] : null;
-  return { points, latest };
+  const latest = points.length ? points[points.length - 1] : null
+  return {points, latest}
 }
 
 export async function getFundQuote(fund) {
-  const code = fund.code;
-  let fundKey = fund.fundKey;
-  let name = fund.name;
-  let dayGrowth = null;
-  let netValue = null;
-  let netValueDate = '';
+  const code = fund.code
+  let fundKey = fund.fundKey
+  let name = fund.name
+  let dayGrowth = null
+  let netValue = null
+  let netValueDate = ''
 
   try {
     if (!fundKey || !name) {
-      const searched = await searchFund(code);
-      fundKey = fundKey || searched.fundKey;
-      name = name || searched.name;
-      dayGrowth = searched.dayGrowth;
-      netValue = searched.netValue;
+      const searched = await searchFund(code)
+      fundKey = fundKey || searched.fundKey
+      name = name || searched.name
+      dayGrowth = searched.dayGrowth
+      netValue = searched.netValue
     }
   } catch {
     // ignore search failure, try matiaria
   }
 
   try {
-    const m = await getFundMatiaria(code);
-    name = name || m.name || code;
-    dayGrowth = m.dayGrowth ?? dayGrowth;
-    netValue = m.netValue ?? netValue;
-    netValueDate = m.netValueDate || '';
+    const m = await getFundMatiaria(code)
+    name = name || m.name || code
+    dayGrowth = m.dayGrowth ?? dayGrowth
+    netValue = m.netValue ?? netValue
+    netValueDate = m.netValueDate || ''
   } catch {
     // keep previous
   }
 
-  let estimateGrowth = null;
-  let trend = [];
+  let estimateGrowth = null
+  let trend = []
   try {
-    const est = await getFundEstimateIntraday(fundKey);
-    estimateGrowth = est.latest?.growth ?? null;
-    trend = est.points;
+    const est = await getFundEstimateIntraday(fundKey)
+    estimateGrowth = est.latest?.growth ?? null
+    trend = est.points
   } catch {
     // no estimate outside market hours
   }
 
-  const percent = estimateGrowth ?? dayGrowth;
+  // 晚间净值确认后优先用真实涨跌；盘中无确认日则用估值
+  const {percent, percentSource} = resolveDisplayPercent({
+    estimateGrowth,
+    dayGrowth,
+    netValueDate,
+  })
+
+  let sectors = Array.isArray(fund.sectors) ? [...fund.sectors] : []
+  if (sectorsNeedRefresh(sectors, name)) {
+    try {
+      const next = await fetchFundSectorsQueued(code, name)
+      if (next.length) sectors = next
+    } catch {
+      // keep previous
+    }
+  }
 
   return {
     code,
@@ -183,24 +471,50 @@ export async function getFundQuote(fund) {
     dayGrowth,
     estimateGrowth,
     percent,
+    percentSource,
     netValue,
     netValueDate,
     time: trend.length ? trend[trend.length - 1].time : null,
     trend,
-    sectors: fund.sectors || [],
-  };
+    sectors,
+  }
+}
+
+function todayDateStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * 涨跌幅口径：
+ * - 净值日已是今天 → 晚间确认值已出，用 dayGrowth 校准
+ * - 否则盘中优先估值 estimateGrowth
+ * - 再否则回落 dayGrowth（上一确认日）
+ */
+function resolveDisplayPercent({estimateGrowth, dayGrowth, netValueDate}) {
+  const navDay = String(netValueDate || '').slice(0, 10)
+  if (dayGrowth != null && navDay && navDay === todayDateStr()) {
+    return {percent: dayGrowth, percentSource: 'confirmed'}
+  }
+  if (estimateGrowth != null) {
+    return {percent: estimateGrowth, percentSource: 'estimate'}
+  }
+  if (dayGrowth != null) {
+    return {percent: dayGrowth, percentSource: 'confirmed'}
+  }
+  return {percent: null, percentSource: null}
 }
 
 export async function getFundsQuotes(funds) {
-  const results = [];
-  const concurrency = 4;
+  const results = []
+  const concurrency = 4
   for (let i = 0; i < funds.length; i += concurrency) {
-    const chunk = funds.slice(i, i + concurrency);
-    const settled = await Promise.allSettled(chunk.map((f) => getFundQuote(f)));
+    const chunk = funds.slice(i, i + concurrency)
+    const settled = await Promise.allSettled(chunk.map((f) => getFundQuote(f)))
     settled.forEach((s, idx) => {
-      if (s.status === 'fulfilled') results.push(s.value);
+      if (s.status === 'fulfilled') results.push(s.value)
       else {
-        const f = chunk[idx];
+        const f = chunk[idx]
         results.push({
           code: f.code,
           name: f.name || f.code,
@@ -208,15 +522,16 @@ export async function getFundsQuotes(funds) {
           dayGrowth: null,
           estimateGrowth: null,
           percent: null,
+          percentSource: null,
           netValue: null,
           netValueDate: '',
           time: null,
           trend: [],
           sectors: f.sectors || [],
           error: String(s.reason?.message || s.reason),
-        });
+        })
       }
-    });
+    })
   }
-  return results;
+  return results
 }

@@ -11,6 +11,8 @@ export type FundRecord = {
   fundKey?: string;
   type: 'hold' | 'watch';
   amount: number;
+  /** 持仓金额已计入的净值确认日（晚间确认后自动滚动） */
+  amountAsOf?: string;
   shares: number;
   sectors: string[];
   updatedAt?: string;
@@ -18,8 +20,10 @@ export type FundRecord = {
 
 export type FundQuoteRow = FundRecord & {
   percent: number | null;
+  percentSource?: 'estimate' | 'confirmed' | null;
   estimateGrowth?: number | null;
   dayGrowth?: number | null;
+  netValueDate?: string;
   time?: string | null;
   trend: { time: string; growth: number | null }[];
   liveAmount?: number;
@@ -30,6 +34,8 @@ export type FundQuoteRow = FundRecord & {
 export type HoldingsPayload = {
   summary: {
     totalAmount: number;
+    /** 开盘前确认市值（算当日收益率用） */
+    bodTotal?: number;
     totalPnl: number;
     totalPnlPercent: number;
   };
@@ -58,6 +64,7 @@ export type GoldPayload = {
   code: string;
   name: string;
   price: number | null;
+  prevClose?: number | null;
   percent: number | null;
   change: number | null;
   time: string;
@@ -65,7 +72,20 @@ export type GoldPayload = {
   avgPrice: number;
   pnl: number | null;
   pnlPercent: number | null;
+  costPnl?: number | null;
+  costPnlPercent?: number | null;
+  show?: boolean;
   trend: { time: string; price: number; percent: number | null }[];
+};
+
+export type AppSettings = {
+  showGold: boolean;
+};
+
+export type AppConfig = {
+  settings: AppSettings;
+  funds: Record<string, FundRecord>;
+  gold: { holding: number; avgPrice: number };
 };
 
 export async function fetchHoldings() {
@@ -125,5 +145,25 @@ export async function removeFund(code: string) {
 
 export async function updateGoldConfig(payload: { holding: number; avgPrice: number }) {
   const { data } = await api.put('/gold/config', payload);
+  return assertOk(data);
+}
+
+export async function fetchSettings() {
+  const { data } = await api.get<{ success: boolean; data: AppSettings }>('/settings');
+  return data.data;
+}
+
+export async function updateSettings(payload: Partial<AppSettings>) {
+  const { data } = await api.put('/settings', payload);
+  return assertOk(data).data as AppSettings;
+}
+
+export async function exportConfig() {
+  const { data } = await api.get<{ success: boolean; data: AppConfig }>('/config');
+  return data.data;
+}
+
+export async function importConfig(payload: AppConfig) {
+  const { data } = await api.put('/config', payload);
   return assertOk(data);
 }

@@ -1,68 +1,83 @@
-import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import {useCallback, useEffect, useState} from 'react'
+import {FolderSync, Moon, RefreshCw, Sun} from 'lucide-react'
 import {
   fetchGold,
   fetchHoldings,
   fetchIndices,
   fetchMarketOverview,
+  fetchSettings,
   fetchWatchlist,
   type FundQuoteRow,
   type GoldPayload,
   type HoldingsPayload,
   type IndexItem,
   type MarketOverview,
-} from '@/lib/api';
-import { formatMoney, formatPct } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { HoldingsModule } from '@/components/HoldingsModule';
-import { WatchlistModule } from '@/components/WatchlistModule';
-import { IndicesModule, MarketModule } from '@/components/MarketModules';
-import './index.css';
+} from '@/lib/api'
+import {applyTheme, getStoredTheme, type AppTheme} from '@/lib/theme'
+import {Button} from '@/components/ui/button'
+import {HoldingsModule} from '@/components/HoldingsModule'
+import {WatchlistModule} from '@/components/WatchlistModule'
+import {IndicesModule, MarketModule} from '@/components/MarketModules'
+import {ConfigDialog} from '@/components/ConfigDialog'
+import './index.css'
 
-const REFRESH_MS = 30_000;
+const REFRESH_MS = 30_000
 
 export default function App() {
-  const [holdings, setHoldings] = useState<HoldingsPayload | null>(null);
-  const [watchlist, setWatchlist] = useState<FundQuoteRow[]>([]);
-  const [indices, setIndices] = useState<IndexItem[]>([]);
-  const [market, setMarket] = useState<MarketOverview | null>(null);
-  const [gold, setGold] = useState<GoldPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState<string>('');
-  const [error, setError] = useState('');
+  const [holdings, setHoldings] = useState<HoldingsPayload | null>(null)
+  const [watchlist, setWatchlist] = useState<FundQuoteRow[]>([])
+  const [indices, setIndices] = useState<IndexItem[]>([])
+  const [market, setMarket] = useState<MarketOverview | null>(null)
+  const [gold, setGold] = useState<GoldPayload | null>(null)
+  const [showGold, setShowGold] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [updatedAt, setUpdatedAt] = useState<string>('')
+  const [error, setError] = useState('')
+  const [configOpen, setConfigOpen] = useState(false)
+  const [theme, setTheme] = useState<AppTheme>(() => getStoredTheme())
 
   const load = useCallback(async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setLoading(true);
-    setError('');
+    if (silent) setRefreshing(true)
+    else setLoading(true)
+    setError('')
     try {
-      const [h, w, i, m, g] = await Promise.all([
+      const [h, w, i, m, g, s] = await Promise.all([
         fetchHoldings(),
         fetchWatchlist(),
         fetchIndices(),
         fetchMarketOverview(),
         fetchGold(),
-      ]);
-      setHoldings(h);
-      setWatchlist(w);
-      setIndices(i);
-      setMarket(m);
-      setGold(g);
-      setUpdatedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }));
+        fetchSettings(),
+      ])
+      setHoldings(h)
+      setWatchlist(w)
+      setIndices(i)
+      setMarket(m)
+      setGold(g)
+      setShowGold(s?.showGold !== false)
+      setUpdatedAt(new Date().toLocaleTimeString('zh-CN', {hour12: false}))
     } catch (e: unknown) {
-      setError((e as Error)?.message || '加载失败，请确认代理服务已启动');
+      setError((e as Error)?.message || '加载失败，请确认代理服务已启动')
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setLoading(false)
+      setRefreshing(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    load();
-    const timer = window.setInterval(() => load(true), REFRESH_MS);
-    return () => window.clearInterval(timer);
-  }, [load]);
+    applyTheme(theme)
+  }, [theme])
+
+  useEffect(() => {
+    load()
+    const timer = window.setInterval(() => load(true), REFRESH_MS)
+    return () => window.clearInterval(timer)
+  }, [load])
+
+  function toggleTheme() {
+    setTheme((t) => (t === 'light' ? 'dark' : 'light'))
+  }
 
   return (
     <div className="min-h-screen w-full">
@@ -83,6 +98,19 @@ export default function App() {
             <Button
               variant="outline"
               size="sm"
+              onClick={toggleTheme}
+              title={theme === 'light' ? '切换暗色' : '切换亮色'}
+            >
+              {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              <span className="hidden sm:inline">{theme === 'light' ? '暗色' : '亮色'}</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setConfigOpen(true)}>
+              <FolderSync className="h-4 w-4" />
+              <span className="hidden sm:inline">配置</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => load(true)}
               disabled={refreshing}
             >
@@ -100,46 +128,17 @@ export default function App() {
           </div>
         ) : null}
 
-        <section className="relative overflow-hidden rounded-2xl border border-line/80 bg-ink text-white">
-          <div className="ticker-grid absolute inset-0 opacity-20" />
-          <div className="relative grid gap-4 px-4 py-5 sm:grid-cols-2 sm:px-6 sm:py-7 lg:px-8">
-            <div className="min-w-0">
-              <div className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
-                WZK Fund
-              </div>
-              <p className="mt-2 text-xs text-white/70 sm:text-sm">
-                行情看板：持仓盈亏本地估算，市场侧只强调实时涨跌幅。
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 self-end sm:gap-3">
-              <HeroStat
-                label="持仓收益"
-                value={holdings ? formatMoney(holdings.summary.totalPnl) : '--'}
-                tone={holdings && holdings.summary.totalPnl >= 0 ? 'rise' : 'fall'}
-              />
-              <HeroStat
-                label="持仓收益率"
-                value={holdings ? formatPct(holdings.summary.totalPnlPercent) : '--'}
-                tone={
-                  holdings && holdings.summary.totalPnlPercent >= 0 ? 'rise' : 'fall'
-                }
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* 1. 持仓全宽（含黄金浓缩行） */}
         <HoldingsModule
           data={holdings}
           gold={gold}
+          showGold={showGold}
           loading={loading}
           onChanged={() => load(true)}
+          onSettingsChanged={setShowGold}
         />
 
-        {/* 2. 指数看板在持仓下方 */}
         <IndicesModule list={indices} loading={loading} />
 
-        {/* 3. 大盘 + 自选同一行 */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
           <MarketModule data={market} loading={loading} />
           <WatchlistModule list={watchlist} loading={loading} onChanged={() => load(true)} />
@@ -149,29 +148,12 @@ export default function App() {
           数据来自公开行情接口，仅供展示，不构成投资建议。
         </footer>
       </main>
-    </div>
-  );
-}
 
-function HeroStat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: 'rise' | 'fall';
-}) {
-  return (
-    <div className="min-w-0 rounded-xl border border-white/15 bg-white/5 px-3 py-3 backdrop-blur-sm">
-      <div className="text-[11px] text-white/60">{label}</div>
-      <div
-        className={`mt-1 break-all font-mono text-lg font-semibold tabular-nums sm:text-xl ${
-          tone === 'rise' ? 'text-[#ff8a9a]' : 'text-[#7ddec0]'
-        }`}
-      >
-        {value}
-      </div>
+      <ConfigDialog
+        open={configOpen}
+        onOpenChange={setConfigOpen}
+        onImported={() => load(true)}
+      />
     </div>
-  );
+  )
 }

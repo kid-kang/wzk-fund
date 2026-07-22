@@ -1,30 +1,29 @@
-import { useEffect, useState } from 'react';
-import { Settings2 } from 'lucide-react';
-import ReactECharts from 'echarts-for-react';
-import { updateGoldConfig, type GoldPayload } from '@/lib/api';
-import { formatAmount, formatMoney, pctClass } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {useEffect, useState} from 'react'
+import {Settings2} from 'lucide-react'
+import {updateGoldConfig, type GoldPayload} from '@/lib/api'
+import {formatAmount, formatMoney, pctClass} from '@/lib/utils'
+import {Button} from '@/components/ui/button'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { MiniPct } from '@/components/SparkTrend';
+} from '@/components/ui/dialog'
+import {SparkTrend} from '@/components/SparkTrend'
 
 function useGoldSettings(data: GoldPayload | null, onChanged: () => void) {
-  const [open, setOpen] = useState(false);
-  const [holding, setHolding] = useState('0');
-  const [avgPrice, setAvgPrice] = useState('0');
-  const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(false)
+  const [holding, setHolding] = useState('0')
+  const [avgPrice, setAvgPrice] = useState('0')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!data) return;
-    setHolding(String(data.holding ?? 0));
-    setAvgPrice(String(data.avgPrice ?? 0));
-  }, [data?.holding, data?.avgPrice]);
+    if (!data) return
+    setHolding(String(data.holding ?? 0))
+    setAvgPrice(String(data.avgPrice ?? 0))
+  }, [data?.holding, data?.avgPrice])
 
   const dialog = (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -35,17 +34,17 @@ function useGoldSettings(data: GoldPayload | null, onChanged: () => void) {
         <form
           className="space-y-3"
           onSubmit={async (e) => {
-            e.preventDefault();
-            setSaving(true);
+            e.preventDefault()
+            setSaving(true)
             try {
               await updateGoldConfig({
                 holding: Number(holding) || 0,
                 avgPrice: Number(avgPrice) || 0,
-              });
-              setOpen(false);
-              onChanged();
+              })
+              setOpen(false)
+              onChanged()
             } finally {
-              setSaving(false);
+              setSaving(false)
             }
           }}
         >
@@ -73,7 +72,14 @@ function useGoldSettings(data: GoldPayload | null, onChanged: () => void) {
               />
             </div>
           </div>
-          <p className="text-xs text-muted">看板只展示行情与盈亏，仓位在此修改。</p>
+          {data?.costPnl != null ? (
+            <p className="text-xs text-muted">
+              相对成本盈亏 {formatMoney(data.costPnl)}
+              {data.costPnlPercent != null ? `（${data.costPnlPercent.toFixed(2)}%）` : ''}
+            </p>
+          ) : (
+            <p className="text-xs text-muted">看板「实时收益」按当日涨跌估算。</p>
+          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               取消
@@ -85,68 +91,15 @@ function useGoldSettings(data: GoldPayload | null, onChanged: () => void) {
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 
-  return { openSettings: () => setOpen(true), dialog };
+  return {openSettings: () => setOpen(true), dialog}
 }
 
-function GoldSpark({ data }: { data: GoldPayload | null }) {
-  const trend = data?.trend || [];
-  if (!trend.length) {
-    return <div className="flex h-10 items-center text-[10px] text-muted">暂无走势</div>;
-  }
-  const option = {
-    animation: false,
-    grid: { left: 0, right: 0, top: 4, bottom: 0 },
-    tooltip: {
-      trigger: 'axis',
-      appendToBody: true,
-      confine: false,
-      backgroundColor: 'rgba(21,32,43,0.92)',
-      borderWidth: 0,
-      padding: [6, 8],
-      textStyle: { color: '#fff', fontSize: 11 },
-      formatter: (params: unknown) => {
-        const list = Array.isArray(params) ? params : [params];
-        const p = list[0] as { axisValue?: string; value?: number | string };
-        if (!p) return '';
-        const val = p.value == null || p.value === '' ? '--' : Number(p.value).toFixed(2);
-        return `${p.axisValue ?? ''}<br/><b>${val}</b>`;
-      },
-    },
-    xAxis: { type: 'category', show: false, data: trend.map((p) => p.time) },
-    yAxis: { type: 'value', show: false, scale: true },
-    series: [
-      {
-        type: 'line',
-        data: trend.map((p) => p.price),
-        showSymbol: false,
-        smooth: 0.25,
-        lineStyle: { width: 1.5, color: '#b8860b' },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(184,134,11,0.28)' },
-              { offset: 1, color: 'rgba(184,134,11,0.02)' },
-            ],
-          },
-        },
-      },
-    ],
-  };
-  return (
-    <ReactECharts
-      option={option}
-      style={{ height: 40, width: '100%' }}
-      opts={{ renderer: 'canvas' }}
-      notMerge
-    />
-  );
+function goldTrendPoints(data: GoldPayload | null) {
+  return (data?.trend || [])
+    .filter((p) => p.percent != null)
+    .map((p) => ({time: p.time, value: p.percent as number}))
 }
 
 export function GoldMobileCard({
@@ -154,13 +107,15 @@ export function GoldMobileCard({
   loading,
   onChanged,
 }: {
-  data: GoldPayload | null;
-  loading?: boolean;
-  onChanged: () => void;
+  data: GoldPayload | null
+  loading?: boolean
+  onChanged: () => void
 }) {
-  const { openSettings, dialog } = useGoldSettings(data, onChanged);
-  const liveAmount =
-    data?.price != null && data.holding > 0 ? data.price * data.holding : null;
+  const {openSettings, dialog} = useGoldSettings(data, onChanged)
+  const refPrice =
+    data?.prevClose != null && data.prevClose > 0 ? data.prevClose : data?.price
+  const amount =
+    refPrice != null && data && data.holding > 0 ? refPrice * data.holding : null
 
   return (
     <>
@@ -170,22 +125,24 @@ export function GoldMobileCard({
             <div className="font-medium">AU9999 沪金</div>
             <div className="font-mono text-xs text-muted">黄金</div>
           </div>
-          <div className="flex items-center gap-1">
-            <MiniPct value={data?.percent} />
-            <Button size="icon" variant="ghost" onClick={openSettings} title="仓位设置">
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button size="icon" variant="ghost" onClick={openSettings} title="仓位设置">
+            <Settings2 className="h-4 w-4" />
+          </Button>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
           <div>
-            <div className="text-[11px] text-muted">持仓金额</div>
+            <div
+              className="text-[11px] text-muted"
+              title="昨收×克数（上一确认点），不含盘中浮动"
+            >
+              持仓金额
+            </div>
             <div className="font-mono tabular-nums text-gold">
-              {liveAmount != null ? formatAmount(liveAmount) : loading ? '...' : '--'}
+              {amount != null ? formatAmount(amount) : loading ? '...' : '--'}
             </div>
           </div>
           <div>
-            <div className="text-[11px] text-muted">持仓收益</div>
+            <div className="text-[11px] text-muted">实时收益</div>
             <div className={`font-mono tabular-nums ${pctClass(data?.pnl)}`}>
               {formatMoney(data?.pnl)}
             </div>
@@ -204,12 +161,17 @@ export function GoldMobileCard({
           </div>
         </div>
         <div className="mt-2">
-          <GoldSpark data={data} />
+          <SparkTrend
+            height={56}
+            title="AU9999 分时涨幅"
+            accentColor="#b8860b"
+            points={goldTrendPoints(data)}
+          />
         </div>
       </div>
       {dialog}
     </>
-  );
+  )
 }
 
 export function GoldTableRow({
@@ -217,13 +179,15 @@ export function GoldTableRow({
   loading,
   onChanged,
 }: {
-  data: GoldPayload | null;
-  loading?: boolean;
-  onChanged: () => void;
+  data: GoldPayload | null
+  loading?: boolean
+  onChanged: () => void
 }) {
-  const { openSettings, dialog } = useGoldSettings(data, onChanged);
-  const liveAmount =
-    data?.price != null && data.holding > 0 ? data.price * data.holding : null;
+  const {openSettings, dialog} = useGoldSettings(data, onChanged)
+  const refPrice =
+    data?.prevClose != null && data.prevClose > 0 ? data.prevClose : data?.price
+  const amount =
+    refPrice != null && data && data.holding > 0 ? refPrice * data.holding : null
 
   return (
     <>
@@ -232,11 +196,8 @@ export function GoldTableRow({
           <div className="font-medium text-ink">AU9999 沪金</div>
           <div className="font-mono text-xs text-muted">黄金</div>
         </td>
-        <td className="px-3 py-3">
-          <MiniPct value={data?.percent} />
-        </td>
         <td className="px-3 py-3 font-mono tabular-nums text-gold">
-          {liveAmount != null ? formatAmount(liveAmount) : loading ? '...' : '--'}
+          {amount != null ? formatAmount(amount) : loading ? '...' : '--'}
         </td>
         <td className={`px-3 py-3 font-mono tabular-nums ${pctClass(data?.pnl)}`}>
           {formatMoney(data?.pnl)}
@@ -249,10 +210,15 @@ export function GoldTableRow({
             均价 {data?.avgPrice ? data.avgPrice.toFixed(2) : '--'}
           </span>
         </td>
-        <td className="min-w-[160px] px-3 py-2">
-          <GoldSpark data={data} />
+        <td className="min-w-[200px] px-3 py-2">
+          <SparkTrend
+            height={64}
+            title="AU9999 分时涨幅"
+            accentColor="#b8860b"
+            points={goldTrendPoints(data)}
+          />
         </td>
-        <td className="w-px whitespace-nowrap px-1 py-2">
+        <td className="w-28 whitespace-nowrap pl-8 pr-4 py-2">
           <div className="flex justify-center">
             <Button
               size="icon"
@@ -268,5 +234,5 @@ export function GoldTableRow({
       </tr>
       {dialog}
     </>
-  );
+  )
 }

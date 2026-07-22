@@ -42,6 +42,8 @@ npm run dev
 
 浏览器打开 http://127.0.0.1:5173 ，前端通过 `/api` 代理到 Koa。
 
+添加持仓只需「代码 + 金额」，添加自选只需「代码」；名称与板块自动拉取。顶部「配置」可导入/导出完整本地配置；持仓区可开关黄金栏（默认开）。
+
 ## API 摘要
 
 - `GET /api/funds/quotes?type=hold|watch`
@@ -49,3 +51,5 @@ npm run dev
 - `GET /api/indices`
 - `GET /api/market/overview`
 - `GET /api/gold` / `PUT /api/gold/config`
+- `GET|PUT /api/settings`（如 `showGold`）
+- `GET|PUT /api/config`（整包导入导出）

@@ -1,23 +1,20 @@
-import { useEffect, useState } from 'react';
-import type { FundQuoteRow } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {useEffect, useState} from 'react'
+import type {FundQuoteRow} from '@/lib/api'
+import {Button} from '@/components/ui/button'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 
 type Payload = {
-  code: string;
-  name?: string;
-  amount?: number;
-  shares?: number;
-  sectors?: string[];
-  type?: 'hold' | 'watch';
-};
+  code: string
+  amount?: number
+  type?: 'hold' | 'watch'
+}
 
 export function FundFormDialog({
   open,
@@ -26,67 +23,64 @@ export function FundFormDialog({
   initial,
   onSubmit,
 }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  mode: 'hold' | 'watch';
-  initial: FundQuoteRow | null;
-  onSubmit: (payload: Payload) => Promise<void>;
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  mode: 'hold' | 'watch'
+  initial: FundQuoteRow | null
+  onSubmit: (payload: Payload) => Promise<void>
 }) {
-  const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [amount, setAmount] = useState('0');
-  const [shares, setShares] = useState('0');
-  const [sectors, setSectors] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [code, setCode] = useState('')
+  const [amount, setAmount] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!open) return;
-    setCode(initial?.code || '');
-    setName(initial?.name || '');
-    setAmount(String(initial?.amount ?? 0));
-    setShares(String(initial?.shares ?? 0));
-    setSectors((initial?.sectors || []).join(','));
-    setError('');
-  }, [open, initial]);
+    if (!open) return
+    setCode(initial?.code || '')
+    setAmount(initial?.amount != null ? String(initial.amount) : '')
+    setError('')
+  }, [open, initial])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {initial ? '编辑基金' : mode === 'hold' ? '添加持仓' : '添加自选'}
+            {initial
+              ? mode === 'hold'
+                ? '编辑持仓金额'
+                : '编辑自选'
+              : mode === 'hold'
+                ? '添加持仓'
+                : '添加自选'}
           </DialogTitle>
         </DialogHeader>
 
         <form
           className="space-y-3"
           onSubmit={async (e) => {
-            e.preventDefault();
-            setSaving(true);
-            setError('');
+            e.preventDefault()
+            setSaving(true)
+            setError('')
             try {
-              await onSubmit({
+              const payload: Payload = {
                 code: code.trim(),
-                name: name.trim() || undefined,
-                amount: Number(amount) || 0,
-                shares: Number(shares) || 0,
-                sectors: sectors
-                  .split(/[,，]/)
-                  .map((s) => s.trim())
-                  .filter(Boolean),
                 type: mode,
-              });
-              onOpenChange(false);
+              }
+              if (mode === 'hold') {
+                payload.amount = Number(amount) || 0
+              }
+              await onSubmit(payload)
+              onOpenChange(false)
             } catch (err: unknown) {
               const msg =
-                (err as { response?: { data?: { message?: string } }; message?: string })
+                (err as {response?: {data?: {message?: string}}; message?: string})
                   ?.response?.data?.message ||
                 (err as Error)?.message ||
-                '保存失败';
-              setError(msg);
+                '保存失败'
+              setError(msg)
             } finally {
-              setSaving(false);
+              setSaving(false)
             }
           }}
         >
@@ -96,64 +90,50 @@ export function FundFormDialog({
               id="code"
               value={code}
               disabled={!!initial}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="如 001618"
+              inputMode="numeric"
               required
             />
+            <p className="text-xs text-muted">名称与板块将自动从公开接口获取</p>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="name">名称（可留空自动搜索）</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="自动填充"
-            />
-          </div>
+
           {mode === 'hold' ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="amount">持仓金额</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="shares">持仓份额（可选）</Label>
-                <Input
-                  id="shares"
-                  type="number"
-                  step="0.01"
-                  value={shares}
-                  onChange={(e) => setShares(e.target.value)}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="amount">持仓金额</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="上一确认涨幅后的确认市值"
+                required
+              />
+              <p className="text-xs text-muted">
+                填上一确认市值（交易时段即昨日确认额）。晚间净值确认后系统会按确认涨跌自动滚动，无需每天手改。
+              </p>
             </div>
           ) : null}
-          <div className="space-y-1.5">
-            <Label htmlFor="sectors">关联板块（逗号分隔）</Label>
-            <Input
-              id="sectors"
-              value={sectors}
-              onChange={(e) => setSectors(e.target.value)}
-              placeholder="电子,半导体"
-            />
-          </div>
+
+          {mode === 'watch' && initial ? (
+            <p className="text-sm text-muted">
+              自选仅需基金代码，当前：{initial.name || initial.code}
+            </p>
+          ) : null}
+
           {error ? <p className="text-sm text-rise">{error}</p> : null}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               取消
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || (mode === 'watch' && !!initial)}>
               {saving ? '保存中...' : '保存'}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
