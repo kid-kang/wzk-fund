@@ -29,12 +29,14 @@ export function PanelHeader({
   action?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-2 border-b border-line/70 px-3 py-3 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="min-w-0">
-        <h2 className="font-display text-base font-bold tracking-tight text-ink sm:text-lg">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line/70 px-3 py-2.5 sm:px-5 sm:py-3">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <h2 className="shrink-0 font-display text-base font-bold tracking-tight text-ink sm:text-lg">
           {title}
         </h2>
-        {desc ? <p className="mt-0.5 text-xs text-muted">{desc}</p> : null}
+        {desc ? (
+          <p className="min-w-0 truncate text-xs text-muted sm:text-[13px]">{desc}</p>
+        ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>

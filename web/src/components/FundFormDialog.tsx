@@ -9,11 +9,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {normalizeNetValueDate} from '@/lib/tradingCalendar'
+
+/** 录入金额对应哪一版确认净值市值 */
+export type AmountBasis = 'prev' | 'today'
 
 type Payload = {
   code: string
   amount?: number
+  /** 持仓金额口径：昨确认 / 今确认 */
+  amountBasis?: AmountBasis
   type?: 'hold' | 'watch'
+}
+
+function defaultBasis(initial: FundQuoteRow | null): AmountBasis {
+  if (!initial) return 'prev'
+  const asOf = normalizeNetValueDate(initial.amountAsOf)
+  const navDay = normalizeNetValueDate(initial.netValueDate)
+  // 金额已按今日确认净值计入 → 默认「今日结算」
+  if (asOf && navDay && asOf >= navDay && initial.percentSource === 'confirmed') {
+    return 'today'
+  }
+  return 'prev'
 }
 
 export function FundFormDialog({
@@ -31,6 +48,7 @@ export function FundFormDialog({
 }) {
   const [code, setCode] = useState('')
   const [amount, setAmount] = useState('')
+  const [amountBasis, setAmountBasis] = useState<AmountBasis>('prev')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -38,6 +56,7 @@ export function FundFormDialog({
     if (!open) return
     setCode(initial?.code || '')
     setAmount(initial?.amount != null ? String(initial.amount) : '')
+    setAmountBasis(defaultBasis(initial))
     setError('')
   }, [open, initial])
 
@@ -69,6 +88,7 @@ export function FundFormDialog({
               }
               if (mode === 'hold') {
                 payload.amount = Number(amount) || 0
+                payload.amountBasis = amountBasis
               }
               await onSubmit(payload)
               onOpenChange(false)
@@ -95,26 +115,57 @@ export function FundFormDialog({
               inputMode="numeric"
               required
             />
-            <p className="text-xs text-muted">名称与板块将自动从公开接口获取</p>
           </div>
 
           {mode === 'hold' ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="amount">持仓金额</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="上一确认涨幅后的确认市值"
-                required
-              />
-              <p className="text-xs text-muted">
-                填上一确认市值（交易时段即昨日确认额）。晚间净值确认后系统会按确认涨跌自动滚动，无需每天手改。
-              </p>
-            </div>
+            <>
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-ink">金额口径</legend>
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line/70 bg-paper/40 px-3 py-2.5">
+                  <input
+                    type="radio"
+                    name="amountBasis"
+                    className="mt-1"
+                    checked={amountBasis === 'prev'}
+                    onChange={() => setAmountBasis('prev')}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm text-ink">昨日结算的持仓金额</span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      用昨净值算份额；今净值确认后自动滚成今日市值
+                    </span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line/70 bg-paper/40 px-3 py-2.5">
+                  <input
+                    type="radio"
+                    name="amountBasis"
+                    className="mt-1"
+                    checked={amountBasis === 'today'}
+                    onChange={() => setAmountBasis('today')}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm text-ink">今日结算的持仓金额</span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      输入即今日确认市值（与列表一致）；用今净值算份额
+                    </span>
+                  </span>
+                </label>
+              </fieldset>
+              <div className="space-y-1.5">
+                <Label htmlFor="amount">持仓金额</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="填写与上方口径一致的金额"
+                  required
+                />
+              </div>
+            </>
           ) : null}
 
           {mode === 'watch' && initial ? (

@@ -7,6 +7,7 @@ import {
   fetchMarketOverview,
   fetchSettings,
   fetchWatchlist,
+  updateSettings,
   type FundQuoteRow,
   type GoldPayload,
   type HoldingsPayload,
@@ -30,6 +31,7 @@ export default function App() {
   const [market, setMarket] = useState<MarketOverview | null>(null)
   const [gold, setGold] = useState<GoldPayload | null>(null)
   const [showGold, setShowGold] = useState(true)
+  const [togglingGold, setTogglingGold] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [updatedAt, setUpdatedAt] = useState<string>('')
@@ -42,7 +44,7 @@ export default function App() {
     else setLoading(true)
     setError('')
     try {
-      const [h, w, i, m, g, s] = await Promise.all([
+      const results = await Promise.allSettled([
         fetchHoldings(),
         fetchWatchlist(),
         fetchIndices(),
@@ -50,12 +52,22 @@ export default function App() {
         fetchGold(),
         fetchSettings(),
       ])
-      setHoldings(h)
-      setWatchlist(w)
-      setIndices(i)
-      setMarket(m)
-      setGold(g)
-      setShowGold(s?.showGold !== false)
+      const [h, w, i, m, g, s] = results
+      if (h.status === 'fulfilled') setHoldings(h.value)
+      if (w.status === 'fulfilled') setWatchlist(w.value)
+      if (i.status === 'fulfilled') setIndices(i.value)
+      if (m.status === 'fulfilled') setMarket(m.value)
+      if (g.status === 'fulfilled') setGold(g.value)
+      if (s.status === 'fulfilled') setShowGold(s.value?.showGold !== false)
+
+      const failed = results.find((r) => r.status === 'rejected') as
+        | PromiseRejectedResult
+        | undefined
+      if (failed && results.every((r) => r.status === 'rejected')) {
+        setError((failed.reason as Error)?.message || '加载失败，请确认代理服务已启动')
+      } else if (failed) {
+        console.warn('[refresh partial fail]', failed.reason)
+      }
       setUpdatedAt(new Date().toLocaleTimeString('zh-CN', {hour12: false}))
     } catch (e: unknown) {
       setError((e as Error)?.message || '加载失败，请确认代理服务已启动')
@@ -79,6 +91,17 @@ export default function App() {
     setTheme((t) => (t === 'light' ? 'dark' : 'light'))
   }
 
+  async function toggleGold() {
+    const next = !showGold
+    setTogglingGold(true)
+    try {
+      await updateSettings({showGold: next})
+      setShowGold(next)
+    } finally {
+      setTogglingGold(false)
+    }
+  }
+
   return (
     <div className="min-h-screen w-full">
       <header className="sticky top-0 z-40 w-full border-b border-line/80 bg-panel/85 backdrop-blur-md">
@@ -95,6 +118,16 @@ export default function App() {
             <span className="hidden font-mono text-xs text-muted md:inline">
               {updatedAt ? `更新 ${updatedAt}` : ''}
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void toggleGold()}
+              disabled={togglingGold}
+              title={showGold ? '隐藏黄金板块' : '显示黄金板块'}
+            >
+              <span className="sm:hidden">{showGold ? '金开' : '金关'}</span>
+              <span className="hidden sm:inline">{showGold ? '关闭黄金板块' : '打开黄金板块'}</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -134,7 +167,6 @@ export default function App() {
           showGold={showGold}
           loading={loading}
           onChanged={() => load(true)}
-          onSettingsChanged={setShowGold}
         />
 
         <IndicesModule list={indices} loading={loading} />

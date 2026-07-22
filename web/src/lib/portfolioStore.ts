@@ -100,6 +100,11 @@ export function upsertFund(payload: Partial<FundRecord> & {code: string}): FundR
   return next
 }
 
+export function getFund(code: string): FundRecord | null {
+  const key = String(code).padStart(6, '0')
+  return loadConfig().funds[key] || null
+}
+
 export function updateFund(code: string, patch: Partial<FundRecord>): FundRecord {
   const config = loadConfig()
   const key = String(code).padStart(6, '0')
@@ -148,9 +153,15 @@ export function importLocalConfig(payload: AppConfig): AppConfig {
   return saveConfig(normalizeConfig(payload))
 }
 
-/** 批量写回滚仓后的 amount / amountAsOf / sectors */
+/** 批量写回滚仓后的 amount / amountAsOf / shares / sectors */
 export function patchFunds(
-  patches: Array<{code: string; amount?: number; amountAsOf?: string; sectors?: string[]}>,
+  patches: Array<{
+    code: string
+    amount?: number
+    amountAsOf?: string
+    shares?: number
+    sectors?: string[]
+  }>,
 ) {
   if (!patches.length) return
   const config = loadConfig()
@@ -167,6 +178,10 @@ export function patchFunds(
     }
     if (p.amountAsOf != null && p.amountAsOf !== (prev.amountAsOf || '')) {
       next.amountAsOf = p.amountAsOf
+      changed = true
+    }
+    if (p.shares != null && p.shares !== (prev.shares || 0)) {
+      next.shares = p.shares
       changed = true
     }
     if (

@@ -22,7 +22,7 @@ export function WatchlistModule({
     <Panel className="min-w-0">
       <PanelHeader
         title="自选基金"
-        desc="按添加顺序固定排列 · 只看实时涨跌与走势"
+        desc="按添加顺序固定排列"
         action={
           <Button
             size="sm"
@@ -53,7 +53,9 @@ export function WatchlistModule({
               <div className="mt-2">
                 <SparkTrend
                   height={56}
-                  title={`${row.name} 分时涨幅`}
+                  title={row.name}
+                  fundCode={row.code}
+                  badgePercent={row.percent}
                   points={(row.trend || [])
                     .filter((p) => p.growth != null)
                     .map((p) => ({time: p.time, value: p.growth as number}))}
@@ -83,7 +85,7 @@ export function WatchlistModule({
             <tr className="border-y border-line/70">
               <th className="px-3 py-2 font-medium">基金</th>
               <th className="px-3 py-2 font-medium">关联板块</th>
-              <th className="w-[40%] min-w-[220px] px-3 py-2 font-medium">走势（涨幅）</th>
+              <th className="w-[32%] min-w-[170px] px-3 py-2 font-medium">走势（涨幅）</th>
               <th className="w-24 whitespace-nowrap pl-8 pr-4 py-2 text-center font-medium">操作</th>
             </tr>
           </thead>
@@ -110,10 +112,13 @@ export function WatchlistModule({
                   <td className="px-3 py-3">
                     <SectorTags sectors={row.sectors} />
                   </td>
-                  <td className="min-w-[220px] px-3 py-2">
+                  <td className="min-w-[170px] px-3 py-2">
                     <SparkTrend
+                      className="w-full"
                       height={64}
-                      title={`${row.name} 分时涨幅`}
+                      title={row.name}
+                      fundCode={row.code}
+                      badgePercent={row.percent}
                       points={(row.trend || [])
                         .filter((p) => p.growth != null)
                         .map((p) => ({time: p.time, value: p.growth as number}))}

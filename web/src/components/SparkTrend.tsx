@@ -1,12 +1,13 @@
 import {useMemo, useState} from 'react'
 import ReactECharts from 'echarts-for-react'
-import {pctClass} from '@/lib/utils'
+import {cn, pctClass} from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {FundTrendDialog} from '@/components/FundTrendDialog'
 
 export type TrendPoint = {
   time: string
@@ -29,24 +30,37 @@ function buildOption(
     showAxis,
     color,
     compact,
-  }: {showAxis: boolean; color: string; compact?: boolean},
+    mode = 'percent',
+    showTimeAxis = false,
+  }: {
+    showAxis: boolean
+    color: string
+    compact?: boolean
+    mode?: 'percent' | 'price'
+    /** 迷你图也显示横坐标时间 */
+    showTimeAxis?: boolean
+  },
 ) {
   const values = points.map((p) => p.value)
   const min = Math.min(...values)
   const max = Math.max(...values)
-  const pad = Math.max((max - min) * 0.12, 0.05)
+  const pad =
+    mode === 'price'
+      ? Math.max((max - min) * 0.12, 0.5)
+      : Math.max((max - min) * 0.12, 0.05)
   const axisColors = chartAxisColors()
-  const showPrice = points.some((p) => p.price != null)
+  const showPriceBadge = mode === 'price' || points.some((p) => p.price != null)
+  const showX = (showAxis && !compact) || showTimeAxis
+  const showY = showAxis && !compact
 
   return {
     animation: false,
     grid: compact
       ? {
-        left: 2,
-        right: 2,
-        // 顶部留给角标，底部贴边占满高度
-        top: showPrice ? 26 : 14,
-        bottom: 2,
+        left: showY ? 36 : 2,
+        right: 8,
+        top: showPriceBadge ? 26 : 14,
+        bottom: showTimeAxis ? 28 : 2,
       }
       : showAxis
         ? {left: 48, right: 16, top: 28, bottom: 36}
@@ -68,6 +82,9 @@ function buildOption(
         }
         if (!p || p.value == null || p.value === '') return ''
         const n = Number(p.value)
+        if (mode === 'price') {
+          return `${p.axisValue ?? ''}<br/><b>${n.toFixed(2)} 元/克</b>`
+        }
         const sign = n > 0 ? '+' : ''
         const price = points[p.dataIndex ?? 0]?.price
         const priceText =
@@ -78,8 +95,7 @@ function buildOption(
     xAxis: {
       type: 'category',
       data: points.map((p) => p.time),
-      // 列表迷你图不显示横坐标，放大弹窗再显示
-      show: showAxis && !compact,
+      show: showX,
       boundaryGap: false,
       axisLine: {lineStyle: {color: axisColors.line}},
       axisTick: {show: false},
@@ -87,11 +103,12 @@ function buildOption(
         color: axisColors.muted,
         fontSize: 11,
         interval: Math.max(0, Math.floor(points.length / 6) - 1),
+        hideOverlap: true,
       },
     },
     yAxis: {
       type: 'value',
-      show: showAxis && !compact,
+      show: showY,
       scale: true,
       min: Number((min - pad).toFixed(2)),
       max: Number((max + pad).toFixed(2)),
@@ -101,10 +118,13 @@ function buildOption(
       axisLabel: {
         color: axisColors.muted,
         fontSize: 11,
-        formatter: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
+        formatter:
+          mode === 'price'
+            ? (v: number) => v.toFixed(1)
+            : (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       },
       splitLine: {
-        show: showAxis && !compact,
+        show: showY,
         lineStyle: {color: axisColors.line, type: 'dashed'},
       },
     },
@@ -128,15 +148,16 @@ function buildOption(
             ],
           },
         },
-        markLine: showAxis
-          ? {
-            silent: true,
-            symbol: 'none',
-            lineStyle: {color: axisColors.muted, type: 'dashed', width: 1},
-            data: [{yAxis: 0}],
-            label: {show: false},
-          }
-          : undefined,
+        markLine:
+          showAxis && mode === 'percent'
+            ? {
+              silent: true,
+              symbol: 'none',
+              lineStyle: {color: axisColors.muted, type: 'dashed', width: 1},
+              data: [{yAxis: 0}],
+              label: {show: false},
+            }
+            : undefined,
       },
     ],
   }
@@ -148,39 +169,67 @@ export function SparkTrend({
   title = '分时走势',
   accentColor,
   positiveIsUp = true,
+  className,
+  /** 角标涨跌幅；不传则用曲线最后一个点（应与收益计算口径一致） */
+  badgePercent,
+  /** percent：涨跌幅曲线；price：绝对价格曲线（黄金） */
+  mode = 'percent',
+  /** 迷你图也显示横坐标时间 */
+  showTimeAxis = false,
+  /** 传入基金代码时，放大弹窗支持分时/近3月/近1年/近3年/成立以来 */
+  fundCode,
 }: {
   points: TrendPoint[]
   height?: number
   title?: string
   accentColor?: string
   positiveIsUp?: boolean
+  className?: string
+  badgePercent?: number | null
+  mode?: 'percent' | 'price'
+  showTimeAxis?: boolean
+  fundCode?: string
 }) {
   const [open, setOpen] = useState(false)
 
   const lastPoint = points[points.length - 1]
-  const last = lastPoint?.value ?? 0
-  const lastPrice = lastPoint?.price
-  // 以最新涨跌幅正负定色：红涨绿跌（A股习惯）
-  const up = positiveIsUp ? last >= 0 : last < 0
+  const lastPct = badgePercent != null ? badgePercent : (lastPoint?.value ?? 0)
+  const lastPrice =
+    mode === 'price' ? lastPoint?.value ?? lastPoint?.price : lastPoint?.price
+  const firstPrice = mode === 'price' ? points[0]?.value : null
+  const priceUp =
+    mode === 'price' && lastPrice != null && firstPrice != null
+      ? lastPrice >= firstPrice
+      : true
+  const up = mode === 'price' ? priceUp : positiveIsUp ? lastPct >= 0 : lastPct < 0
   const color = accentColor || (up ? '#d7263d' : '#0f8a5f')
-  const showPrice = points.some((p) => p.price != null)
 
   const themeKey =
     typeof document !== 'undefined' ? document.documentElement.dataset.theme : 'light'
 
   const miniOption = useMemo(
-    () => buildOption(points, {showAxis: true, color, compact: true}),
-    [points, color, themeKey],
+    () =>
+      buildOption(points, {
+        showAxis: true,
+        color,
+        compact: true,
+        mode,
+        showTimeAxis,
+      }),
+    [points, color, themeKey, mode, showTimeAxis],
   )
   const fullOption = useMemo(
-    () => buildOption(points, {showAxis: true, color, compact: false}),
-    [points, color, themeKey],
+    () => buildOption(points, {showAxis: true, color, compact: false, mode}),
+    [points, color, themeKey, mode],
   )
 
   if (!points.length) {
     return (
       <div
-        className="flex items-center justify-center text-[10px] text-muted"
+        className={cn(
+          'flex w-2/3 items-center justify-center text-[10px] text-muted',
+          className,
+        )}
         style={{height}}
       >
         暂无走势
@@ -192,13 +241,18 @@ export function SparkTrend({
     <>
       <button
         type="button"
-        className="group relative w-full cursor-zoom-in rounded-md text-left transition-opacity hover:opacity-90"
+        className={cn(
+          'group relative w-2/3 cursor-zoom-in rounded-md text-left transition-opacity hover:opacity-90',
+          className,
+        )}
         onClick={() => setOpen(true)}
         title="点击放大查看"
       >
         <div className="pointer-events-none absolute right-0 top-0 z-10 flex flex-col items-end gap-0.5">
-          <MiniPct value={last} />
-          {showPrice ? <MiniPrice value={lastPrice} /> : null}
+          {mode === 'percent' ? <MiniPct value={lastPct} /> : null}
+          {mode === 'price' || lastPrice != null ? (
+            <MiniPrice value={lastPrice} className={mode === 'price' ? 'text-gold' : undefined} />
+          ) : null}
         </div>
         <ReactECharts
           option={miniOption}
@@ -208,30 +262,41 @@ export function SparkTrend({
         />
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-3 pr-6">
-              <span className="truncate">{title}</span>
-              <span className="flex shrink-0 flex-col items-end gap-0.5">
-                <MiniPct value={last} />
-                {showPrice ? <MiniPrice value={lastPrice} /> : null}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          <p className="mb-2 text-xs text-muted">
-            {showPrice
-              ? '横轴为时间，纵轴为涨跌幅（%）；角标与悬停可查看金价'
-              : '横轴为时间，纵轴为涨跌幅（%）'}
-          </p>
-          <ReactECharts
-            option={fullOption}
-            style={{height: 320, width: '100%'}}
-            opts={{renderer: 'canvas'}}
-            notMerge
-          />
-        </DialogContent>
-      </Dialog>
+      {fundCode ? (
+        <FundTrendDialog
+          open={open}
+          onOpenChange={setOpen}
+          code={fundCode}
+          name={title}
+          intradayPoints={points}
+          badgePercent={badgePercent}
+        />
+      ) : (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between gap-3 pr-6">
+                <span className="truncate">{title}</span>
+                <span className="flex shrink-0 flex-col items-end gap-0.5">
+                  {mode === 'percent' ? <MiniPct value={lastPct} /> : null}
+                  {mode === 'price' || lastPrice != null ? (
+                    <MiniPrice
+                      value={lastPrice}
+                      className={mode === 'price' ? 'text-gold' : undefined}
+                    />
+                  ) : null}
+                </span>
+              </DialogTitle>
+            </DialogHeader>
+            <ReactECharts
+              option={fullOption}
+              style={{height: 320, width: '100%'}}
+              opts={{renderer: 'canvas'}}
+              notMerge
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }
@@ -248,10 +313,21 @@ export function MiniPct({value}: {value: number | null | undefined}) {
   )
 }
 
-function MiniPrice({value}: {value: number | null | undefined}) {
+function MiniPrice({
+  value,
+  className,
+}: {
+  value: number | null | undefined
+  className?: string
+}) {
   if (value == null) return null
   return (
-    <span className="font-mono text-[10px] tabular-nums text-ink-soft sm:text-xs">
+    <span
+      className={cn(
+        'font-mono text-[10px] font-semibold tabular-nums text-ink-soft sm:text-xs',
+        className,
+      )}
+    >
       {value.toFixed(2)}
     </span>
   )

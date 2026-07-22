@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import {Settings2} from 'lucide-react'
 import {updateGoldConfig, type GoldPayload} from '@/lib/api'
-import {formatAmount, formatMoney, formatPct, pctClass} from '@/lib/utils'
+import {formatAmount, formatMoney, pctClass} from '@/lib/utils'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {Panel, PanelHeader} from '@/components/ui/panel'
 import {SparkTrend} from '@/components/SparkTrend'
 
 function useGoldSettings(data: GoldPayload | null, onChanged: () => void) {
@@ -72,14 +73,6 @@ function useGoldSettings(data: GoldPayload | null, onChanged: () => void) {
               />
             </div>
           </div>
-          {data?.costPnl != null ? (
-            <p className="text-xs text-muted">
-              相对成本盈亏 {formatMoney(data.costPnl)}
-              {data.costPnlPercent != null ? `（${data.costPnlPercent.toFixed(2)}%）` : ''}
-            </p>
-          ) : (
-            <p className="text-xs text-muted">看板「实时收益」按当日涨跌估算。</p>
-          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               取消
@@ -96,158 +89,142 @@ function useGoldSettings(data: GoldPayload | null, onChanged: () => void) {
   return {openSettings: () => setOpen(true), dialog}
 }
 
-function goldTrendPoints(data: GoldPayload | null) {
+/** 分时按真实金价画 */
+function goldPricePoints(data: GoldPayload | null) {
   return (data?.trend || [])
-    .filter((p) => p.percent != null)
+    .filter((p) => p.price != null && Number.isFinite(p.price))
     .map((p) => ({
       time: p.time,
-      value: p.percent as number,
+      value: p.price as number,
       price: p.price,
     }))
 }
 
-export function GoldMobileCard({
+export function GoldPanel({
   data,
-  weight,
   loading,
   onChanged,
 }: {
   data: GoldPayload | null
-  weight?: number | null
   loading?: boolean
   onChanged: () => void
 }) {
   const {openSettings, dialog} = useGoldSettings(data, onChanged)
-  const refPrice =
-    data?.prevClose != null && data.prevClose > 0 ? data.prevClose : data?.price
-  const amount =
-    refPrice != null && data && data.holding > 0 ? refPrice * data.holding : null
+  const price = data?.price != null && data.price > 0 ? data.price : null
+  const liveAmount =
+    price != null && data && data.holding > 0 ? price * data.holding : null
+  const cost =
+    data && data.holding > 0 && data.avgPrice > 0
+      ? data.holding * data.avgPrice
+      : null
+  const points = goldPricePoints(data)
 
   return (
-    <>
-      <div className="rounded-xl border border-gold/30 bg-gradient-to-r from-gold/10 to-paper/40 p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="font-medium">AU9999 沪金</div>
-            <div className="font-mono text-xs text-muted">黄金</div>
-          </div>
-          <Button size="icon" variant="ghost" onClick={openSettings} title="仓位设置">
+    <Panel className="min-w-0 w-full">
+      <PanelHeader
+        title="黄金"
+        desc="AU9999 沪金 · 交易跨日，独立于基金当日结算"
+        action={
+          <Button size="sm" variant="outline" onClick={openSettings}>
             <Settings2 className="h-4 w-4" />
+            仓位
           </Button>
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-          <div>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-4 px-3 pb-4 pt-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-stretch lg:gap-5 sm:px-5 sm:pt-5">
+        {/* 左侧数据 */}
+        <div className="flex flex-col justify-center gap-3">
+          <div className="relative overflow-hidden rounded-xl border border-gold/35 bg-gradient-to-br from-gold/15 via-gold/5 to-paper/50 px-4 py-4 sm:px-5 sm:py-5">
             <div
-              className="text-[11px] text-muted"
-              title="昨收×克数（上一确认点），不含盘中浮动"
-            >
-              持仓金额
-            </div>
-            <div className="font-mono tabular-nums text-gold">
-              {amount != null ? formatAmount(amount) : loading ? '...' : '--'}
+              className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-gold/10 blur-2xl"
+              aria-hidden
+            />
+            <div className="relative flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-muted">当前总价值</div>
+                <div className="mt-2 font-mono text-2xl font-bold leading-none tracking-tight tabular-nums text-gold sm:text-3xl">
+                  {liveAmount != null ? (
+                    <>
+                      <span className="mr-1 align-baseline text-base font-semibold text-gold/65 sm:text-lg">
+                        ¥
+                      </span>
+                      {formatAmount(liveAmount)}
+                    </>
+                  ) : loading ? (
+                    '...'
+                  ) : (
+                    '--'
+                  )}
+                </div>
+              </div>
+              {data?.costPnl != null ? (
+                <div className="shrink-0 border-l border-gold/25 pl-5">
+                  <div className="text-[11px] tracking-wide text-muted">相对成本</div>
+                  <div className="mt-2 flex flex-wrap items-baseline gap-2">
+                    <span
+                      className={`font-mono text-lg font-semibold tabular-nums sm:text-xl ${pctClass(data.costPnl)}`}
+                    >
+                      {formatMoney(data.costPnl)}
+                    </span>
+                    {data.costPnlPercent != null ? (
+                      <span
+                        className={`rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums ${data.costPnl >= 0
+                          ? 'border-rise/30 bg-rise/10 text-rise'
+                          : 'border-fall/30 bg-fall/10 text-fall'
+                          }`}
+                      >
+                        {data.costPnlPercent > 0 ? '+' : ''}
+                        {data.costPnlPercent.toFixed(2)}%
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
-          <div>
-            <div className="text-[11px] text-muted">实时收益</div>
-            <div className={`font-mono tabular-nums ${pctClass(data?.pnl)}`}>
-              {formatMoney(data?.pnl)}
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted">占比</div>
-            <div className="font-mono tabular-nums text-ink-soft">
-              {formatPct(weight, 1).replace('+', '')}
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted">克数 / 均价</div>
-            <div className="font-mono tabular-nums text-ink-soft">
-              {data?.holding ? `${data.holding}克` : '--'}
-              {' · '}
-              {data?.avgPrice ? data.avgPrice.toFixed(2) : '--'}
+
+          <div className="rounded-xl border border-line/60 bg-paper/50 px-4 py-3.5">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="min-w-0">
+                <div className="text-[11px] text-muted">克数</div>
+                <div className="mt-1.5 truncate font-mono text-sm font-semibold tabular-nums text-ink sm:text-base">
+                  {data?.holding ? `${data.holding}克` : '--'}
+                </div>
+              </div>
+              <div className="min-w-0 border-l border-line/50 pl-3">
+                <div className="text-[11px] text-muted">均价</div>
+                <div className="mt-1.5 truncate font-mono text-sm font-semibold tabular-nums text-ink sm:text-base">
+                  {data?.avgPrice ? data.avgPrice.toFixed(2) : '--'}
+                </div>
+              </div>
+              <div className="min-w-0 border-l border-line/50 pl-3">
+                <div className="text-[11px] text-muted">成本</div>
+                <div className="mt-1.5 truncate font-mono text-sm font-semibold tabular-nums text-ink sm:text-base">
+                  {cost != null ? formatAmount(cost) : '--'}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="mt-2">
-          <SparkTrend
-            height={56}
-            title="AU9999 分时"
-            accentColor="#b8860b"
-            points={goldTrendPoints(data)}
-          />
+
+        {/* 右侧走势 */}
+        <div className="flex min-h-[180px] flex-col rounded-xl border border-gold/20 bg-paper/30 px-2 py-2 sm:px-3 sm:py-3">
+          <div className="mb-1 px-1 text-[11px] text-muted">分时金价</div>
+          <div className="min-h-0 flex-1">
+            <SparkTrend
+              height={200}
+              title="AU9999 分时金价"
+              accentColor="#b8860b"
+              className="h-full w-full"
+              mode="price"
+              showTimeAxis
+              points={points}
+            />
+          </div>
         </div>
       </div>
       {dialog}
-    </>
-  )
-}
-
-export function GoldTableRow({
-  data,
-  weight,
-  loading,
-  onChanged,
-}: {
-  data: GoldPayload | null
-  weight?: number | null
-  loading?: boolean
-  onChanged: () => void
-}) {
-  const {openSettings, dialog} = useGoldSettings(data, onChanged)
-  const refPrice =
-    data?.prevClose != null && data.prevClose > 0 ? data.prevClose : data?.price
-  const amount =
-    refPrice != null && data && data.holding > 0 ? refPrice * data.holding : null
-
-  return (
-    <>
-      <tr className="border-b border-gold/25 bg-gradient-to-r from-gold/10 to-transparent">
-        <td className="px-3 py-3">
-          <div className="font-medium text-ink">AU9999 沪金</div>
-          <div className="font-mono text-xs text-muted">黄金</div>
-        </td>
-        <td className="px-3 py-3 font-mono tabular-nums text-gold">
-          {amount != null ? formatAmount(amount) : loading ? '...' : '--'}
-        </td>
-        <td className={`px-3 py-3 font-mono tabular-nums ${pctClass(data?.pnl)}`}>
-          {formatMoney(data?.pnl)}
-        </td>
-        <td className="px-3 py-3 font-mono tabular-nums text-ink-soft">
-          {formatPct(weight, 1).replace('+', '')}
-        </td>
-        <td className="px-3 py-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="rounded border border-gold/40 bg-gold/10 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-ink-soft">
-              {data?.holding ? `${data.holding}克` : '--'}
-            </span>
-            <span className="rounded border border-gold/40 bg-gold/10 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-ink-soft">
-              均价 {data?.avgPrice ? data.avgPrice.toFixed(2) : '--'}
-            </span>
-          </div>
-        </td>
-        <td className="px-3 py-2">
-          <SparkTrend
-            height={64}
-            title="AU9999 分时"
-            accentColor="#b8860b"
-            points={goldTrendPoints(data)}
-          />
-        </td>
-        <td className="whitespace-nowrap px-3 py-2">
-          <div className="flex justify-center">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={openSettings}
-              title="仓位设置"
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </td>
-      </tr>
-      {dialog}
-    </>
+    </Panel>
   )
 }

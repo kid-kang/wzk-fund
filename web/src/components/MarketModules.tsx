@@ -17,7 +17,7 @@ export function IndicesModule({
 
   return (
     <Panel className="w-full min-w-0">
-      <PanelHeader title="指数看板" desc="点击查看历史趋势 · 仅强调涨跌幅" />
+      <PanelHeader title="指数看板" desc="点击查看历史趋势" />
       <div className="grid grid-cols-2 gap-2 px-3 py-3 sm:grid-cols-3 sm:px-4 sm:py-4 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-10">
         {loading && !list.length
           ? Array.from({length: 10}).map((_, i) => (
@@ -66,25 +66,20 @@ export function MarketModule({
       <PanelHeader title="A股大盘" desc="涨跌家数占比 · 板块指数涨跌前十" />
       <div className="space-y-3 px-3 py-3 sm:space-y-4 sm:px-5 sm:py-4">
         <div className="rounded-xl border border-line/70 bg-paper/50 p-3 sm:p-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="text-xs text-muted">今日涨跌家数</div>
-              <div className="mt-1 flex flex-wrap items-baseline gap-3 font-mono text-lg font-semibold sm:gap-4 sm:text-xl">
-                <span className="rise">
-                  涨 {loading ? '...' : up}
-                  <span className="ml-1 text-sm font-medium">
-                    ({loading ? '--' : `${upPct.toFixed(1)}%`})
-                  </span>
-                </span>
-                <span className="fall">
-                  跌 {loading ? '...' : down}
-                  <span className="ml-1 text-sm font-medium">
-                    ({loading ? '--' : `${downPct.toFixed(1)}%`})
-                  </span>
-                </span>
-              </div>
-            </div>
-            <div className="text-xs text-muted">{data?.upDown.time || ''}</div>
+          <div className="text-xs text-muted">今日涨跌家数</div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-3 font-mono text-lg font-semibold sm:gap-4 sm:text-xl">
+            <span className="rise">
+              涨 {loading ? '...' : up}
+              <span className="ml-1 text-sm font-medium">
+                ({loading ? '--' : `${upPct.toFixed(1)}%`})
+              </span>
+            </span>
+            <span className="fall">
+              跌 {loading ? '...' : down}
+              <span className="ml-1 text-sm font-medium">
+                ({loading ? '--' : `${downPct.toFixed(1)}%`})
+              </span>
+            </span>
           </div>
           <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-fall/20">
             <div className="bg-rise transition-all duration-700" style={{width: `${barPct}%`}} />

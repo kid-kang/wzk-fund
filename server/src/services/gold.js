@@ -85,17 +85,18 @@ async function fetchEastmoneyQuote() {
       if (!d || d.f43 == null) continue
       const price = Number(d.f43)
       const prevClose = Number(d.f60)
+      // 金钱口径优先用现价−昨收，不用接口四舍五入后的涨跌额/涨跌幅
       const change =
-        d.f169 != null
-          ? Number(d.f169)
-          : Number.isFinite(price) && Number.isFinite(prevClose)
-            ? price - prevClose
+        Number.isFinite(price) && Number.isFinite(prevClose)
+          ? price - prevClose
+          : d.f169 != null
+            ? Number(d.f169)
             : null
       const percent =
-        d.f170 != null
-          ? Number(d.f170)
-          : Number.isFinite(price) && Number.isFinite(prevClose) && prevClose
-            ? ((price - prevClose) / prevClose) * 100
+        Number.isFinite(price) && Number.isFinite(prevClose) && prevClose
+          ? ((price - prevClose) / prevClose) * 100
+          : d.f170 != null
+            ? Number(d.f170)
             : null
       return {
         code: 'AU9999',
@@ -231,12 +232,12 @@ export async function getGoldRealtime({holding = 0, avgPrice = 0} = {}) {
   const hold = Number(holding) || 0
   const avg = Number(avgPrice) || 0
 
-  // 当日估算盈亏（与基金「实时收益」口径一致）
+  // 当日盈亏只用价格差：克数 × (现价 − 昨收)；涨幅仅展示，不参与金额
   let pnl = null
-  if (hold > 0 && quote.change != null) {
-    pnl = round2(hold * quote.change)
-  } else if (hold > 0 && quote.percent != null && quote.prevClose != null) {
-    pnl = round2(hold * quote.prevClose * (quote.percent / 100))
+  if (hold > 0 && quote.price != null && quote.prevClose != null) {
+    const delta = quote.price - quote.prevClose
+    quote.change = round4(delta)
+    pnl = round2(hold * delta)
   }
 
   let costPnl = null

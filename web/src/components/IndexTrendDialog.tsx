@@ -202,7 +202,6 @@ export function IndexTrendDialog({
           <DialogTitle className="truncate text-base sm:text-lg">
             {item?.name || '指数趋势'}
           </DialogTitle>
-          <p className="text-xs text-muted">涨跌幅走势 · 相对区间首日</p>
         </DialogHeader>
 
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">

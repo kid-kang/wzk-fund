@@ -4,7 +4,10 @@ import {
   getFundsQuotes,
   getFundQuote,
   getFundMatiaria,
+  fetchFundNavHistory,
   fetchFundSectorsQueued,
+  getFundHistory,
+  isConfirmedSessionActive,
 } from './services/fund.js'
 import {getIndices, getIndexHistory, getMarketOverview} from './services/market.js'
 import {getGoldRealtime} from './services/gold.js'
@@ -85,12 +88,40 @@ router.post('/funds/resolve', async (ctx) => {
     }
 
     let amountAsOf = body.amountAsOf || ''
-    if ((body.type || 'watch') === 'hold' && !amountAsOf) {
+    let netValue = null
+    let prevNetValue = null
+    let prevNetValueDate = ''
+    let netValueDate = ''
+    if ((body.type || 'watch') === 'hold') {
       try {
-        const m = await getFundMatiaria(meta.code || code)
-        amountAsOf = String(m.netValueDate || '').slice(0, 10)
+        const hist = await fetchFundNavHistory(meta.code || code, 5)
+        if (hist.length) {
+          netValue = hist[0].netValue
+          netValueDate = hist[0].date || ''
+          if (hist[1]?.netValue != null) prevNetValue = hist[1].netValue
+          if (hist[1]?.date) prevNetValueDate = hist[1].date
+        }
       } catch {
-        amountAsOf = ''
+        // fall through
+      }
+      try {
+        if (netValue == null || !netValueDate) {
+          const m = await getFundMatiaria(meta.code || code)
+          netValue = netValue ?? m.netValue ?? null
+          netValueDate = netValueDate || m.netValueDate || ''
+        }
+      } catch {
+        // keep empty
+      }
+      if (netValue == null && meta.netValue != null) netValue = meta.netValue
+
+      // 「昨日结算」反推份额用的净值：
+      // - 确认会话内：金额是今确认前市值 → 用上一交易日净值 hist[1]
+      // - 盘中估值期：金额是最新确认市值 → 用最新披露净值 hist[0]
+      //   （此时绝不能再用 hist[1]，否则份额系统性偏大）
+      if (netValue != null && netValueDate && !isConfirmedSessionActive(netValueDate)) {
+        prevNetValue = netValue
+        prevNetValueDate = netValueDate
       }
     }
 
@@ -102,6 +133,12 @@ router.post('/funds/resolve', async (ctx) => {
         fundKey: meta.fundKey || body.fundKey || '',
         sectors: sectors || [],
         amountAsOf,
+        netValue,
+        prevNetValue,
+        prevNetValueDate,
+        netValueDate,
+        /** 是否处于今日净值已确认会话（可选「今日结算」） */
+        confirmedSession: !!(netValueDate && isConfirmedSessionActive(netValueDate)),
       },
     }
   } catch (e) {
@@ -161,6 +198,17 @@ router.get('/indices/:code/history', async (ctx) => {
   try {
     const range = String(ctx.query.range || '1m')
     const data = await getIndexHistory(ctx.params.code, range)
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 400
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+router.get('/funds/:code/history', async (ctx) => {
+  try {
+    const range = String(ctx.query.range || '3m')
+    const data = await getFundHistory(ctx.params.code, range)
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 400

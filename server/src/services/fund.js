@@ -366,7 +366,9 @@ export async function getFundMatiaria(code) {
   const html = res.data || ''
   const dayGrowth = parsePct(html.match(/dayOfGrowth":"([^"]+)/)?.[1])
   const netValue = parseFloat(html.match(/netValue":"([^"]+)/)?.[1])
-  const netValueDate = html.match(/netValueDate":"([^"]+)/)?.[1] || ''
+  const netValueDate = normalizeNetValueDate(
+    html.match(/netValueDate":"([^"]+)/)?.[1] || '',
+  )
   const fundName = html.match(/fundName":"([^"]+)/)?.[1]
   return {
     code: padded,
@@ -374,6 +376,125 @@ export async function getFundMatiaria(code) {
     dayGrowth: Number.isFinite(dayGrowth) ? dayGrowth : null,
     netValue: Number.isFinite(netValue) ? netValue : null,
     netValueDate,
+  }
+}
+
+/** 基金历史涨幅区间 → 回溯自然日（成立以来不截断） */
+const FUND_RANGE_CALENDAR_DAYS = {
+  '3m': 100,
+  '1y': 400,
+  '3y': 1200,
+  since: null,
+}
+
+function round4(n) {
+  return Math.round(Number(n) * 10000) / 10000
+}
+
+function mapHisNetRows(list) {
+  const rows = Array.isArray(list) ? list : []
+  return rows
+    .map((r) => {
+      const netValue = parseFloat(r.DWJZ)
+      const dayGrowth = parsePct(r.JZZZL)
+      const date = normalizeNetValueDate(r.FSRQ || '')
+      return {
+        date,
+        netValue: Number.isFinite(netValue) ? netValue : null,
+        dayGrowth,
+      }
+    })
+    .filter((r) => r.netValue != null && r.date)
+}
+
+/**
+ * 东财历史净值（单位净值 DWJZ 为真实披露值，勿用两位涨幅反推）。
+ * 返回按日期降序：[{date, netValue, dayGrowth}, ...]
+ */
+export async function fetchFundNavHistory(code, pageSize = 5, pageIndex = 1) {
+  const list = await eastmoneyFundGet('FundMNHisNetList', {
+    FCODE: String(code).padStart(6, '0'),
+    pageIndex,
+    pageSize,
+  })
+  return mapHisNetRows(list)
+}
+
+/**
+ * 分页拉取历史净值（降序），直到条数够或无更多页。
+ * @param {string} code
+ * @param {{ pageSize?: number, maxPages?: number, minCount?: number }} opts
+ */
+async function fetchFundNavHistoryPaged(code, opts = {}) {
+  const pageSize = opts.pageSize || 500
+  const maxPages = opts.maxPages || 1
+  const minCount = opts.minCount || 0
+  const all = []
+  for (let pageIndex = 1; pageIndex <= maxPages; pageIndex++) {
+    const rows = await fetchFundNavHistory(code, pageSize, pageIndex)
+    if (!rows.length) break
+    all.push(...rows)
+    if (rows.length < pageSize) break
+    if (minCount > 0 && all.length >= minCount) break
+  }
+  return all
+}
+
+function filterFundNavByRange(rowsAsc, range) {
+  const days = FUND_RANGE_CALENDAR_DAYS[range]
+  if (days == null) return rowsAsc
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  start.setDate(start.getDate() - days)
+  const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
+  return rowsAsc.filter((p) => p.date >= startStr)
+}
+
+/**
+ * 基金历史净值涨幅（相对区间首日单位净值）
+ * @param {string} code
+ * @param {'3m'|'1y'|'3y'|'since'} range
+ */
+export async function getFundHistory(code, range = '3m') {
+  const padded = String(code || '').padStart(6, '0')
+  const key = FUND_RANGE_CALENDAR_DAYS[range] !== undefined ? range : '3m'
+
+  let desc
+  if (key === 'since') {
+    desc = await fetchFundNavHistoryPaged(padded, {pageSize: 500, maxPages: 40})
+  } else if (key === '3y') {
+    desc = await fetchFundNavHistoryPaged(padded, {
+      pageSize: 500,
+      maxPages: 3,
+      minCount: 900,
+    })
+  } else if (key === '1y') {
+    desc = await fetchFundNavHistory(padded, 320, 1)
+  } else {
+    desc = await fetchFundNavHistory(padded, 120, 1)
+  }
+
+  if (!desc.length) throw new Error(`暂无基金 ${padded} 历史净值`)
+
+  // 接口降序 → 升序后再按区间截断
+  const asc = filterFundNavByRange([...desc].reverse(), key)
+  if (!asc.length) throw new Error(`暂无该周期净值数据`)
+
+  const base = asc[0].netValue
+  const points = asc.map((p) => ({
+    date: p.date,
+    netValue: p.netValue,
+    percent:
+      base && Number.isFinite(base)
+        ? round4(((p.netValue - base) / base) * 100)
+        : null,
+  }))
+  const last = points[points.length - 1]
+  return {
+    code: padded,
+    range: key,
+    periodPercent: last?.percent ?? null,
+    points,
   }
 }
 
@@ -438,13 +559,36 @@ export async function getFundQuote(fund) {
   }
 
   let estimateGrowth = null
+  let estimateNetValue = null
   let trend = []
   try {
     const est = await getFundEstimateIntraday(fundKey)
     estimateGrowth = est.latest?.growth ?? null
+    estimateNetValue = est.latest?.netValue ?? null
     trend = est.points
   } catch {
     // no estimate outside market hours
+  }
+
+  // 用东财历史净值对齐披露值（单位净值），并取真实相邻昨净值
+  let hist = []
+  let histIdx = -1
+  try {
+    hist = await fetchFundNavHistory(code, 5)
+    if (hist.length) {
+      const navDay = normalizeNetValueDate(netValueDate)
+      histIdx = navDay ? hist.findIndex((h) => h.date === navDay) : 0
+      if (histIdx < 0) histIdx = 0
+      const match = hist[histIdx]
+      if (match?.netValue != null) {
+        netValue = match.netValue
+        if (match.dayGrowth != null) dayGrowth = match.dayGrowth
+        if (match.date) netValueDate = match.date
+      }
+    }
+  } catch {
+    hist = []
+    histIdx = -1
   }
 
   // 晚间净值确认后优先用真实涨跌；盘中无确认日则用估值
@@ -453,6 +597,24 @@ export async function getFundQuote(fund) {
     dayGrowth,
     netValueDate,
   })
+
+  const hasEstimate = estimateNetValue != null || estimateGrowth != null
+
+  // 确认日 / 无估值（QDII 等）：昨净值 = 历史上一交易日披露值
+  // 估值日：昨净值 = 最新确认净值（即 netValue）
+  // 禁止用两位涨幅反推
+  let prevNetValue = null
+  if (percentSource === 'confirmed') {
+    if (histIdx >= 0 && hist[histIdx + 1]?.netValue != null) {
+      prevNetValue = hist[histIdx + 1].netValue
+    }
+  } else if (hasEstimate) {
+    if (netValue != null) prevNetValue = netValue
+  } else if (histIdx >= 0 && hist[histIdx + 1]?.netValue != null) {
+    prevNetValue = hist[histIdx + 1].netValue
+  } else if (netValue != null) {
+    prevNetValue = netValue
+  }
 
   let sectors = Array.isArray(fund.sectors) ? [...fund.sectors] : []
   if (sectorsNeedRefresh(sectors, name)) {
@@ -473,6 +635,8 @@ export async function getFundQuote(fund) {
     percent,
     percentSource,
     netValue,
+    estimateNetValue,
+    prevNetValue,
     netValueDate,
     time: trend.length ? trend[trend.length - 1].time : null,
     trend,
@@ -480,27 +644,68 @@ export async function getFundQuote(fund) {
   }
 }
 
-function todayDateStr() {
-  const d = new Date()
+function todayDateStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** 统一成 YYYY-MM-DD（兼容接口返回的 MM-DD） */
+export function normalizeNetValueDate(raw, now = new Date()) {
+  const s = String(raw || '').trim()
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+  const md = s.match(/^(\d{1,2})-(\d{1,2})$/)
+  if (!md) return ''
+  const month = Number(md[1])
+  const day = Number(md[2])
+  if (!month || !day) return ''
+  let year = now.getFullYear()
+  const candidate = new Date(year, month - 1, day)
+  // 未到的月日视为去年（跨年）
+  const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  if (candidate > todayOnly) year -= 1
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function nextTradingDay(dateStr) {
+  const [y, m, day] = dateStr.split('-').map(Number)
+  if (!y || !m || !day) return dateStr
+  const d = new Date(y, m - 1, day)
+  do {
+    d.setDate(d.getDate() + 1)
+  } while (d.getDay() === 0 || d.getDay() === 6)
+  return todayDateStr(d)
+}
+
+/** 净值确认会话是否仍有效：下一交易日 09:15 前 */
+export function isConfirmedSessionActive(navDayRaw, now = new Date()) {
+  const navDay = normalizeNetValueDate(navDayRaw, now)
+  if (!navDay) return false
+  const next = nextTradingDay(navDay)
+  const today = todayDateStr(now)
+  if (today > next) return false
+  if (today < next) return true
+  const minutes = now.getHours() * 60 + now.getMinutes()
+  return minutes < 9 * 60 + 15
 }
 
 /**
  * 涨跌幅口径：
- * - 净值日已是今天 → 晚间确认值已出，用 dayGrowth 校准
- * - 否则盘中优先估值 estimateGrowth
- * - 再否则回落 dayGrowth（上一确认日）
+ * - 确认会话内（净值日已出 → 下一交易日开盘前）优先官方 dayGrowth
+ * - 否则盘中用估值 estimateGrowth
+ * - 再否则回落上一确认 dayGrowth（不再标为 confirmed）
  */
 function resolveDisplayPercent({estimateGrowth, dayGrowth, netValueDate}) {
-  const navDay = String(netValueDate || '').slice(0, 10)
-  if (dayGrowth != null && navDay && navDay === todayDateStr()) {
+  const navDay = normalizeNetValueDate(netValueDate)
+  const inConfirmSession =
+    dayGrowth != null && navDay && isConfirmedSessionActive(navDay)
+
+  if (inConfirmSession) {
     return {percent: dayGrowth, percentSource: 'confirmed'}
   }
   if (estimateGrowth != null) {
     return {percent: estimateGrowth, percentSource: 'estimate'}
   }
   if (dayGrowth != null) {
-    return {percent: dayGrowth, percentSource: 'confirmed'}
+    return {percent: dayGrowth, percentSource: null}
   }
   return {percent: null, percentSource: null}
 }
@@ -524,6 +729,8 @@ export async function getFundsQuotes(funds) {
           percent: null,
           percentSource: null,
           netValue: null,
+          estimateNetValue: null,
+          prevNetValue: null,
           netValueDate: '',
           time: null,
           trend: [],
