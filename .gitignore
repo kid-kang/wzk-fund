@@ -6,3 +6,6 @@ web/dist/
 *.log
 .probe*
 server/probe*.mjs
+
+# 本地个人配置（持仓/自选/黄金等），勿提交
+data/store.json
