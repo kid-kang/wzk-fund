@@ -16,11 +16,6 @@ function normalizeFund(raw: Partial<FundRecord> & {code: string}, prev?: FundRec
     name: raw.name ?? prev?.name ?? code,
     fundKey: raw.fundKey ?? prev?.fundKey ?? '',
     type: raw.type === 'hold' || raw.type === 'watch' ? raw.type : prev?.type || 'watch',
-    amount: Number(raw.amount ?? prev?.amount ?? 0) || 0,
-    amountAsOf:
-      raw.amountAsOf !== undefined
-        ? String(raw.amountAsOf || '')
-        : prev?.amountAsOf || '',
     shares: Number(raw.shares ?? prev?.shares ?? 0) || 0,
     sectors: Array.isArray(raw.sectors) ? raw.sectors : prev?.sectors || [],
     createdAt: prev?.createdAt || raw.createdAt || now,
@@ -55,7 +50,12 @@ export function loadConfig(): AppConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return structuredClone(DEFAULT_CONFIG)
-    return normalizeConfig(JSON.parse(raw) as AppConfig)
+    const next = normalizeConfig(JSON.parse(raw) as AppConfig)
+    const serialized = JSON.stringify(next)
+    if (raw !== serialized) {
+      localStorage.setItem(STORAGE_KEY, serialized)
+    }
+    return next
   } catch {
     return structuredClone(DEFAULT_CONFIG)
   }
@@ -153,13 +153,10 @@ export function importLocalConfig(payload: AppConfig): AppConfig {
   return saveConfig(normalizeConfig(payload))
 }
 
-/** 批量写回滚仓后的 amount / amountAsOf / shares / sectors */
+/** 批量补全可从行情识别出的基金板块 */
 export function patchFunds(
   patches: Array<{
     code: string
-    amount?: number
-    amountAsOf?: string
-    shares?: number
     sectors?: string[]
   }>,
 ) {
@@ -172,18 +169,6 @@ export function patchFunds(
     if (!prev) continue
     const next = {...prev}
     let changed = false
-    if (p.amount != null && p.amount !== prev.amount) {
-      next.amount = p.amount
-      changed = true
-    }
-    if (p.amountAsOf != null && p.amountAsOf !== (prev.amountAsOf || '')) {
-      next.amountAsOf = p.amountAsOf
-      changed = true
-    }
-    if (p.shares != null && p.shares !== (prev.shares || 0)) {
-      next.shares = p.shares
-      changed = true
-    }
     if (
       p.sectors &&
       (!prev.sectors?.length || p.sectors.join() !== prev.sectors.join())

@@ -35,9 +35,6 @@ export type FundRecord = {
   name: string
   fundKey?: string
   type: 'hold' | 'watch'
-  amount: number
-  /** 持仓金额已计入的净值确认日（晚间确认后自动滚动） */
-  amountAsOf?: string
   shares: number
   sectors: string[]
   createdAt?: string
@@ -45,6 +42,8 @@ export type FundRecord = {
 }
 
 export type FundQuoteRow = FundRecord & {
+  /** 实时计算的确认净值市值，不写入 localStorage */
+  amount: number
   percent: number | null
   percentSource?: 'estimate' | 'confirmed' | null
   estimateGrowth?: number | null
@@ -227,7 +226,6 @@ export type ResolveFundResult = {
   name: string
   fundKey: string
   sectors: string[]
-  amountAsOf: string
   netValue?: number | null
   prevNetValue?: number | null
   /** 上一确认净值日期 YYYY-MM-DD */
@@ -258,8 +256,8 @@ function sharesFromAmount(amount: number, netValue?: number | null) {
 
 export type AmountBasis = 'prev' | 'today'
 
-/** 按金额口径反推份额并覆盖；拿不到对应净值则直接失败，绝不沿用旧 shares */
-function deriveHoldPosition(
+/** 仅在用户新增/修改金额时按确认净值反推份额 */
+function deriveHoldShares(
   amount: number,
   basis: AmountBasis,
   meta: {
@@ -269,9 +267,9 @@ function deriveHoldPosition(
     prevNetValueDate?: string
     confirmedSession?: boolean
   },
-): {shares: number; amountAsOf: string} {
+): number {
   if (!(amount > 0)) {
-    return {shares: 0, amountAsOf: ''}
+    return 0
   }
   if (basis === 'today') {
     if (!meta.confirmedSession) {
@@ -280,13 +278,9 @@ function deriveHoldPosition(
     if (!(meta.netValue != null && meta.netValue > 0)) {
       throw new Error('暂无今日确认净值，请稍后重试')
     }
-    // 今日结算：输入金额 = 份额×今净值 = 列表应展示的持仓金额
-    return {
-      shares: sharesFromAmount(amount, meta.netValue),
-      amountAsOf: meta.netValueDate || '',
-    }
+    return sharesFromAmount(amount, meta.netValue)
   }
-  // 昨日结算：输入金额 = 份额×昨净值；今净值出来后滚仓把金额更新为份额×今净值
+  // 昨日结算：输入金额 = 份额×昨确认净值；保存后只落 shares。
   const nav =
     meta.prevNetValue != null && meta.prevNetValue > 0
       ? meta.prevNetValue
@@ -294,15 +288,13 @@ function deriveHoldPosition(
   if (!(nav != null && nav > 0)) {
     throw new Error('暂无确认净值，无法按金额反推份额，请稍后重试')
   }
-  return {
-    shares: sharesFromAmount(amount, nav),
-    amountAsOf: meta.prevNetValueDate || meta.netValueDate || '',
-  }
+  return sharesFromAmount(amount, nav)
 }
 
 export async function createFund(
   payload: Partial<FundRecord> & {
     code: string
+    amount?: number
     amountBasis?: AmountBasis
   },
 ) {
@@ -316,11 +308,8 @@ export async function createFund(
   const basis: AmountBasis = payload.amountBasis === 'today' ? 'today' : 'prev'
 
   let shares = 0
-  let amountAsOf = ''
   if (payload.type === 'hold') {
-    const derived = deriveHoldPosition(amount, basis, meta)
-    shares = derived.shares
-    amountAsOf = derived.amountAsOf
+    shares = deriveHoldShares(amount, basis, meta)
   }
 
   return upsertLocalFund({
@@ -328,8 +317,6 @@ export async function createFund(
     name: payload.name || meta.name,
     fundKey: meta.fundKey,
     type: payload.type || 'watch',
-    amount,
-    amountAsOf: payload.type === 'hold' ? amountAsOf : '',
     shares,
     sectors: payload.sectors?.length ? payload.sectors : meta.sectors,
   })
@@ -337,18 +324,16 @@ export async function createFund(
 
 export async function updateFund(
   code: string,
-  payload: Partial<FundRecord> & {amountBasis?: AmountBasis},
+  payload: Partial<FundRecord> & {amount?: number; amountBasis?: AmountBasis},
 ) {
-  const {amountBasis, ...rest} = payload
+  const {amount, amountBasis, ...rest} = payload
   const patch: Partial<FundRecord> = {...rest}
 
-  // 改金额 = 整项覆盖：必须按口径重算 shares / amountAsOf，失败则抛错（不吃掉）
-  if (patch.amount != null) {
+  // 只有用户显式改金额时才重算 shares；日常刷新绝不反向校准份额。
+  if (amount != null) {
     const meta = await resolveFund({code, type: 'hold'})
     const basis: AmountBasis = amountBasis === 'today' ? 'today' : 'prev'
-    const derived = deriveHoldPosition(Number(patch.amount) || 0, basis, meta)
-    patch.shares = derived.shares
-    patch.amountAsOf = derived.amountAsOf
+    patch.shares = deriveHoldShares(Number(amount) || 0, basis, meta)
   }
 
   return updateLocalFund(code, patch)

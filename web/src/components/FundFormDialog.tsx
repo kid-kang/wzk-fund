@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {normalizeNetValueDate} from '@/lib/tradingCalendar'
 
 /** 录入金额对应哪一版确认净值市值 */
 export type AmountBasis = 'prev' | 'today'
@@ -24,13 +23,7 @@ type Payload = {
 
 function defaultBasis(initial: FundQuoteRow | null): AmountBasis {
   if (!initial) return 'prev'
-  const asOf = normalizeNetValueDate(initial.amountAsOf)
-  const navDay = normalizeNetValueDate(initial.netValueDate)
-  // 金额已按今日确认净值计入 → 默认「今日结算」
-  if (asOf && navDay && asOf >= navDay && initial.percentSource === 'confirmed') {
-    return 'today'
-  }
-  return 'prev'
+  return initial.percentSource === 'confirmed' ? 'today' : 'prev'
 }
 
 export function FundFormDialog({
@@ -132,7 +125,7 @@ export function FundFormDialog({
                   <span className="min-w-0">
                     <span className="block text-sm text-ink">昨日结算的持仓金额</span>
                     <span className="mt-0.5 block text-xs text-muted">
-                      用昨净值算份额；今净值确认后自动滚成今日市值
+                      用昨确认净值算份额；列表金额之后按最新净值实时计算
                     </span>
                   </span>
                 </label>

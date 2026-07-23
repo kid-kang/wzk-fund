@@ -21,8 +21,6 @@ function normalizeFundInput(raw = {}) {
     name: raw.name || code,
     fundKey: raw.fundKey || '',
     type: raw.type === 'hold' ? 'hold' : 'watch',
-    amount: Number(raw.amount) || 0,
-    amountAsOf: raw.amountAsOf || '',
     shares: Number(raw.shares) || 0,
     sectors: Array.isArray(raw.sectors) ? raw.sectors : [],
     createdAt: raw.createdAt || '',
@@ -87,7 +85,6 @@ router.post('/funds/resolve', async (ctx) => {
       }
     }
 
-    let amountAsOf = body.amountAsOf || ''
     let netValue = null
     let prevNetValue = null
     let prevNetValueDate = ''
@@ -132,7 +129,6 @@ router.post('/funds/resolve', async (ctx) => {
         name: body.name || meta.name || code,
         fundKey: meta.fundKey || body.fundKey || '',
         sectors: sectors || [],
-        amountAsOf,
         netValue,
         prevNetValue,
         prevNetValueDate,
@@ -150,7 +146,7 @@ router.post('/funds/resolve', async (ctx) => {
 /**
  * 无状态行情：客户端传入基金列表
  * body: { type: 'hold'|'watch', funds: FundRecord[] }
- * 返回原始 quotes（持仓汇总与滚仓由前端计算）
+ * 返回原始 quotes（持仓汇总由前端按 shares 实时计算）
  */
 router.post('/funds/quotes', async (ctx) => {
   try {

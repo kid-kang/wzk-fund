@@ -35,8 +35,7 @@ export function HoldingsModule({
   const list = data?.list || []
 
   function openEditHold(row: FundQuoteRow) {
-    // 列表持仓金额与口径自洽：昨结算未滚仓=昨市值；今结算或已滚仓=今市值
-    // 编辑时带上当前 amountAsOf，表单据此默认选昨日/今日口径
+    // 编辑时带入实时计算出的展示金额，保存时按所选口径重算 shares。
     setEditing(row)
     setOpen(true)
   }
