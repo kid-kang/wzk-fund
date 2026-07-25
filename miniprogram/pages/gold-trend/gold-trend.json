@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "金价走势",
+  "usingComponents": {
+    "ec-line": "/components/ec-line/ec-line",
+    "van-empty": "@vant/weapp/empty/index"
+  }
+}

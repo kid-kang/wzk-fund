@@ -1,0 +1,50 @@
+<view class="page theme-{{theme}} gold-edit-page">
+  <view class="glass gold-form">
+    <van-field
+      label="持有克数"
+      type="digit"
+      value="{{holding}}"
+      placeholder="0"
+      placeholder-style="color: rgba(122, 84, 24, 0.35)"
+      border="{{false}}"
+      custom-class="gold-field"
+      label-class="gold-field-label"
+      input-class="gold-field-input"
+      bind:change="onHolding"
+    />
+    <view class="gold-field-line"></view>
+    <van-field
+      label="成本均价"
+      type="digit"
+      value="{{avgPrice}}"
+      placeholder="元/克"
+      placeholder-style="color: rgba(122, 84, 24, 0.35)"
+      border="{{false}}"
+      custom-class="gold-field"
+      label-class="gold-field-label"
+      input-class="gold-field-input"
+      bind:change="onAvgPrice"
+    />
+    <view class="err" wx:if="{{error}}">{{error}}</view>
+  </view>
+
+  <view class="save-row">
+    <van-button
+      block
+      round
+      custom-class="gold-save"
+      loading="{{saving}}"
+      loading-text="保存中"
+      bindtap="onSubmit"
+    >保存</van-button>
+  </view>
+
+  <view class="fortune-wm is-fill" aria-hidden="true">
+    <text class="fortune-mark">来财</text>
+    <text class="fortune-seal">進寶</text>
+    <view class="fortune-ingot fortune-ingot-a"></view>
+    <view class="fortune-ingot fortune-ingot-b"></view>
+  </view>
+
+  <van-toast id="van-toast" />
+</view>

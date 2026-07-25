@@ -1,5 +1,6 @@
 import {useMemo, useState} from 'react'
 import ReactECharts from 'echarts-for-react'
+import {PALETTE} from '@/lib/palette'
 import {cn, pctClass} from '@/lib/utils'
 import {
   Dialog,
@@ -202,10 +203,10 @@ export function SparkTrend({
       ? lastPrice >= firstPrice
       : true
   const up = mode === 'price' ? priceUp : positiveIsUp ? lastPct >= 0 : lastPct < 0
-  const color = accentColor || (up ? '#d7263d' : '#0f8a5f')
-
   const themeKey =
     typeof document !== 'undefined' ? document.documentElement.dataset.theme : 'light'
+  const tone = themeKey === 'dark' ? PALETTE.dark : PALETTE.light
+  const color = accentColor || (up ? tone.rise : tone.fall)
 
   const miniOption = useMemo(
     () =>

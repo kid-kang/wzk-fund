@@ -1,0 +1,10 @@
+<view class="wrap" style="height: {{height}}px;">
+  <ec-canvas
+    wx:if="{{ready}}"
+    id="chart"
+    class="chart-host"
+    canvas-id="{{canvasId}}"
+    ec="{{ec}}"
+    force-use-old-canvas="{{false}}"
+  ></ec-canvas>
+</view>

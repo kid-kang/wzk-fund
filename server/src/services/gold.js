@@ -211,6 +211,158 @@ async function fetchTrend(prevCloseHint) {
   return []
 }
 
+const HISTORY_RANGE_DAYS = {
+  '1m': 35,
+  '3m': 100,
+  '6m': 200,
+  '1y': 400,
+}
+
+function shanghaiDate(ms) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(ms))
+}
+
+async function fetchEastmoneyDailyKlines(limit = 320) {
+  const hosts = [
+    'https://push2his.eastmoney.com',
+    'https://push2delay.eastmoney.com',
+    'https://push2.eastmoney.com',
+  ]
+  let lastErr
+  for (const host of hosts) {
+    try {
+      const res = await axios.get(`${host}/api/qt/stock/kline/get`, {
+        timeout: 15000,
+        headers: {'User-Agent': ua, Referer: 'https://quote.eastmoney.com/'},
+        params: {
+          secid: '118.AU9999',
+          fields1: 'f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13',
+          fields2: 'f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61',
+          klt: 101,
+          fqt: 0,
+          end: '20500101',
+          lmt: limit,
+        },
+      })
+      const klines = res.data?.data?.klines || []
+      if (!klines.length) continue
+      return klines
+        .map((line) => {
+          const [date, open, close, high, low] = String(line).split(',')
+          const c = parseFloat(close)
+          const h = parseFloat(high)
+          const lo = parseFloat(low)
+          const o = parseFloat(open)
+          return {
+            date,
+            open: Number.isFinite(o) ? o : null,
+            close: Number.isFinite(c) ? c : null,
+            high: Number.isFinite(h) ? h : null,
+            low: Number.isFinite(lo) ? lo : null,
+            price: Number.isFinite(c) ? c : null,
+          }
+        })
+        .filter((p) => p.date && p.close != null)
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw lastErr || new Error('东财黄金日K为空')
+}
+
+/** 金投网 JO_71（黄金9999）日K：q1开 q2收 q3高 q4低 */
+async function fetchJijinhaoDailyKlines(limit = 400) {
+  const res = await axios.get('https://api.jijinhao.com/quoteCenter/history.htm', {
+    timeout: 15000,
+    headers: {'User-Agent': ua, Referer: 'https://quote.cngold.org/'},
+    params: {
+      code: 'JO_71',
+      style: 3,
+      pageSize: Math.min(Math.max(limit, 30), 500),
+    },
+  })
+  const text = String(res.data).replace(/^var quote_json\s*=\s*/, '').trim()
+  const json = JSON.parse(text)
+  if (!json?.flag || !Array.isArray(json.data) || !json.data.length) {
+    throw new Error('金投网黄金日K为空')
+  }
+  return json.data
+    .map((row) => {
+      const open = Number(row.q1)
+      const close = Number(row.q2)
+      const high = Number(row.q3)
+      const low = Number(row.q4)
+      const date = row.time != null ? shanghaiDate(row.time) : ''
+      return {
+        date,
+        open: Number.isFinite(open) ? open : null,
+        close: Number.isFinite(close) ? close : null,
+        high: Number.isFinite(high) ? high : null,
+        low: Number.isFinite(low) ? low : null,
+        price: Number.isFinite(close) ? close : null,
+      }
+    })
+    .filter((p) => p.date && p.close != null)
+}
+
+async function fetchDailyKlines(limit = 420) {
+  try {
+    return await fetchEastmoneyDailyKlines(limit)
+  } catch {
+    return fetchJijinhaoDailyKlines(limit)
+  }
+}
+
+function filterHistoryByRange(points, range) {
+  const days = HISTORY_RANGE_DAYS[range] || HISTORY_RANGE_DAYS['1m']
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  start.setDate(start.getDate() - days)
+  const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
+  return points.filter((p) => p.date >= startStr)
+}
+
+/** range: 1m | 3m | 6m | 1y */
+export async function getGoldHistory(range = '1m') {
+  const key = HISTORY_RANGE_DAYS[range] ? range : '1m'
+  const all = await fetchDailyKlines(420)
+  const points = filterHistoryByRange(all, key)
+  if (!points.length) {
+    return {
+      code: 'AU9999',
+      name: 'AU9999',
+      range: key,
+      points: [],
+      periodPercent: null,
+      high: null,
+      low: null,
+    }
+  }
+  const base = points[0].close
+  const withPct = points.map((p) => ({
+    ...p,
+    percent:
+      base && p.close != null ? round4(((p.close - base) / base) * 100) : null,
+  }))
+  const last = withPct[withPct.length - 1]
+  const highs = withPct.map((p) => p.high).filter((n) => n != null)
+  const lows = withPct.map((p) => p.low).filter((n) => n != null)
+  return {
+    code: 'AU9999',
+    name: 'AU9999 沪金99',
+    range: key,
+    points: withPct,
+    periodPercent: last.percent == null ? null : round2(last.percent),
+    high: highs.length ? Math.max(...highs) : null,
+    low: lows.length ? Math.min(...lows) : null,
+  }
+}
+
 export async function getGoldRealtime({holding = 0, avgPrice = 0} = {}) {
   const quote = await fetchQuote()
   const trend = await fetchTrend(quote.prevClose)

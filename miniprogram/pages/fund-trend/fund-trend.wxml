@@ -1,0 +1,54 @@
+<view class="page theme-{{theme}} fund-trend">
+  <view class="fortune-wm" aria-hidden="true">
+    <text class="fortune-mark">来财</text>
+    <text class="fortune-seal">進寶</text>
+    <view class="fortune-ingot fortune-ingot-a"></view>
+    <view class="fortune-ingot fortune-ingot-b"></view>
+  </view>
+
+  <view class="trend-fg">
+    <view class="ticket">
+      <view class="ticket-id">
+        <view class="ticket-meta">
+          <text class="ticket-code mono">{{code}}</text>
+          <text class="ticket-sep">·</text>
+          <text class="ticket-name">{{name || '基金走势'}}</text>
+          <text class="ticket-age mono" wx:if="{{ageText}}">{{ageText}}</text>
+        </view>
+      </view>
+      <view class="ticket-rule" aria-hidden="true"></view>
+    </view>
+
+    <scroll-view class="range-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
+      <view
+        class="range-chip {{range === item.key ? 'is-on' : ''}}"
+        wx:for="{{ranges}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="onRangeTap"
+      >
+        <text class="range-label">{{item.label}}</text>
+        <text class="range-pct mono {{item.pctClass}}">{{item.pctText}}</text>
+      </view>
+    </scroll-view>
+
+    <view class="err" wx:if="{{error}}">{{error}}</view>
+    <van-empty wx:if="{{loading}}" description="加载中…" />
+    <van-empty wx:elif="{{!loading && !chartPoints.length}}" description="暂无该周期数据" />
+
+    <view class="chart-stage" wx:if="{{!loading && chartPoints.length}}">
+      <ec-line
+        points="{{chartPoints}}"
+        valueKey="value"
+        mode="trend"
+        theme="{{theme}}"
+        valueMode="percent"
+        extraKey="netValue"
+        extraLabel="净值"
+        showExtremes="{{true}}"
+        range="{{range}}"
+        height="{{chartHeight}}"
+      />
+    </view>
+  </view>
+</view>

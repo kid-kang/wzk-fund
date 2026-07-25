@@ -1,0 +1,193 @@
+/* 持仓编辑台：报头身份 + 编号轨，无卡片堆叠 */
+
+.fund-form {
+  padding-top: 8rpx;
+  padding-bottom: 80rpx;
+}
+
+.mast {
+  padding: 8rpx 8rpx 28rpx;
+  margin-bottom: 4rpx;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.mast-kicker {
+  display: block;
+  font-size: 18rpx;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  margin-bottom: 12rpx;
+}
+
+.mast-name {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.25;
+  word-break: break-all;
+}
+
+.mast-hint {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+.rail {
+  padding: 28rpx 8rpx 8rpx;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.rail-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  margin-bottom: 14rpx;
+}
+
+.rail-code {
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.rail-name {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.18em;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-height: 72rpx;
+  padding: 8rpx 0;
+}
+
+.field-row.is-locked {
+  opacity: 0.72;
+}
+
+.field-prefix {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.field-input {
+  flex: 1;
+  min-width: 0;
+  height: 64rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  background: transparent;
+}
+
+.field-ph {
+  color: var(--muted);
+  opacity: 0.65;
+  font-weight: 500;
+}
+
+.field-suffix {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding: 6rpx 12rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 999rpx;
+}
+
+.field-tip {
+  display: block;
+  margin-top: 4rpx;
+  margin-bottom: 12rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.basis {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.basis-card {
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  border: 1rpx solid var(--line);
+  background: transparent;
+}
+
+.basis-card.is-on {
+  border-color: rgba(79, 93, 255, 0.45);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1rpx rgba(79, 93, 255, 0.12);
+}
+
+.basis-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.basis-card.is-on .basis-title {
+  color: var(--accent);
+}
+
+.basis-desc {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.err {
+  margin: 20rpx 8rpx 0;
+  padding: 14rpx 18rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 59, 69, 0.1);
+  color: var(--rise);
+  font-size: 22rpx;
+}
+
+.save-btn {
+  margin: 36rpx 8rpx 0;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 740;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  border-radius: 999rpx;
+  background: var(--accent);
+  box-shadow: 0 12rpx 28rpx var(--accent-soft);
+}
+
+.save-btn-hover {
+  opacity: 0.86;
+  transform: scale(0.985);
+}
+
+.save-btn.is-busy {
+  opacity: 0.7;
+}

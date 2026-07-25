@@ -1,0 +1,55 @@
+<view class="page theme-{{theme}} gold-trend">
+  <view class="fortune-wm" aria-hidden="true">
+    <text class="fortune-mark">来财</text>
+    <text class="fortune-seal">進寶</text>
+    <view class="fortune-ingot fortune-ingot-a"></view>
+    <view class="fortune-ingot fortune-ingot-b"></view>
+  </view>
+
+  <view class="trend-fg">
+    <view class="ticket">
+      <view class="ticket-id">
+        <view class="ticket-meta">
+          <text class="ticket-code mono">AU9999</text>
+          <text class="ticket-sep">·</text>
+          <text class="ticket-name">沪金99</text>
+        </view>
+        <view class="ticket-live">
+          <text class="ticket-live-k">当前金价</text>
+          <text class="ticket-live-v mono">{{priceText}}</text>
+        </view>
+      </view>
+      <view class="ticket-rule" aria-hidden="true"></view>
+    </view>
+
+    <scroll-view class="range-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
+      <view
+        class="range-chip {{range === item.key ? 'is-on' : ''}}"
+        wx:for="{{ranges}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="onRangeTap"
+      >
+        <text class="range-label">{{item.label}}</text>
+        <text class="range-pct mono" wx:if="{{range === item.key}}">{{periodText}}</text>
+      </view>
+    </scroll-view>
+
+    <view class="err" wx:if="{{error}}">{{error}}</view>
+    <van-empty wx:if="{{loading}}" description="加载中…" />
+    <van-empty wx:elif="{{!loading && !points.length}}" description="暂无数据" />
+
+    <view class="chart-stage" wx:if="{{!loading && points.length}}">
+      <ec-line
+        points="{{points}}"
+        valueKey="price"
+        mode="trend"
+        theme="{{theme}}"
+        valueMode="price"
+        showExtremes="{{true}}"
+        range="{{range}}"
+        height="{{chartHeight}}"
+      />
+    </view>
+  </view>
+</view>

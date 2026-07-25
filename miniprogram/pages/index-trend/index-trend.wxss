@@ -1,0 +1,149 @@
+/* 指数走势：对齐基金详情票据报头 + 周期胶囊 */
+
+.index-trend {
+  --it-ink: var(--ink);
+  --it-bright: var(--accent);
+  --it-soft: var(--accent-soft);
+  --it-line: rgba(79, 93, 255, 0.28);
+  position: relative;
+  min-height: 100vh;
+  padding-top: 4rpx;
+  overflow: hidden;
+}
+
+.index-trend .trend-fg {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-dark.index-trend,
+.theme-dark .index-trend {
+  --it-line: rgba(123, 136, 255, 0.28);
+}
+
+.ticket {
+  position: relative;
+  padding: 8rpx 8rpx 12rpx;
+  margin-bottom: 2rpx;
+}
+
+.ticket-id {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.ticket-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+  min-width: 0;
+  flex: 1;
+}
+
+.ticket-code {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  font-weight: 780;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.ticket-sep {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.ticket-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-rule {
+  margin-top: 16rpx;
+  height: 2rpx;
+  background: linear-gradient(
+    90deg,
+    var(--it-bright) 0%,
+    var(--it-line) 42%,
+    transparent 100%
+  );
+  opacity: 0.9;
+}
+
+.range-scroll {
+  width: 100%;
+  white-space: nowrap;
+  margin: 4rpx 0 8rpx;
+}
+
+.range-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 96rpx;
+  min-height: 72rpx;
+  padding: 10rpx 20rpx;
+  margin-right: 10rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid transparent;
+  vertical-align: top;
+}
+
+.range-label {
+  font-size: 24rpx;
+  font-weight: 650;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.range-pct {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  font-weight: 740;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.range-pct.flat {
+  color: var(--muted);
+}
+
+.range-chip.is-on {
+  background: var(--it-soft);
+  border-color: var(--it-line);
+}
+
+.range-chip.is-on .range-label {
+  color: var(--it-ink);
+  font-weight: 740;
+}
+
+.range-chip.is-on .range-pct {
+  font-weight: 780;
+}
+
+.err {
+  margin: 8rpx 0;
+  padding: 14rpx 18rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 59, 69, 0.1);
+  color: var(--rise);
+  font-size: 22rpx;
+}
+
+.chart-stage {
+  margin-top: 4rpx;
+  margin-left: -8rpx;
+  margin-right: -8rpx;
+  padding: 4rpx 0 0;
+}

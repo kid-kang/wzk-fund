@@ -1,6 +1,8 @@
 node_modules/
 web/node_modules/
 server/node_modules/
+miniprogram/node_modules/
+miniprogram/miniprogram_npm/
 web/dist/
 .DS_Store
 *.log

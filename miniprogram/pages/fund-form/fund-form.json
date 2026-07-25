@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "基金",
+  "usingComponents": {
+    "van-toast": "@vant/weapp/toast/index"
+  }
+}

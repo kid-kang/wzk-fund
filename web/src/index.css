@@ -28,8 +28,9 @@ html[data-theme='light'] {
   --app-paper-deep: #e2eaf0;
   --app-line: #c5d2dc;
   --app-panel: #f7fafc;
+  /* 与小程序 utils/palette.js 同步：红涨 / 玉青绿跌 */
   --app-rise: #d7263d;
-  --app-fall: #0f8a5f;
+  --app-fall: #0b6b4f;
   --app-accent: #1f6f8b;
   --app-gold: #b8860b;
   --app-muted: #6b7c8a;
@@ -52,7 +53,7 @@ html[data-theme='dark'] {
   --app-line: #334556;
   --app-panel: #1e2c38;
   --app-rise: #ff6b7a;
-  --app-fall: #3ecf9a;
+  --app-fall: #4bb892;
   --app-accent: #3d9bbb;
   --app-gold: #d4a017;
   --app-muted: #8a9bab;

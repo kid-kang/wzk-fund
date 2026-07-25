@@ -10,7 +10,7 @@ import {
   isConfirmedSessionActive,
 } from './services/fund.js'
 import {getIndices, getIndexHistory, getMarketOverview} from './services/market.js'
-import {getGoldRealtime} from './services/gold.js'
+import {getGoldRealtime, getGoldHistory} from './services/gold.js'
 
 const router = new Router({prefix: '/api'})
 
@@ -234,6 +234,18 @@ router.post('/gold/quote', async (ctx) => {
       avgPrice: Number(body.avgPrice) || 0,
     }
     const data = await getGoldRealtime(cfg)
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+/** range: 1m | 3m | 6m | 1y */
+router.get('/gold/history', async (ctx) => {
+  try {
+    const range = String(ctx.query.range || '1m')
+    const data = await getGoldHistory(range)
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 500

@@ -1,0 +1,164 @@
+/* 金价走势：薄金条票据报头，无卡片堆叠 */
+
+.gold-trend {
+  --gold-ink: #8a6a32;
+  --gold-bright: #b08a48;
+  --gold-soft: rgba(176, 138, 72, 0.14);
+  --gold-line: rgba(176, 138, 72, 0.28);
+  position: relative;
+  min-height: 100vh;
+  padding-top: 4rpx;
+  overflow: hidden;
+}
+
+.gold-trend .trend-fg {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-dark.gold-trend,
+.theme-dark .gold-trend {
+  --gold-ink: #e0c07a;
+  --gold-bright: #e6b84a;
+  --gold-soft: rgba(224, 192, 122, 0.12);
+  --gold-line: rgba(224, 192, 122, 0.22);
+}
+
+.ticket {
+  position: relative;
+  padding: 8rpx 8rpx 12rpx;
+  margin-bottom: 2rpx;
+}
+
+.ticket-id {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16rpx;
+  min-width: 0;
+}
+
+.ticket-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.ticket-code {
+  font-size: 28rpx;
+  font-weight: 780;
+  letter-spacing: 0.06em;
+  color: var(--gold-ink);
+}
+
+.ticket-sep {
+  font-size: 22rpx;
+  color: var(--gold-bright);
+  opacity: 0.55;
+}
+
+.ticket-name {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.ticket-live {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+.ticket-live-k {
+  font-size: 20rpx;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.ticket-live-v {
+  font-size: 36rpx;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--gold-ink);
+  line-height: 1;
+}
+
+.ticket-rule {
+  margin-top: 16rpx;
+  height: 2rpx;
+  background: linear-gradient(
+    90deg,
+    var(--gold-bright) 0%,
+    var(--gold-line) 42%,
+    transparent 100%
+  );
+  opacity: 0.9;
+}
+
+/* 周期：名称 + 下方涨跌幅 */
+.range-scroll {
+  width: 100%;
+  white-space: nowrap;
+  margin: 4rpx 0 8rpx;
+}
+
+.range-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 96rpx;
+  min-height: 72rpx;
+  padding: 10rpx 20rpx;
+  margin-right: 10rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid transparent;
+  vertical-align: top;
+}
+
+.range-label {
+  font-size: 24rpx;
+  font-weight: 650;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.range-pct {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  font-weight: 740;
+  letter-spacing: -0.02em;
+  color: var(--gold-bright);
+  line-height: 1.1;
+}
+
+.range-chip.is-on {
+  background: var(--gold-soft);
+  border-color: var(--gold-line);
+}
+
+.range-chip.is-on .range-label {
+  color: var(--gold-ink);
+  font-weight: 740;
+}
+
+.err {
+  margin: 8rpx 0;
+  padding: 14rpx 18rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 59, 69, 0.1);
+  color: var(--rise);
+  font-size: 22rpx;
+}
+
+.chart-stage {
+  margin-top: 4rpx;
+  margin-left: -8rpx;
+  margin-right: -8rpx;
+  padding: 4rpx 0 0;
+}

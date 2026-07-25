@@ -461,11 +461,15 @@ export async function getFundHistory(code, range = '3m') {
 
   let desc
   if (key === 'since') {
-    desc = await fetchFundNavHistoryPaged(padded, {pageSize: 500, maxPages: 40})
+    // 单页大 pageSize 一次拉全（实测可达数千条）；偶发截断时再补一页
+    desc = await fetchFundNavHistoryPaged(padded, {
+      pageSize: 10000,
+      maxPages: 2,
+    })
   } else if (key === '3y') {
     desc = await fetchFundNavHistoryPaged(padded, {
-      pageSize: 500,
-      maxPages: 3,
+      pageSize: 1200,
+      maxPages: 2,
       minCount: 900,
     })
   } else if (key === '1y') {
@@ -626,6 +630,33 @@ export async function getFundQuote(fund) {
     }
   }
 
+  let establishDate = ''
+  let ageDays = null
+  try {
+    const basic = await fetchFundBasicInfo(code)
+    const raw = String(basic?.ESTABDATE || basic?.ESTABLISHDATE || '').trim()
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+      establishDate = raw.slice(0, 10)
+    } else if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(raw)) {
+      const [yy, mm, dd] = raw.split(/[^\d]/).filter(Boolean)
+      establishDate = `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`
+    }
+    if (establishDate) {
+      const [y, m, d] = establishDate.split('-').map(Number)
+      const start = new Date(y, m - 1, d)
+      const now = new Date()
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      if (!Number.isNaN(start.getTime())) {
+        ageDays = Math.max(
+          0,
+          Math.floor((end.getTime() - start.getTime()) / 86400000),
+        )
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   return {
     code,
     name,
@@ -638,6 +669,8 @@ export async function getFundQuote(fund) {
     estimateNetValue,
     prevNetValue,
     netValueDate,
+    establishDate,
+    ageDays,
     time: trend.length ? trend[trend.length - 1].time : null,
     trend,
     sectors,

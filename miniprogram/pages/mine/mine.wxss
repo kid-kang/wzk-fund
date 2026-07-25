@@ -1,0 +1,376 @@
+/* 本地控制台：行情台报头 + 编号轨，无卡片容器 */
+
+.mine-page {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 100%;
+  padding-top: 8rpx;
+  padding-bottom: 64rpx;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+.mine-page::before {
+  content: "";
+  position: absolute;
+  left: -40rpx;
+  top: 120rpx;
+  width: 2rpx;
+  height: 72%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(79, 93, 255, 0.45),
+    rgba(79, 93, 255, 0.08),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.theme-dark.mine-page::before,
+.theme-dark .mine-page::before {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(123, 136, 255, 0.5),
+    rgba(123, 136, 255, 0.1),
+    transparent
+  );
+}
+
+/* —— 报头 —— */
+.mast,
+.rail,
+.legal {
+  position: relative;
+  z-index: 1;
+}
+
+.mast {
+  display: flex;
+  align-items: flex-end;
+  gap: 16rpx;
+  min-height: 200rpx;
+  padding: 12rpx 8rpx 36rpx;
+  margin-bottom: 8rpx;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.page-wm {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 80rpx;
+  z-index: 0;
+  height: 280rpx;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.page-wm-text {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-family: "Arial Black", "Helvetica Black", Impact, "PingFang SC", sans-serif;
+  font-size: 88rpx;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.12;
+  white-space: nowrap;
+  text-transform: lowercase;
+  transform: translate(-46%, -50%) rotate(-16deg);
+  transform-origin: center center;
+}
+
+.page-wm-text.is-face {
+  font-family: "WzkDesk", "Arial Black", Impact, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.theme-dark .page-wm-text {
+  opacity: 0.16;
+}
+
+.mast-copy {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+.mast-kicker {
+  display: block;
+  font-size: 18rpx;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  margin-bottom: 10rpx;
+}
+
+.mast-title {
+  display: block;
+  font-size: 48rpx;
+  font-weight: 780;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.mast-sub {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+.mast-signal {
+  position: relative;
+  z-index: 1;
+  width: 36rpx;
+  height: 36rpx;
+  margin-bottom: 8rpx;
+  flex-shrink: 0;
+}
+
+.signal-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 6rpx var(--accent-soft);
+}
+
+.mast-signal.is-day .signal-core {
+  background: radial-gradient(circle at 35% 30%, #fff7d6 0%, #f0c14b 42%, #4f5dff 100%);
+}
+
+.mast-signal.is-night .signal-core {
+  background: radial-gradient(circle at 35% 30%, #dfe6ff 0%, #7b88ff 40%, #1a2030 100%);
+}
+
+/* —— 编号轨 —— */
+.rail {
+  padding: 28rpx 8rpx 8rpx;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.rail-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.rail-code {
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.rail-name {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.18em;
+}
+
+.row,
+.xfer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 22rpx 0;
+  border-top: 1rpx dashed rgba(122, 132, 148, 0.28);
+}
+
+.theme-dark .row,
+.theme-dark .xfer {
+  border-top-color: rgba(139, 147, 167, 0.22);
+}
+
+.row-text,
+.xfer-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.row-desc {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+/* —— API 终端行 —— */
+.endpoint {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 12rpx;
+  padding: 18rpx 0 8rpx;
+  border-top: 1rpx dashed rgba(122, 132, 148, 0.28);
+}
+
+.theme-dark .endpoint {
+  border-top-color: rgba(139, 147, 167, 0.22);
+}
+
+.endpoint-prompt {
+  font-size: 28rpx;
+  font-weight: 760;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.endpoint-input {
+  flex: 1;
+  min-width: 0;
+  height: 48rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+}
+
+.endpoint-ph {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.endpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12rpx;
+  padding: 8rpx 0 18rpx;
+}
+
+.chip {
+  min-height: 56rpx;
+  padding: 0 22rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999rpx;
+}
+
+.chip-fill {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.chip-line {
+  color: var(--accent);
+  border: 1rpx solid rgba(79, 93, 255, 0.45);
+  background: var(--accent-soft);
+}
+
+.theme-dark .chip-line {
+  border-color: rgba(123, 136, 255, 0.45);
+}
+
+.chip-hover {
+  opacity: 0.78;
+  transform: scale(0.98);
+}
+
+.ping-lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-left: 4rpx;
+  min-height: 56rpx;
+  padding: 0 8rpx;
+}
+
+.ping-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: var(--muted);
+  opacity: 0.55;
+}
+
+.ping-text {
+  font-size: 20rpx;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.ping-lamp.is-ok .ping-dot {
+  background: var(--fall);
+  opacity: 1;
+  box-shadow: 0 0 0 6rpx rgba(11, 107, 79, 0.16);
+}
+
+.ping-lamp.is-ok .ping-text {
+  color: var(--fall);
+}
+
+.ping-lamp.is-fail .ping-dot {
+  background: var(--rise);
+  opacity: 1;
+  box-shadow: 0 0 0 6rpx rgba(215, 38, 61, 0.16);
+}
+
+.ping-lamp.is-fail .ping-text {
+  color: var(--rise);
+}
+
+.ping-lamp.is-busy .ping-dot {
+  background: var(--accent);
+  opacity: 1;
+  animation: ping-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes ping-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+}
+
+/* —— 导入导出 —— */
+.xfer-arrow {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  padding-right: 4rpx;
+}
+
+.xfer-hover {
+  opacity: 0.72;
+}
+
+.legal {
+  display: block;
+  margin: 28rpx 8rpx 0;
+  font-size: 20rpx;
+  line-height: 1.55;
+  color: var(--muted);
+}

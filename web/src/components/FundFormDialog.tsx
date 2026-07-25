@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react'
 import type {FundQuoteRow} from '@/lib/api'
+import {isTradingDay} from '@/lib/tradingCalendar'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
@@ -22,6 +23,8 @@ type Payload = {
 }
 
 function defaultBasis(initial: FundQuoteRow | null): AmountBasis {
+  // 非交易日列表金额即最新确认市值，固定按「今日结算」避免误选昨日
+  if (!isTradingDay()) return 'today'
   if (!initial) return 'prev'
   return initial.percentSource === 'confirmed' ? 'today' : 'prev'
 }
@@ -44,6 +47,7 @@ export function FundFormDialog({
   const [amountBasis, setAmountBasis] = useState<AmountBasis>('prev')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const showAmountBasis = isTradingDay()
 
   useEffect(() => {
     if (!open) return
@@ -81,7 +85,8 @@ export function FundFormDialog({
               }
               if (mode === 'hold') {
                 payload.amount = Number(amount) || 0
-                payload.amountBasis = amountBasis
+                // 非交易日固定按今日结算，与隐藏口径选项一致
+                payload.amountBasis = showAmountBasis ? amountBasis : 'today'
               }
               await onSubmit(payload)
               onOpenChange(false)
@@ -112,39 +117,41 @@ export function FundFormDialog({
 
           {mode === 'hold' ? (
             <>
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium text-ink">金额口径</legend>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line/70 bg-paper/40 px-3 py-2.5">
-                  <input
-                    type="radio"
-                    name="amountBasis"
-                    className="mt-1"
-                    checked={amountBasis === 'prev'}
-                    onChange={() => setAmountBasis('prev')}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm text-ink">昨日结算的持仓金额</span>
-                    <span className="mt-0.5 block text-xs text-muted">
-                      用昨确认净值算份额；列表金额之后按最新净值实时计算
+              {showAmountBasis ? (
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium text-ink">金额口径</legend>
+                  <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line/70 bg-paper/40 px-3 py-2.5">
+                    <input
+                      type="radio"
+                      name="amountBasis"
+                      className="mt-1"
+                      checked={amountBasis === 'prev'}
+                      onChange={() => setAmountBasis('prev')}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm text-ink">昨日结算的持仓金额</span>
+                      <span className="mt-0.5 block text-xs text-muted">
+                        用昨确认净值算份额；列表金额之后按最新净值实时计算
+                      </span>
                     </span>
-                  </span>
-                </label>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line/70 bg-paper/40 px-3 py-2.5">
-                  <input
-                    type="radio"
-                    name="amountBasis"
-                    className="mt-1"
-                    checked={amountBasis === 'today'}
-                    onChange={() => setAmountBasis('today')}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm text-ink">今日结算的持仓金额</span>
-                    <span className="mt-0.5 block text-xs text-muted">
-                      输入即今日确认市值（与列表一致）；用今净值算份额
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line/70 bg-paper/40 px-3 py-2.5">
+                    <input
+                      type="radio"
+                      name="amountBasis"
+                      className="mt-1"
+                      checked={amountBasis === 'today'}
+                      onChange={() => setAmountBasis('today')}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm text-ink">今日结算的持仓金额</span>
+                      <span className="mt-0.5 block text-xs text-muted">
+                        输入即今日确认市值（与列表一致）；用今净值算份额
+                      </span>
                     </span>
-                  </span>
-                </label>
-              </fieldset>
+                  </label>
+                </fieldset>
+              ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="amount">持仓金额</Label>
                 <Input
@@ -154,7 +161,11 @@ export function FundFormDialog({
                   min="0"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="填写与上方口径一致的金额"
+                  placeholder={
+                    showAmountBasis
+                      ? '填写与上方口径一致的金额'
+                      : '填写今日结算的持仓金额'
+                  }
                   required
                 />
               </div>

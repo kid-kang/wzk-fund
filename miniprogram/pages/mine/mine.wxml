@@ -1,0 +1,108 @@
+<view class="page theme-{{theme}} mine-page">
+  <view class="page-wm" aria-hidden="true">
+    <text class="page-wm-text {{wmFontReady ? 'is-face' : ''}}">wzk-fund</text>
+  </view>
+
+  <!-- 签名：行情台报头，非卡片 -->
+  <view class="mast">
+    <view class="mast-copy">
+      <text class="mast-kicker mono">PERSONAL DESK</text>
+      <text class="mast-title">控制台</text>
+      <text class="mast-sub">配置保存在本地</text>
+    </view>
+    <view class="mast-signal {{theme === 'dark' ? 'is-night' : 'is-day'}}" aria-hidden="true">
+      <view class="signal-core"></view>
+    </view>
+  </view>
+
+  <view class="rail">
+    <view class="rail-head">
+      <text class="rail-code mono">01</text>
+      <text class="rail-name">显示</text>
+    </view>
+
+    <view class="row">
+      <view class="row-text">
+        <text class="row-title">黄金持仓</text>
+        <text class="row-desc">持仓页是否展示黄金模块</text>
+      </view>
+      <van-switch
+        size="22px"
+        checked="{{showGold}}"
+        active-color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}"
+        inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}"
+        bind:change="onToggleGold"
+      />
+    </view>
+
+    <view class="row">
+      <view class="row-text">
+        <text class="row-title">深色主题</text>
+        <text class="row-desc">夜间行情台配色</text>
+      </view>
+      <van-switch
+        size="22px"
+        checked="{{theme === 'dark'}}"
+        active-color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}"
+        inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}"
+        bind:change="onToggleTheme"
+      />
+    </view>
+  </view>
+
+  <view class="rail">
+    <view class="rail-head">
+      <text class="rail-code mono">02</text>
+      <text class="rail-name">接口</text>
+    </view>
+
+    <view class="endpoint">
+      <text class="endpoint-prompt mono">$</text>
+      <input
+        class="endpoint-input mono"
+        value="{{apiBase}}"
+        placeholder="http://127.0.0.1:8787"
+        placeholder-class="endpoint-ph"
+        confirm-type="done"
+        bindinput="onApiInput"
+      />
+    </view>
+
+    <view class="endpoint-actions">
+      <view class="chip chip-fill" hover-class="chip-hover" bindtap="onSaveApi">保存地址</view>
+      <view class="chip chip-line" hover-class="chip-hover" bindtap="onPing">探测连通</view>
+      <view class="ping-lamp {{pingState}}" aria-label="连通状态">
+        <view class="ping-dot"></view>
+        <text class="ping-text mono">{{pingLabel}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="rail">
+    <view class="rail-head">
+      <text class="rail-code mono">03</text>
+      <text class="rail-name">配置</text>
+    </view>
+
+    <view class="xfer" hover-class="xfer-hover" bindtap="onExport">
+      <view class="xfer-text">
+        <text class="row-title">导出配置</text>
+        <text class="row-desc">复制 JSON 到剪贴板</text>
+      </view>
+      <text class="xfer-arrow mono">↗</text>
+    </view>
+
+    <view class="xfer" hover-class="xfer-hover" bindtap="onImport">
+      <view class="xfer-text">
+        <text class="row-title">导入配置</text>
+        <text class="row-desc">从剪贴板读取 JSON</text>
+      </view>
+      <text class="xfer-arrow mono">↙</text>
+    </view>
+  </view>
+
+  <text class="legal">数据仅供个人参考，不构成投资建议。</text>
+
+  <van-dialog id="van-dialog" />
+  <van-toast id="van-toast" />
+</view>

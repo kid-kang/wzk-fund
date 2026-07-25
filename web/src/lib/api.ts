@@ -1,5 +1,6 @@
 import axios from 'axios'
 import {calcHoldings, mergeWatchlist} from '@/lib/holdingsCalc'
+import {sharesFromAmount as sharesFromAmountExact} from '@/lib/money'
 import {
   getSettings as getLocalSettings,
   importLocalConfig,
@@ -201,6 +202,24 @@ export async function fetchFundHistory(code: string, range: FundHistoryRange = '
   return data.data
 }
 
+export type FundQuoteDetail = {
+  code: string
+  name: string
+  establishDate?: string
+  ageDays?: number | null
+  percent?: number | null
+  netValue?: number | null
+}
+
+export async function fetchFundQuote(code: string) {
+  const {data} = await api.get<{
+    success: boolean
+    message?: string
+    data: FundQuoteDetail
+  }>(`/funds/${encodeURIComponent(code)}/quote`)
+  return assertOk(data).data
+}
+
 export async function fetchMarketOverview() {
   const {data} = await api.get<{success: boolean; data: MarketOverview}>('/market/overview')
   return data.data
@@ -251,7 +270,7 @@ export async function resolveFund(payload: {
 
 function sharesFromAmount(amount: number, netValue?: number | null) {
   if (!(amount > 0) || !(netValue != null && netValue > 0)) return 0
-  return Math.round((amount / netValue) * 10000) / 10000
+  return sharesFromAmountExact(amount, netValue)
 }
 
 export type AmountBasis = 'prev' | 'today'

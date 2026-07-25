@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import {Pencil, Plus, Trash2} from 'lucide-react'
+import {Eye, EyeOff, Pencil, Plus, Trash2} from 'lucide-react'
 import {
   createFund,
   removeFund,
@@ -8,12 +8,22 @@ import {
   type GoldPayload,
   type HoldingsPayload,
 } from '@/lib/api'
-import {formatAmount, formatMoney, formatPct, pctClass} from '@/lib/utils'
+import {cn, formatAmount, formatMoney, formatPct, pctClass} from '@/lib/utils'
 import {Button} from '@/components/ui/button'
 import {Panel, PanelHeader} from '@/components/ui/panel'
 import {SparkTrend} from '@/components/SparkTrend'
 import {FundFormDialog} from '@/components/FundFormDialog'
 import {GoldPanel} from '@/components/GoldHoldingsRow'
+
+const HIDE_AMOUNTS_KEY = 'holdings_hide_amounts'
+
+function readHideAmounts() {
+  try {
+    return localStorage.getItem(HIDE_AMOUNTS_KEY) === '1'
+  } catch {
+    return false
+  }
+}
 
 export function HoldingsModule({
   data,
@@ -30,15 +40,31 @@ export function HoldingsModule({
 }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<FundQuoteRow | null>(null)
+  const [hideAmounts, setHideAmounts] = useState(readHideAmounts)
 
   const summary = data?.summary ?? null
   const list = data?.list || []
+
+  function toggleHideAmounts() {
+    setHideAmounts((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(HIDE_AMOUNTS_KEY, next ? '1' : '0')
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }
 
   function openEditHold(row: FundQuoteRow) {
     // 编辑时带入实时计算出的展示金额，保存时按所选口径重算 shares。
     setEditing(row)
     setOpen(true)
   }
+
+  const mask = (text: string) => (hideAmounts ? '***' : text)
+
   return (
     <div className="flex min-w-0 w-full flex-col gap-4">
       <Panel className="min-w-0 w-full">
@@ -46,16 +72,32 @@ export function HoldingsModule({
           title="持仓列表"
           desc="仅基金 · 总金额 / 当日收益 / 收益率不含黄金"
           action={
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditing(null)
-                setOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              添加持仓
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                aria-label={hideAmounts ? '显示金额' : '隐藏金额'}
+                title={hideAmounts ? '显示金额' : '隐藏金额'}
+                onClick={toggleHideAmounts}
+              >
+                {hideAmounts ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditing(null)
+                  setOpen(true)
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                添加持仓
+              </Button>
+            </div>
           }
         />
 
@@ -63,13 +105,13 @@ export function HoldingsModule({
           <Stat
             label="总持仓金额"
             hint="基金确认净值市值合计，不含盘中估算浮动，不含黄金"
-            value={formatAmount(summary?.totalAmount)}
+            value={mask(formatAmount(summary?.totalAmount))}
             loading={loading}
           />
           <Stat
             label="当日收益"
-            value={formatMoney(summary?.totalPnl)}
-            className={pctClass(summary?.totalPnl)}
+            value={mask(formatMoney(summary?.totalPnl))}
+            className={hideAmounts ? 'text-muted' : pctClass(summary?.totalPnl)}
             loading={loading}
           />
           <Stat
@@ -106,7 +148,9 @@ export function HoldingsModule({
                     >
                       持仓金额
                     </div>
-                    <div className="font-mono tabular-nums">{formatAmount(row.amount)}</div>
+                    <div className="font-mono tabular-nums">
+                      {mask(formatAmount(row.amount))}
+                    </div>
                   </div>
                   <div>
                     <div
@@ -119,8 +163,13 @@ export function HoldingsModule({
                     >
                       {row.confirmedUpdated ? '当日收益' : '实时收益'}
                     </div>
-                    <div className={`font-mono tabular-nums ${pctClass(row.pnl)}`}>
-                      {formatMoney(row.pnl)}
+                    <div
+                      className={cn(
+                        'font-mono tabular-nums',
+                        hideAmounts ? 'text-muted' : pctClass(row.pnl),
+                      )}
+                    >
+                      {mask(formatMoney(row.pnl))}
                     </div>
                   </div>
                   <div>
@@ -212,10 +261,15 @@ export function HoldingsModule({
                       </div>
                     </td>
                     <td className="px-3 py-3 font-mono tabular-nums">
-                      {formatAmount(row.amount)}
+                      {mask(formatAmount(row.amount))}
                     </td>
-                    <td className={`px-3 py-3 font-mono tabular-nums ${pctClass(row.pnl)}`}>
-                      {formatMoney(row.pnl)}
+                    <td
+                      className={cn(
+                        'px-3 py-3 font-mono tabular-nums',
+                        hideAmounts ? 'text-muted' : pctClass(row.pnl),
+                      )}
+                    >
+                      {mask(formatMoney(row.pnl))}
                     </td>
                     <td className="px-3 py-3 font-mono tabular-nums text-ink-soft">
                       {formatPct(row.weight, 1).replace('+', '')}
@@ -290,7 +344,12 @@ export function HoldingsModule({
       </Panel>
 
       {showGold ? (
-        <GoldPanel data={gold} loading={loading} onChanged={onChanged} />
+        <GoldPanel
+          data={gold}
+          loading={loading}
+          hideAmounts={hideAmounts}
+          onChanged={onChanged}
+        />
       ) : null}
     </div>
   )

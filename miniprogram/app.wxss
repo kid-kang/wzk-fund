@@ -1,0 +1,789 @@
+/* Crystal Ticker — 水晶行情台：毛玻璃面板 + 3D 悬浮数字 */
+page {
+  --bg: #eef1f8;
+  --bg-deep: #e2e7f2;
+  --panel: rgba(255, 255, 255, 0.72);
+  --panel-solid: #ffffff;
+  --ink: #10141c;
+  --muted: #7a8494;
+  --line: rgba(16, 20, 28, 0.08);
+  /* 与 utils/palette.js 同步：红涨 / 玉青绿跌 */
+  --rise: #d7263d;
+  --fall: #0b6b4f;
+  --accent: #4f5dff;
+  --accent-soft: rgba(79, 93, 255, 0.12);
+  --gold: #d4a017;
+  --glass-border: rgba(255, 255, 255, 0.72);
+  --glass-shadow:
+    0 18rpx 50rpx rgba(28, 40, 80, 0.1),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+  --radius: 24rpx;
+  /* 顶部与导航栏同色衔接，光晕下移，避免接缝色差 */
+  background:
+    linear-gradient(180deg, #eef1f8 0%, #eef1f8 120rpx, transparent 280rpx),
+    radial-gradient(900rpx 520rpx at 12% 28%, rgba(79, 93, 255, 0.14), transparent 58%),
+    radial-gradient(700rpx 480rpx at 96% 36%, rgba(20, 184, 122, 0.08), transparent 52%),
+    radial-gradient(600rpx 400rpx at 50% 100%, rgba(255, 59, 69, 0.05), transparent 55%),
+    var(--bg);
+  color: var(--ink);
+  font-size: 26rpx;
+  line-height: 1.35;
+  box-sizing: border-box;
+  font-family: "PingFang SC", "HarmonyOS Sans", "Noto Sans SC", system-ui, sans-serif;
+}
+
+page.theme-dark,
+.theme-dark {
+  --bg: #0b1018;
+  --bg-deep: #070a10;
+  --panel: rgba(28, 34, 48, 0.78);
+  --panel-solid: #161b27;
+  --ink: #eef2ff;
+  --muted: #8b93a7;
+  --line: rgba(238, 242, 255, 0.1);
+  --rise: #ff6b7a;
+  --fall: #4bb892;
+  --accent: #7b88ff;
+  --accent-soft: rgba(123, 136, 255, 0.18);
+  --gold: #e6b84a;
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow:
+    0 20rpx 56rpx rgba(0, 0, 0, 0.45),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.08);
+  /* Vant Cell / Field 深色变量（继承进自定义组件） */
+  --cell-background-color: transparent;
+  --cell-text-color: var(--ink);
+  --cell-label-color: var(--muted);
+  --cell-value-color: var(--muted);
+  --cell-right-icon-color: var(--muted);
+  --cell-active-color: rgba(238, 242, 255, 0.06);
+  --cell-border-color: var(--line);
+  --field-label-color: var(--muted);
+  --field-input-text-color: var(--ink);
+  --field-placeholder-text-color: rgba(139, 147, 167, 0.7);
+  background:
+    linear-gradient(180deg, #0b1018 0%, #0b1018 120rpx, transparent 280rpx),
+    radial-gradient(800rpx 480rpx at 12% 30%, rgba(79, 93, 255, 0.2), transparent 58%),
+    radial-gradient(600rpx 400rpx at 96% 40%, rgba(61, 214, 160, 0.08), transparent 52%),
+    var(--bg);
+  color: var(--ink);
+}
+
+view,
+text,
+scroll-view,
+input,
+button {
+  box-sizing: border-box;
+}
+
+.page {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  padding: 12rpx 20rpx 48rpx;
+  overflow-x: hidden;
+}
+
+/* tab 页自定义下拉：阈值更长，不易误触 */
+.page-scroller {
+  width: 100%;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.page-scroller .page {
+  min-height: auto;
+  /* 给 tabBar 留空，避免最后一项贴底被挡 */
+  padding-bottom: calc(48rpx + 100rpx + env(safe-area-inset-bottom));
+}
+
+.glass {
+  background: var(--panel);
+  border: 1rpx solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+}
+
+.crystal {
+  position: relative;
+  transform: perspective(1100rpx) rotateX(7deg) translateZ(0);
+  transform-origin: 50% 0%;
+  overflow: hidden;
+}
+
+.crystal::after {
+  content: "";
+  position: absolute;
+  left: -20%;
+  top: -60%;
+  width: 70%;
+  height: 120%;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0) 55%
+  );
+  pointer-events: none;
+  transform: rotate(18deg);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.rise {
+  color: var(--rise);
+}
+
+.fall {
+  color: var(--fall);
+}
+
+.flat {
+  color: var(--muted);
+}
+
+.mono {
+  font-family: "DIN Alternate", "Tabular Numbers", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  margin-bottom: 14rpx;
+}
+
+.toolbar .title {
+  font-size: 36rpx;
+  font-weight: 760;
+}
+
+.toolbar .sub {
+  display: block;
+  margin-top: 2rpx;
+  font-size: 20rpx;
+  color: var(--muted);
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.icon-fab {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1rpx solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(20px);
+}
+
+.swipe-actions {
+  display: flex;
+  height: 100%;
+  align-items: stretch;
+  gap: 2rpx;
+}
+
+.swipe-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  width: 68px;
+  height: 100%;
+  /* 与行情笺同系：霜面 + 细斜纹 */
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.72) 0%,
+      rgba(236, 241, 250, 0.88) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(36, 53, 82, 0.03) 9rpx 10rpx
+    );
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.65);
+}
+
+.swipe-label {
+  font-size: 18rpx;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+.swipe-btn.edit {
+  color: #243552;
+  background:
+    linear-gradient(
+      160deg,
+      rgba(230, 236, 248, 0.95) 0%,
+      rgba(210, 220, 238, 0.92) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(36, 53, 82, 0.04) 9rpx 10rpx
+    );
+}
+
+.swipe-btn.edit .swipe-label {
+  color: #243552;
+}
+
+.swipe-btn.set {
+  color: #8a6a32;
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 248, 230, 0.95) 0%,
+      rgba(240, 220, 180, 0.9) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(138, 106, 50, 0.05) 9rpx 10rpx
+    );
+}
+
+.swipe-btn.set .swipe-label {
+  color: #8a6a32;
+}
+
+.swipe-btn.del {
+  color: #d7263d;
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 236, 238, 0.95) 0%,
+      rgba(248, 220, 224, 0.92) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(215, 38, 61, 0.05) 9rpx 10rpx
+    );
+}
+
+.swipe-btn.del .swipe-label {
+  color: #b01f33;
+}
+
+.theme-dark .swipe-btn {
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
+}
+
+.theme-dark .swipe-btn.edit {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(48, 58, 78, 0.96) 0%,
+      rgba(36, 44, 62, 0.94) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(238, 242, 255, 0.03) 9rpx 10rpx
+    );
+  color: #c5d0e6;
+}
+
+.theme-dark .swipe-btn.edit .swipe-label {
+  color: #c5d0e6;
+}
+
+.theme-dark .swipe-btn.set {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(72, 58, 32, 0.95) 0%,
+      rgba(56, 44, 24, 0.94) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(230, 184, 74, 0.05) 9rpx 10rpx
+    );
+  color: #e0c07a;
+}
+
+.theme-dark .swipe-btn.set .swipe-label {
+  color: #e0c07a;
+}
+
+.theme-dark .swipe-btn.del {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(72, 36, 42, 0.95) 0%,
+      rgba(56, 28, 34, 0.94) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(255, 107, 122, 0.05) 9rpx 10rpx
+    );
+  color: #ff6b7a;
+}
+
+.theme-dark .swipe-btn.del .swipe-label {
+  color: #ff6b7a;
+}
+
+.dense-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 12rpx;
+  padding: 14rpx 16rpx;
+  min-height: 112rpx;
+  /* 行情笺：霜面斜纹 + 冷雾底，避开纯白卡片 */
+  background:
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(236, 241, 250, 0.62) 48%,
+      rgba(245, 248, 255, 0.72) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(36, 53, 82, 0.028) 9rpx 10rpx
+    );
+  border-color: rgba(120, 140, 180, 0.18);
+  box-shadow:
+    0 12rpx 28rpx rgba(36, 53, 82, 0.06),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.85);
+}
+
+/* 水印/涨跌晕单独层裁剪，不给整卡 overflow，以免裁掉 canvas */
+.dense-row-skin {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.dense-row-skin::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 42%;
+}
+
+.dense-row.tone-rise .dense-row-skin::after {
+  background: linear-gradient(90deg, transparent, rgba(215, 38, 61, 0.06));
+}
+
+.dense-row.tone-fall .dense-row-skin::after {
+  background: linear-gradient(90deg, transparent, rgba(11, 107, 79, 0.07));
+}
+
+.dense-row.tone-flat .dense-row-skin::after {
+  background: linear-gradient(90deg, transparent, rgba(79, 93, 255, 0.04));
+}
+
+.card-mark {
+  position: absolute;
+  right: 14%;
+  top: 50%;
+  font-size: 68rpx;
+  font-weight: 820;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: rgba(36, 53, 82, 0.06);
+  transform: translateY(-50%) rotate(-12deg);
+  transform-origin: center center;
+  user-select: none;
+}
+
+.dense-main,
+.spark,
+.dense-right {
+  position: relative;
+  z-index: 1;
+}
+
+.dense-main {
+  flex: 0 1 38%;
+  max-width: 38%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+/* 名称区域：仅真实溢出才走马灯；双份等宽单元保证无缝循环 */
+.name-clip {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.name-clip.is-marquee {
+  mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+
+.name-track {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  width: max-content;
+}
+
+.name-clip.is-marquee .name-track {
+  animation: name-marquee 10s linear infinite;
+}
+
+.name-unit {
+  flex-shrink: 0;
+  box-sizing: content-box;
+}
+
+.name-clip.is-marquee .name-unit {
+  padding-right: 48rpx;
+}
+
+.name-measure {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  white-space: nowrap;
+  font-size: 24rpx;
+  font-weight: 680;
+  pointer-events: none;
+}
+
+/* 夜票深蓝字：小一号、略收字距，像行情机标签 */
+.dense-name {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  font-weight: 680;
+  letter-spacing: 0.03em;
+  color: #243552;
+  white-space: nowrap;
+  text-shadow: 0 1rpx 0 rgba(255, 255, 255, 0.55);
+}
+
+/* 每段 = 名称 + padding，-50% 正好滚过一段，循环无闪烁 */
+@keyframes name-marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  85%,
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10rpx;
+  min-width: 0;
+}
+
+.dense-amount {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #5c6678;
+}
+
+.weight-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+/* 石色甜甜圈：点明占比，不抢涨跌红绿 */
+.pie-icon {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: conic-gradient(
+    #8a93a3 0 42%,
+    #b8c0cc 42% 72%,
+    #d5dae3 72% 100%
+  );
+  -webkit-mask: radial-gradient(circle at center, transparent 36%, #000 38%);
+  mask: radial-gradient(circle at center, transparent 36%, #000 38%);
+}
+
+.dense-weight {
+  font-size: 20rpx;
+  font-weight: 620;
+  color: #8a93a3;
+}
+
+.theme-dark .dense-amount {
+  color: #9aa3b5;
+}
+
+.theme-dark .dense-weight {
+  color: #7a8496;
+}
+
+.theme-dark .pie-icon {
+  background: conic-gradient(
+    #7a8496 0 42%,
+    #5a6478 42% 72%,
+    #9aa3b5 72% 100%
+  );
+}
+
+.tag-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  min-width: 0;
+}
+
+.confirmed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 2rpx 8rpx 2rpx 6rpx;
+  border-radius: 8rpx;
+  font-size: 18rpx;
+  font-weight: 650;
+  line-height: 1.2;
+  border: 1rpx solid var(--line);
+  background: rgba(16, 20, 28, 0.04);
+  color: var(--muted);
+}
+
+.confirmed-badge.rise {
+  border-color: rgba(215, 38, 61, 0.3);
+  background: rgba(215, 38, 61, 0.08);
+  color: var(--rise);
+}
+
+.confirmed-badge.fall {
+  border-color: rgba(11, 107, 79, 0.3);
+  background: rgba(11, 107, 79, 0.08);
+  color: var(--fall);
+}
+
+.sector-tag {
+  padding: 2rpx 8rpx;
+  border-radius: 8rpx;
+  font-size: 18rpx;
+  color: var(--muted);
+  background: rgba(16, 20, 28, 0.05);
+  border: 1rpx solid var(--line);
+  max-width: 140rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-dark .confirmed-badge {
+  background: rgba(238, 242, 255, 0.06);
+}
+
+.theme-dark .sector-tag {
+  background: rgba(238, 242, 255, 0.06);
+}
+
+.spark {
+  flex: 1 1 auto;
+  min-width: 160rpx;
+  height: 56px;
+  align-self: center;
+  display: block;
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+}
+
+.dense-right {
+  flex-shrink: 0;
+  width: 120rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4rpx;
+  text-align: right;
+}
+
+.dense-pnl,
+.dense-pct {
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.theme-dark .dense-row {
+  background:
+    linear-gradient(
+      118deg,
+      rgba(32, 40, 56, 0.92) 0%,
+      rgba(24, 30, 44, 0.88) 52%,
+      rgba(28, 36, 52, 0.9) 100%
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 9rpx,
+      rgba(238, 242, 255, 0.03) 9rpx 10rpx
+    );
+  border-color: rgba(160, 180, 220, 0.12);
+  box-shadow:
+    0 12rpx 28rpx rgba(0, 0, 0, 0.28),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.06);
+}
+
+.theme-dark .dense-name {
+  color: #c5d0e6;
+  text-shadow: 0 1rpx 0 rgba(0, 0, 0, 0.35);
+}
+
+.theme-dark .card-mark {
+  color: rgba(197, 208, 230, 0.07);
+}
+
+.theme-dark .dense-row.tone-rise .dense-row-skin::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 107, 122, 0.08));
+}
+
+.theme-dark .dense-row.tone-fall .dense-row-skin::after {
+  background: linear-gradient(90deg, transparent, rgba(75, 184, 146, 0.08));
+}
+
+.theme-dark .dense-row.tone-flat .dense-row-skin::after {
+  background: linear-gradient(90deg, transparent, rgba(123, 136, 255, 0.06));
+}
+
+.swipe-row {
+  margin-bottom: 10rpx;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.list-gap {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-wrap {
+  padding: 48rpx 0;
+}
+
+/* —— 来财水印（黄金设置 / 基金·黄金走势详情共用） —— */
+.fortune-wm {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 42%;
+  bottom: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fortune-wm.is-fill {
+  position: relative;
+  flex: 1;
+  min-height: 420rpx;
+  top: auto;
+  bottom: auto;
+  margin: 0 -8rpx;
+}
+
+.fortune-mark {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  font-size: 220rpx;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  white-space: nowrap;
+  color: rgba(166, 124, 45, 0.1);
+  text-shadow:
+    0 2rpx 0 rgba(255, 240, 190, 0.12),
+    0 18rpx 48rpx rgba(138, 106, 50, 0.05);
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", serif;
+}
+
+.fortune-seal {
+  position: absolute;
+  right: 10%;
+  top: 68%;
+  transform: rotate(-18deg);
+  padding: 10rpx 14rpx;
+  font-size: 36rpx;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(176, 80, 60, 0.14);
+  border: 4rpx solid rgba(176, 80, 60, 0.12);
+  border-radius: 8rpx;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+}
+
+.fortune-ingot {
+  position: absolute;
+  width: 160rpx;
+  height: 48rpx;
+  background: linear-gradient(180deg, rgba(243, 223, 154, 0.22), rgba(166, 124, 45, 0.16));
+  clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%);
+  opacity: 0.32;
+}
+
+.fortune-ingot-a {
+  left: 8%;
+  bottom: 12%;
+  transform: rotate(-22deg);
+}
+
+.fortune-ingot-b {
+  right: 6%;
+  top: 28%;
+  width: 120rpx;
+  height: 36rpx;
+  transform: rotate(14deg);
+  opacity: 0.24;
+}
+
+.theme-dark .fortune-mark {
+  color: rgba(232, 201, 122, 0.08);
+  text-shadow:
+    0 2rpx 0 rgba(255, 220, 140, 0.04),
+    0 18rpx 48rpx rgba(0, 0, 0, 0.12);
+}
+
+.theme-dark .fortune-seal {
+  color: rgba(230, 140, 120, 0.14);
+  border-color: rgba(230, 140, 120, 0.12);
+}
+
+.theme-dark .fortune-ingot {
+  background: linear-gradient(180deg, rgba(232, 201, 122, 0.12), rgba(143, 109, 46, 0.1));
+}

@@ -3,17 +3,15 @@ import {
   shouldShowConfirmedUpdatedBadge,
   normalizeNetValueDate,
 } from '@/lib/tradingCalendar'
+import {
+  Decimal,
+  amountFromShares,
+  pnlFromShares,
+  round2,
+  truncPnl2,
+} from '@/lib/money'
 
-function round2(n: number) {
-  return Math.round(Number(n) * 100) / 100
-}
-
-/** 收益取分：与支付宝一致，舍去厘（向 0 截断），不用四舍五入 */
-export function truncPnl2(n: number) {
-  const x = Number(n)
-  if (!Number.isFinite(x)) return 0
-  return (x >= 0 ? Math.floor(x * 100) : Math.ceil(x * 100)) / 100
-}
+export {truncPnl2}
 
 export type QuoteLike = {
   code: string
@@ -89,8 +87,8 @@ export function calcHoldings(
     code: string
     sectors?: string[]
   }> = []
-  let totalAmount = 0
-  let totalPnl = 0
+  let totalAmount = new Decimal(0)
+  let totalPnl = new Decimal(0)
 
   for (const raw of localFunds) {
     const q = quoteMap.get(raw.code) || ({} as QuoteLike)
@@ -106,26 +104,26 @@ export function calcHoldings(
 
     let pnl = 0
     if (shares > 0 && prevNav != null && currNav != null) {
-      pnl = truncPnl2(shares * (currNav - prevNav))
+      pnl = pnlFromShares(shares, currNav, prevNav)
     }
 
     // 展示用市值实时计算：估值期看最新确认净值；确认期看当日确认净值。
     let displayAmount = 0
     if (shares > 0) {
       if (usingEstimate && prevNav != null) {
-        displayAmount = round2(shares * prevNav)
+        displayAmount = amountFromShares(shares, prevNav)
       } else if (currNav != null) {
-        displayAmount = round2(shares * currNav)
+        displayAmount = amountFromShares(shares, currNav)
       } else if (prevNav != null) {
-        displayAmount = round2(shares * prevNav)
+        displayAmount = amountFromShares(shares, prevNav)
       }
     }
 
     const liveAmount =
-      shares > 0 && currNav != null ? round2(shares * currNav) : displayAmount
+      shares > 0 && currNav != null ? amountFromShares(shares, currNav) : displayAmount
 
-    totalAmount += displayAmount
-    totalPnl += pnl
+    totalAmount = totalAmount.plus(displayAmount)
+    totalPnl = totalPnl.plus(pnl)
 
     const sectors = raw.sectors?.length
       ? raw.sectors
@@ -159,8 +157,8 @@ export function calcHoldings(
       prevNetValue: prevNav,
       time: q.time,
       trend: q.trend || [],
-      amount: round2(displayAmount),
-      liveAmount: round2(liveAmount),
+      amount: displayAmount,
+      liveAmount,
       pnl,
       sectors,
       shares,
@@ -173,28 +171,32 @@ export function calcHoldings(
     })
   }
 
+  const totalAmountNum = round2(totalAmount)
   for (const row of rows) {
-    row.weight = totalAmount > 0 ? round2((row.amount / totalAmount) * 100) : 0
+    row.weight =
+      totalAmountNum > 0 ? round2(new Decimal(row.amount).div(totalAmount).mul(100)) : 0
   }
 
-  let bodTotal = 0
+  let bodTotal = new Decimal(0)
   for (const row of rows) {
     // 开盘前基数 = 份额 × 昨净值（与涨幅无关）
     if (row.shares > 0 && row.prevNetValue != null && row.prevNetValue > 0) {
-      bodTotal += round2(row.shares * row.prevNetValue)
+      bodTotal = bodTotal.plus(amountFromShares(row.shares, row.prevNetValue))
     } else {
-      bodTotal += (row.amount || 0) - (row.pnl || 0)
+      bodTotal = bodTotal.plus(new Decimal(row.amount || 0).minus(row.pnl || 0))
     }
   }
-  bodTotal = round2(bodTotal)
+  const bodTotalNum = round2(bodTotal)
+  const totalPnlNum = round2(totalPnl)
 
   return {
     summary: {
-      totalAmount: round2(totalAmount),
-      bodTotal,
-      // 总收益 = 各基金已截尾收益之和（与支付宝单只加总一致）
-      totalPnl: round2(totalPnl),
-      totalPnlPercent: bodTotal > 0 ? round2((totalPnl / bodTotal) * 100) : 0,
+      totalAmount: totalAmountNum,
+      bodTotal: bodTotalNum,
+      // 总收益 = 各基金已取分收益之和（与支付宝单只加总一致）
+      totalPnl: totalPnlNum,
+      totalPnlPercent:
+        bodTotalNum > 0 ? round2(new Decimal(totalPnlNum).div(bodTotalNum).mul(100)) : 0,
     },
     list: rows.sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0)),
     persistPatches,

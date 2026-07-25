@@ -1,0 +1,208 @@
+﻿<scroll-view
+  class="page-scroller"
+  scroll-y
+  enhanced
+  show-scrollbar="{{false}}"
+  refresher-enabled
+  refresher-threshold="{{400}}"
+  refresher-default-style="{{theme === 'dark' ? 'white' : 'black'}}"
+  refresher-background="{{theme === 'dark' ? '#0b1018' : '#eef1f8'}}"
+  refresher-triggered="{{refresherTriggered}}"
+  bindrefresherrefresh="onRefresherRefresh"
+>
+  <view class="page theme-{{theme}}">
+    <view class="summary">
+      <view class="summary-glow" aria-hidden="true"></view>
+      <view class="summary-body">
+        <view class="summary-metrics">
+          <view class="summary-cell summary-cell-amount">
+            <text class="summary-cell-label">基金持仓总金额</text>
+            <view class="summary-amount-row">
+              <text class="summary-currency" wx:if="{{!hideAmounts}}">¥</text>
+              <text class="mono summary-amount">{{hideAmounts ? '***' : totalAmountText}}</text>
+            </view>
+          </view>
+          <view class="summary-divider" aria-hidden="true"></view>
+          <view class="summary-cell">
+            <text class="summary-cell-label">当日收益</text>
+            <text class="mono summary-cell-value">{{hideAmounts ? '***' : totalPnlText}}</text>
+          </view>
+          <view class="summary-divider" aria-hidden="true"></view>
+          <view class="summary-cell">
+            <text class="summary-cell-label">当日收益率</text>
+            <text class="mono summary-cell-value">{{totalPnlPctText}}</text>
+          </view>
+        </view>
+        <view
+          class="icon-btn"
+          catchtap="onToggleAmounts"
+          hover-class="icon-btn-hover"
+          aria-label="{{hideAmounts ? '显示金额' : '隐藏金额'}}"
+        >
+          <van-icon
+            name="{{hideAmounts ? 'closed-eye' : 'eye-o'}}"
+            size="15px"
+            color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}"
+          />
+        </view>
+      </view>
+    </view>
+
+    <view class="err" wx:if="{{error}}">{{error}}</view>
+
+    <view class="fund-divider">
+      <view class="fund-divider-main">
+        <view class="fund-divider-line"></view>
+        <text class="fund-divider-text">持仓基金({{list.length}})</text>
+        <view class="fund-divider-line"></view>
+      </view>
+      <view class="section-action" catchtap="onAdd" hover-class="section-action-hover" aria-label="添加基金">
+        <van-icon
+          name="plus"
+          size="15px"
+          color="{{theme === 'dark' ? 'rgba(197,208,230,0.62)' : 'rgba(36,53,82,0.58)'}}"
+        />
+      </view>
+    </view>
+
+    <van-empty wx:if="{{!loading && !list.length}}" description="暂无持仓，下拉刷新或点 + 添加" />
+
+    <view class="list-gap">
+      <view class="swipe-row" wx:for="{{list}}" wx:key="code">
+        <van-swipe-cell right-width="{{130}}">
+          <view class="glass dense-row tone-{{item.pnlClass}}">
+            <view class="dense-row-skin" aria-hidden="true">
+              <text class="card-mark mono">{{item.codeMark}}</text>
+            </view>
+            <view class="dense-main">
+              <view class="name-clip {{item.nameMarquee ? 'is-marquee' : ''}}">
+                <view class="name-track">
+                  <text class="dense-name name-unit">{{item.name}}</text>
+                  <text class="dense-name name-unit" wx:if="{{item.nameMarquee}}">{{item.name}}</text>
+                </view>
+                <text class="name-measure">{{item.name}}</text>
+              </view>
+              <view class="meta-row">
+                <text class="dense-amount mono">{{hideAmounts ? '***' : item.amountText}}</text>
+                <view class="weight-chip">
+                  <view class="pie-icon" aria-hidden="true"></view>
+                  <text class="dense-weight mono">{{item.weightText}}</text>
+                </view>
+              </view>
+              <view class="tag-row" wx:if="{{item.hasTags}}">
+                <view
+                  class="confirmed-badge {{item.confirmPctClass}}"
+                  wx:if="{{item.confirmedUpdated}}"
+                  aria-label="净值已更新"
+                >
+                  <van-icon name="certificate" size="12px" />
+                  <text class="mono" wx:if="{{item.confirmPctText !== '--'}}">{{item.confirmPctText}}</text>
+                </view>
+                <text
+                  class="sector-tag"
+                  wx:for="{{item.sectorTags}}"
+                  wx:for-item="tag"
+                  wx:key="*this"
+                >{{tag}}</text>
+              </view>
+            </view>
+
+            <view
+              class="spark"
+              data-code="{{item.code}}"
+              data-name="{{item.name}}"
+              catchtap="onOpenTrend"
+            >
+              <ec-line
+                wx:if="{{item.trend.length}}"
+                points="{{item.trend}}"
+                valueKey="growth"
+                mode="spark"
+                theme="{{theme}}"
+                height="{{56}}"
+                toneDelta="{{item.percent}}"
+              />
+            </view>
+
+            <view class="dense-right">
+              <text class="mono dense-pnl {{hideAmounts ? 'flat' : item.pnlClass}}">{{hideAmounts ? '***' : item.pnlText}}</text>
+              <text class="mono dense-pct {{item.pctClass}}">{{item.pctText}}</text>
+            </view>
+          </view>
+          <view slot="right" class="swipe-actions">
+            <view class="swipe-btn edit" data-code="{{item.code}}" data-name="{{item.name}}" bindtap="onEdit">
+              <van-icon
+                name="edit"
+                size="17px"
+                color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}"
+              />
+              <text class="swipe-label">编辑</text>
+            </view>
+            <view
+              class="swipe-btn del"
+              data-code="{{item.code}}"
+              data-name="{{item.name}}"
+              catchtap="onRemove"
+            >
+              <van-icon
+                name="delete-o"
+                size="17px"
+                color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}"
+              />
+              <text class="swipe-label">删除</text>
+            </view>
+          </view>
+        </van-swipe-cell>
+      </view>
+    </view>
+
+    <block wx:if="{{showGold}}">
+      <view class="gold-divider">
+        <view class="gold-divider-main">
+          <view class="gold-divider-line"></view>
+          <text class="gold-divider-text">持仓黄金</text>
+          <view class="gold-divider-line"></view>
+        </view>
+        <view class="section-action gold-action" catchtap="onEditGold" hover-class="section-action-hover" aria-label="设置黄金">
+          <van-icon
+            name="setting-o"
+            size="15px"
+            color="{{theme === 'dark' ? '#B8A078' : '#5A3E18'}}"
+          />
+        </view>
+      </view>
+
+      <view class="gold-wrap">
+        <view class="glass gold-card">
+          <view class="gold-metrics">
+            <view class="gm">
+              <text class="gm-k">总价值</text>
+              <text class="mono gm-v gold-price">{{hideAmounts ? '***' : goldValueText}}</text>
+            </view>
+            <view class="gm">
+              <text class="gm-k">相对成本</text>
+              <text class="mono gm-v {{hideAmounts ? 'gold-price' : goldCostClass}}">{{hideAmounts ? '***' : goldCostText}}</text>
+            </view>
+            <view class="gm">
+              <text class="gm-k">收益率</text>
+              <text class="mono gm-v {{goldCostPctClass}}">{{goldCostPctText}}</text>
+            </view>
+            <view class="gm gm-price" catchtap="onOpenGoldTrend" hover-class="gm-price-hover">
+              <view class="gm-price-head">
+                <text class="gm-k">实时金价</text>
+                <van-icon
+                  name="chart-trending-o"
+                  size="13px"
+                  color="{{theme === 'dark' ? '#B8A078' : '#B8892D'}}"
+                />
+              </view>
+              <text class="mono gm-v gold-price">{{goldPriceText}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+</scroll-view>
+
+<van-toast id="van-toast" />

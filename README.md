@@ -16,6 +16,56 @@
 
 添加持仓需「代码 + 金额 + 金额口径」；添加自选只需「代码」；名称与板块自动拉取。顶部「配置」可导入/导出完整本地配置。
 
+## 界面预览
+
+截图目录：[`screenshot/`](./screenshot/)。
+
+### Web
+
+| 持仓（亮色 · 金额隐藏） | 黄金 / 指数 / 自选 |
+|:---:|:---:|
+| ![Web 持仓亮色](./screenshot/web截图/Snipaste_2026-07-25_21-06-14.png) | ![Web 黄金指数](./screenshot/web截图/Snipaste_2026-07-25_21-06-53.png) |
+
+| 大盘 / 自选（亮色） | 基金走势弹窗 |
+|:---:|:---:|
+| ![Web 大盘自选亮色](./screenshot/web截图/Snipaste_2026-07-25_21-07-13.png) | ![Web 基金走势](./screenshot/web截图/Snipaste_2026-07-25_21-07-43.png) |
+
+| 持仓（深色） | 指数走势弹窗 |
+|:---:|:---:|
+| ![Web 持仓深色](./screenshot/web截图/Snipaste_2026-07-25_21-08-00.png) | ![Web 指数走势](./screenshot/web截图/Snipaste_2026-07-25_21-08-30.png) |
+
+| 大盘 / 自选（深色） |
+|:---:|
+| ![Web 大盘自选深色](./screenshot/web截图/Snipaste_2026-07-25_21-08-40.png) |
+
+### 微信小程序 · 亮色
+
+| 持仓 | 自选 |
+|:---:|:---:|
+| <img src="./screenshot/小程序截图/亮色模式/4e5d42b41fc3c19a931d4a76576d8e48.jpg" width="280" alt="小程序持仓亮色" /> | <img src="./screenshot/小程序截图/亮色模式/77931b123071a4efe63ddae794f7f360.jpg" width="280" alt="小程序自选亮色" /> |
+
+| 行情 | 我的 |
+|:---:|:---:|
+| <img src="./screenshot/小程序截图/亮色模式/95b083d7ab9e8de58776acb8ed0c482c.jpg" width="280" alt="小程序行情亮色" /> | <img src="./screenshot/小程序截图/亮色模式/2148e5a3d9f4f46fc5164a2e47da83c4.jpg" width="280" alt="小程序我的亮色" /> |
+
+| 基金走势 | 金价走势 |
+|:---:|:---:|
+| <img src="./screenshot/小程序截图/亮色模式/2425bd514d01532307820ee7beb696e5.jpg" width="280" alt="小程序基金走势" /> | <img src="./screenshot/小程序截图/亮色模式/782c4ae2498f6f1a87370cc650e9b148.jpg" width="280" alt="小程序金价走势" /> |
+
+| 指数走势 | 黄金设置 / 编辑持仓 |
+|:---:|:---:|
+| <img src="./screenshot/小程序截图/亮色模式/0bdc2c2efcdb82d1b17f64cc92f54800.jpg" width="280" alt="小程序指数走势" /> | <img src="./screenshot/小程序截图/亮色模式/d172a0061be2faad6cd5ced98b377ceb.jpg" width="140" alt="小程序黄金设置" /> <img src="./screenshot/小程序截图/亮色模式/d8506a3a1e9e3da6da12665d978cc4f7.jpg" width="140" alt="小程序编辑持仓" /> |
+
+### 微信小程序 · 深色
+
+| 持仓 | 自选 |
+|:---:|:---:|
+| <img src="./screenshot/小程序截图/深色模式/b6b105f582ab8d9e4290cf84759cf686.jpg" width="280" alt="小程序持仓深色" /> | <img src="./screenshot/小程序截图/深色模式/a42af34326586316b5f7e98bb922195d.jpg" width="280" alt="小程序自选深色" /> |
+
+| 行情 | 我的 |
+|:---:|:---:|
+| <img src="./screenshot/小程序截图/深色模式/18eff4ec0d8f938f778456d6d8d64b63.jpg" width="280" alt="小程序行情深色" /> | <img src="./screenshot/小程序截图/深色模式/19b90fbaf10a68acd3f13c03513c88f2.jpg" width="280" alt="小程序我的深色" /> |
+
 ## 计算逻辑（对齐支付宝口径）
 
 金钱相关计算**只用净值差 / 价格差**，**不用涨跌幅百分比去乘金额**。涨跌幅仅用于展示（标签、分时曲线）。目标与支付宝「份额 × 单位净值差」一致。
@@ -48,7 +98,7 @@
 收益 = 份额 × (今净值 − 昨净值)
 ```
 
-取分方式与支付宝一致：**舍去厘**（向 0 截断到分），例如 `92.078… → 92.07`，不用四舍五入。
+取分方式与支付宝展示一致：**四舍五入到分**（`decimal.js` `ROUND_HALF_UP`），例如 `-577.665… → -577.67`。
 
 | 时段 | 今净值 | 昨净值 |
 |------|--------|--------|
@@ -150,8 +200,52 @@
 
 ## 技术栈
 
-- 前端：Rsbuild + React + Tailwind CSS + Shadcn 风格组件 + ECharts + Axios
-- 代理：Node.js + Koa（转发第三方行情；个人配置在浏览器）
+- Web：Rsbuild + React + Tailwind CSS + Shadcn 风格组件 + ECharts + Axios
+- 小程序：原生微信小程序 + Vant Weapp + ECharts（ec-canvas）
+- 代理：Node.js + Koa（转发第三方行情；个人配置在客户端本地）
+
+## 微信小程序
+
+原生微信小程序客户端，与 Web 共用同一代理与计算口径；个人配置存在本机 `wx.storage`（键名 `wzk-fund-config`，JSON 结构与 Web localStorage 互通）。详细说明见 [miniprogram/README.md](./miniprogram/README.md)。
+
+### Tab 页
+
+| Tab | 说明 |
+|-----|------|
+| 持仓 | 基金汇总（总金额 / 当日收益 / 收益率）；列表含金额、占比、盈亏、涨跌、板块、迷你走势；可选黄金模块；左滑编辑/删除；下拉刷新（阈值 400px）+ 约 30s 静默轮询 |
+| 自选 | 自选列表（涨跌、板块、迷你走势）；右下角 FAB 添加；左滑删除；导航标题 `自选(N)`；同样支持下拉刷新与轮询 |
+| 行情 | A 股涨跌家数与涨/跌幅榜；指数网格（上证/深证/创业板/北证50/科创50/上证50/沪深300/中证500/纳斯达克100/标普500 等） |
+| 我的 | 黄金显示开关、深色主题；API 地址保存与连通探测；剪贴板导入/导出完整配置；`wzk-fund` 水印 |
+
+### 二级页
+
+| 页面 | 入口 | 说明 |
+|------|------|------|
+| 基金表单 | 持仓 `+` / 编辑；自选 FAB | `hold`：代码 + 金额 + 金额口径（昨日/今日结算，交易日限制同 Web）；`watch`：仅代码 |
+| 基金走势 | 持仓/自选迷你图 | 近3月 / 近1年 / 近3年 / 成立来（按成立天数隐藏不可用周期）；tab 下红绿区间涨跌；高低点；「来财」水印；成立时长文案 |
+| 黄金设置 | 持仓黄金区设置 | 持有克数、成本均价；「来财」装饰 |
+| 金价走势 | 持仓实时金价 | 分时 / 近1月 / 近3月 / 近6月 / 近1年；价格轴 + 高低点 |
+| 指数走势 | 行情指数卡片 | 近1月 / 近3月 / 近6月 / 近1年 / 近3年；样式对齐基金走势详情 |
+
+### 本地存储与真机
+
+| 键 | 说明 |
+|----|------|
+| `wzk-fund-config` | funds / gold / settings（与 Web 互通） |
+| `wzk-fund-api-base` | 代理地址（默认 `http://127.0.0.1:8787`） |
+| `wzk-fund-theme` | `light` / `dark` |
+| `holdings_hide_amounts` | 持仓页金额隐藏 |
+
+真机调试请在「我的」将 API 改为电脑局域网 IP，开发者工具勾选不校验合法域名，防火墙放行 8787。
+
+## 目录
+
+| 目录 | 说明 |
+|------|------|
+| `server/` | 行情代理（Koa，默认 :8787） |
+| `web/` | Web 看板（:5173） |
+| `miniprogram/` | 微信小程序（用微信开发者工具打开该目录） |
+| `screenshot/` | 界面截图（Web / 小程序亮暗色） |
 
 ## 启动
 
@@ -161,10 +255,15 @@ cd server
 npm install
 npm run dev
 
-# 终端 2：前端 :5173
+# 终端 2：Web 前端 :5173
 cd web
 npm install
 npm run dev
+
+# 可选：微信小程序
+cd miniprogram
+npm install   # 会打包 Vant 到 miniprogram_npm
+# 再用微信开发者工具导入本目录 miniprogram/
 ```
 
-浏览器打开 http://127.0.0.1:5173 ，前端通过 `/api` 代理到 Koa。
+浏览器打开 http://127.0.0.1:5173 ，前端通过 `/api` 代理到 Koa。小程序模块细节见 [miniprogram/README.md](./miniprogram/README.md)。

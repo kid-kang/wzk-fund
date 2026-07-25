@@ -103,10 +103,12 @@ function goldPricePoints(data: GoldPayload | null) {
 export function GoldPanel({
   data,
   loading,
+  hideAmounts = false,
   onChanged,
 }: {
   data: GoldPayload | null
   loading?: boolean
+  hideAmounts?: boolean
   onChanged: () => void
 }) {
   const {openSettings, dialog} = useGoldSettings(data, onChanged)
@@ -118,6 +120,7 @@ export function GoldPanel({
       ? data.holding * data.avgPrice
       : null
   const points = goldPricePoints(data)
+  const mask = (text: string) => (hideAmounts ? '***' : text)
 
   return (
     <Panel className="min-w-0 w-full">
@@ -144,7 +147,9 @@ export function GoldPanel({
               <div className="min-w-0">
                 <div className="text-[11px] tracking-wide text-muted">当前总价值</div>
                 <div className="mt-2 font-mono text-2xl font-bold leading-none tracking-tight tabular-nums text-gold sm:text-3xl">
-                  {liveAmount != null ? (
+                  {hideAmounts ? (
+                    '***'
+                  ) : liveAmount != null ? (
                     <>
                       <span className="mr-1 align-baseline text-base font-semibold text-gold/65 sm:text-lg">
                         ¥
@@ -163,9 +168,9 @@ export function GoldPanel({
                   <div className="text-[11px] tracking-wide text-muted">相对成本</div>
                   <div className="mt-2 flex flex-wrap items-baseline gap-2">
                     <span
-                      className={`font-mono text-lg font-semibold tabular-nums sm:text-xl ${pctClass(data.costPnl)}`}
+                      className={`font-mono text-lg font-semibold tabular-nums sm:text-xl ${hideAmounts ? 'text-muted' : pctClass(data.costPnl)}`}
                     >
-                      {formatMoney(data.costPnl)}
+                      {mask(formatMoney(data.costPnl))}
                     </span>
                     {data.costPnlPercent != null ? (
                       <span
@@ -201,7 +206,11 @@ export function GoldPanel({
               <div className="min-w-0 border-l border-line/50 pl-3">
                 <div className="text-[11px] text-muted">成本</div>
                 <div className="mt-1.5 truncate font-mono text-sm font-semibold tabular-nums text-ink sm:text-base">
-                  {cost != null ? formatAmount(cost) : '--'}
+                  {hideAmounts
+                    ? '***'
+                    : cost != null
+                      ? formatAmount(cost)
+                      : '--'}
                 </div>
               </div>
             </div>

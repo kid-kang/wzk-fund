@@ -1,0 +1,87 @@
+.watch-page {
+  padding-bottom: 140rpx;
+}
+
+.err {
+  margin-bottom: 12rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 59, 69, 0.1);
+  color: var(--rise);
+  font-size: 22rpx;
+}
+
+.list-gap {
+  margin-top: 4rpx;
+}
+
+/* 自选无金额行：整体更扁，标题与标签拉开 */
+.list-gap .dense-row {
+  min-height: 88rpx;
+  padding: 10rpx 14rpx;
+}
+
+.list-gap .dense-main {
+  flex: 0 1 42%;
+  max-width: 42%;
+  justify-content: center;
+  gap: 14rpx;
+}
+
+.list-gap .spark {
+  height: 40px;
+  min-width: 140rpx;
+}
+
+.list-gap .dense-right {
+  width: 120rpx;
+}
+
+.pct-lg {
+  font-size: 28rpx;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* 右下悬浮添加：水晶冷雾圆钮，贴合页面 accent / glass */
+.fab-add {
+  position: fixed;
+  right: 36rpx;
+  bottom: calc(120rpx + env(safe-area-inset-bottom));
+  z-index: 100;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background:
+    radial-gradient(120% 100% at 28% 18%, rgba(255, 255, 255, 0.92) 0%, transparent 46%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.88) 0%, rgba(238, 241, 248, 0.78) 100%);
+  border: 1rpx solid rgba(79, 93, 255, 0.22);
+  box-shadow:
+    0 14rpx 36rpx rgba(28, 40, 80, 0.14),
+    0 0 0 6rpx var(--accent-soft),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.fab-add-hover {
+  opacity: 0.88;
+  transform: scale(0.96);
+}
+
+.theme-dark .fab-add {
+  color: var(--accent);
+  background:
+    radial-gradient(120% 100% at 28% 18%, rgba(255, 255, 255, 0.12) 0%, transparent 48%),
+    linear-gradient(165deg, rgba(40, 48, 68, 0.92) 0%, rgba(22, 27, 39, 0.88) 100%);
+  border: 1rpx solid rgba(123, 136, 255, 0.34);
+  box-shadow:
+    0 14rpx 36rpx rgba(0, 0, 0, 0.42),
+    0 0 0 6rpx var(--accent-soft),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.1);
+}

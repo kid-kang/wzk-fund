@@ -1,0 +1,73 @@
+{
+  "pages": [
+    "pages/holdings/holdings",
+    "pages/watchlist/watchlist",
+    "pages/market/market",
+    "pages/mine/mine",
+    "pages/fund-form/fund-form",
+    "pages/gold-edit/gold-edit",
+    "pages/gold-trend/gold-trend",
+    "pages/fund-trend/fund-trend",
+    "pages/index-trend/index-trend"
+  ],
+  "window": {
+    "navigationBarTitleText": "WZK Fund",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#EEF1F8",
+    "backgroundColorTop": "#EEF1F8",
+    "backgroundColorBottom": "#EEF1F8",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#7A8494",
+    "selectedColor": "#4F5DFF",
+    "backgroundColor": "#EEF1F8",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/holdings/holdings",
+        "text": "持仓",
+        "iconPath": "assets/tab/holdings.png",
+        "selectedIconPath": "assets/tab/holdings-active.png"
+      },
+      {
+        "pagePath": "pages/watchlist/watchlist",
+        "text": "自选",
+        "iconPath": "assets/tab/watchlist.png",
+        "selectedIconPath": "assets/tab/watchlist-active.png"
+      },
+      {
+        "pagePath": "pages/market/market",
+        "text": "行情",
+        "iconPath": "assets/tab/market.png",
+        "selectedIconPath": "assets/tab/market-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "assets/tab/mine.png",
+        "selectedIconPath": "assets/tab/mine-active.png"
+      }
+    ]
+  },
+  "usingComponents": {
+    "van-swipe-cell": "@vant/weapp/swipe-cell/index",
+    "van-button": "@vant/weapp/button/index",
+    "van-cell": "@vant/weapp/cell/index",
+    "van-cell-group": "@vant/weapp/cell-group/index",
+    "van-field": "@vant/weapp/field/index",
+    "van-switch": "@vant/weapp/switch/index",
+    "van-empty": "@vant/weapp/empty/index",
+    "van-icon": "@vant/weapp/icon/index",
+    "van-dialog": "@vant/weapp/dialog/index",
+    "van-toast": "@vant/weapp/toast/index",
+    "van-tabs": "@vant/weapp/tabs/index",
+    "van-tab": "@vant/weapp/tab/index",
+    "van-tag": "@vant/weapp/tag/index",
+    "van-radio": "@vant/weapp/radio/index",
+    "van-radio-group": "@vant/weapp/radio-group/index"
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

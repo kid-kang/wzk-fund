@@ -6,7 +6,15 @@ import {
   type IndexHistoryRange,
   type IndexItem,
 } from '@/lib/api'
-import {cn, formatPct, pctClass} from '@/lib/utils'
+import {toneByDelta} from '@/lib/palette'
+import {
+  cn,
+  formatPct,
+  formatSampledTrendAxisLabels,
+  pctClass,
+  resolveTrendSamplePlan,
+  sampleTrendPoints,
+} from '@/lib/utils'
 import {Button} from '@/components/ui/button'
 import {
   Dialog,
@@ -91,7 +99,7 @@ export function IndexTrendDialog({
   const data = byRange[range] ?? null
 
   const option = useMemo(() => {
-    const points = data?.points || []
+    const points = sampleTrendPoints(data?.points || [], range)
     if (!points.length) return null
 
     const styles = getComputedStyle(document.documentElement)
@@ -99,9 +107,14 @@ export function IndexTrendDialog({
     const line = styles.getPropertyValue('--app-line').trim() || '#c8d0d8'
     const values = points.map((p) => p.percent ?? 0)
     const lastPct = values[values.length - 1] ?? 0
-    const up = lastPct >= 0
-    const color = up ? '#d7263d' : '#0f8a5f'
+    const theme = document.documentElement.dataset.theme
+    const color = toneByDelta(lastPct, theme)
     const lastLabel = `${lastPct > 0 ? '+' : ''}${lastPct.toFixed(2)}%`
+    const labels = formatSampledTrendAxisLabels(
+      points.map((p) => p.date),
+      range,
+    )
+    const sparseAxis = resolveTrendSamplePlan(range).mode !== 'day'
 
     return {
       animation: false,
@@ -133,14 +146,17 @@ export function IndexTrendDialog({
       },
       xAxis: {
         type: 'category',
-        data: points.map((p) => p.date.slice(5)),
+        data: labels,
         boundaryGap: false,
         axisLine: {lineStyle: {color: line}},
         axisTick: {show: false},
         axisLabel: {
           color: muted,
           fontSize: 10,
-          interval: Math.max(0, Math.floor(points.length / 4) - 1),
+          interval: sparseAxis
+            ? 0
+            : Math.max(0, Math.floor(labels.length / 4) - 1),
+          hideOverlap: !sparseAxis,
         },
       },
       yAxis: {
@@ -193,7 +209,7 @@ export function IndexTrendDialog({
         },
       ],
     }
-  }, [data])
+  }, [data, range])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

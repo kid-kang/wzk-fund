@@ -4,6 +4,12 @@ export function todayDateStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** 是否为交易日（仅排除周末，不含法定节假日） */
+export function isTradingDay(d = new Date()) {
+  const day = d.getDay()
+  return day !== 0 && day !== 6
+}
+
 /** 统一成 YYYY-MM-DD（兼容 MM-DD） */
 export function normalizeNetValueDate(raw: string | null | undefined, now = new Date()) {
   const s = String(raw || '').trim()
