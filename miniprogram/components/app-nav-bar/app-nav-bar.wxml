@@ -1,0 +1,11 @@
+<view
+  class="app-nav"
+  style="padding-top: {{statusBarHeight}}px; background-color: {{navBg}};"
+>
+  <view class="app-nav-bar" style="height: {{contentHeight}}px;">
+    <view class="app-nav-back" hover-class="app-nav-back-hover" bindtap="onBack">
+      <view class="app-nav-chevron" style="border-color: {{frontColor}};"></view>
+    </view>
+    <text class="app-nav-title" style="color: {{frontColor}};">{{title}}</text>
+  </view>
+</view>

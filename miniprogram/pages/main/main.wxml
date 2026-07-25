@@ -1,0 +1,77 @@
+<page-meta
+  page-style="background-color: {{pageBg}};"
+  background-color="{{pageBg}}"
+  background-color-top="{{pageBg}}"
+  background-color-bottom="{{pageBg}}"
+  root-background-color="{{pageBg}}"
+  background-text-style="{{bgTextStyle}}"
+>
+  <navigation-bar
+    title="{{navTitle}}"
+    front-color="{{navFrontColor}}"
+    background-color="{{navBg}}"
+  />
+</page-meta>
+
+<view class="main-shell theme-{{theme}}">
+  <view class="main-panels">
+    <view
+      class="main-panel"
+      style="display: {{activeTab === 'holdings' ? 'block' : 'none'}}"
+    >
+      <tab-holdings
+        wx:if="{{mounted.holdings}}"
+        active="{{activeTab === 'holdings'}}"
+        theme="{{theme}}"
+        content-min-height="{{contentMinHeight}}"
+      />
+    </view>
+
+    <view
+      class="main-panel"
+      style="display: {{activeTab === 'watchlist' ? 'block' : 'none'}}"
+    >
+      <tab-watchlist
+        wx:if="{{mounted.watchlist}}"
+        active="{{activeTab === 'watchlist'}}"
+        theme="{{theme}}"
+        content-min-height="{{contentMinHeight}}"
+        bind:countchange="onWatchCount"
+      />
+    </view>
+
+    <view
+      class="main-panel"
+      style="display: {{activeTab === 'market' ? 'block' : 'none'}}"
+    >
+      <tab-market
+        wx:if="{{mounted.market}}"
+        active="{{activeTab === 'market'}}"
+        theme="{{theme}}"
+        content-min-height="{{contentMinHeight}}"
+      />
+    </view>
+
+    <view
+      class="main-panel"
+      style="display: {{activeTab === 'mine' ? 'block' : 'none'}}"
+    >
+      <tab-mine
+        wx:if="{{mounted.mine}}"
+        active="{{activeTab === 'mine'}}"
+        theme="{{theme}}"
+        content-min-height="{{contentMinHeight}}"
+        bind:themechange="onThemeChange"
+      />
+    </view>
+  </view>
+
+  <app-tab-bar
+    active="{{activeTab}}"
+    theme="{{theme}}"
+    bind:change="onTabChange"
+  />
+
+  <van-toast id="van-toast" />
+  <van-dialog id="van-dialog" />
+</view>

@@ -1,6 +1,6 @@
 const api = require('../../utils/api')
 const {formatAmount, formatPct} = require('../../utils/format')
-const {getStoredTheme, syncNavigationBar} = require('../../utils/theme')
+const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
 
 const RANGES = [
   {key: 'intraday', label: '分时'},
@@ -10,9 +10,13 @@ const RANGES = [
   {key: '1y', label: '近1年'},
 ]
 
+const themeView = getThemeViewState()
+syncNavigationBar(themeView.theme)
+
 Page({
   data: {
-    theme: 'light',
+    ...themeView,
+    navTitle: '金价走势',
     ranges: RANGES,
     range: 'intraday',
     points: [],
@@ -26,18 +30,18 @@ Page({
   },
 
   onLoad() {
-    const theme = getStoredTheme()
+    const themePatch = getThemeViewState()
+    syncNavigationBar(themePatch.theme)
     const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
     const chartHeight = Math.max(260, Math.floor((win.windowWidth || 375) * 0.72))
-    this.setData({theme, chartHeight})
-    syncNavigationBar(theme)
+    this.setData({...themePatch, chartHeight})
     this.load()
   },
 
   onShow() {
-    const theme = getStoredTheme()
-    if (theme !== this.data.theme) this.setData({theme})
-    syncNavigationBar(theme)
+    const next = getThemeViewState()
+    if (next.theme !== this.data.theme) this.setData(next)
+    syncNavigationBar(next.theme)
   },
 
   onRangeTap(e) {

@@ -11,6 +11,38 @@ const TAB_BG = {
   dark: '#0B1018',
 }
 
+/** 窗口回弹 / page-meta 底色，与页面 --bg 一致 */
+const PAGE_BG = {
+  light: '#EEF1F8',
+  dark: '#0B1018',
+}
+
+function getPageBg(theme) {
+  return theme === 'dark' ? PAGE_BG.dark : PAGE_BG.light
+}
+
+/**
+ * 主题以本地存储为准。
+ * 注意：不可优先读 globalData.theme —— App 默认值常是 light，
+ * onLaunch 写入前会被误判成亮色，导致冷启动闪白。
+ */
+function resolveTheme() {
+  return getStoredTheme()
+}
+
+/** 页面 data / page-meta 首屏所需的主题字段（同步可读） */
+function getThemeViewState(theme) {
+  const t = theme === 'dark' || theme === 'light' ? theme : resolveTheme()
+  const isDark = t === 'dark'
+  return {
+    theme: t,
+    pageBg: getPageBg(t),
+    navFrontColor: isDark ? '#ffffff' : '#000000',
+    navBg: isDark ? NAV_BG.dark : NAV_BG.light,
+    bgTextStyle: isDark ? 'light' : 'dark',
+  }
+}
+
 const TAB_STYLE = {
   light: {
     color: '#7A8494',
@@ -25,13 +57,6 @@ const TAB_STYLE = {
     borderStyle: 'black',
   },
 }
-
-const TAB_ITEMS = [
-  {pagePath: 'pages/holdings/holdings', text: '持仓', key: 'holdings'},
-  {pagePath: 'pages/watchlist/watchlist', text: '自选', key: 'watchlist'},
-  {pagePath: 'pages/market/market', text: '行情', key: 'market'},
-  {pagePath: 'pages/mine/mine', text: '我的', key: 'mine'},
-]
 
 function getStoredTheme() {
   try {
@@ -57,51 +82,16 @@ function toggleTheme() {
   return applyTheme(getStoredTheme() === 'light' ? 'dark' : 'light')
 }
 
-function tabIconPaths(theme, key) {
-  if (theme === 'dark') {
-    return {
-      iconPath: `assets/tab/${key}-dark.png`,
-      selectedIconPath: `assets/tab/${key}-dark-active.png`,
-    }
-  }
-  return {
-    iconPath: `assets/tab/${key}.png`,
-    selectedIconPath: `assets/tab/${key}-active.png`,
-  }
-}
-
-function syncTabBar(theme) {
-  if (typeof wx.setTabBarStyle !== 'function') return
-  const style = theme === 'dark' ? TAB_STYLE.dark : TAB_STYLE.light
-  wx.setTabBarStyle({
-    color: style.color,
-    selectedColor: style.selectedColor,
-    backgroundColor: style.backgroundColor,
-    borderStyle: style.borderStyle,
-    fail() {},
-  })
-  if (typeof wx.setTabBarItem !== 'function') return
-  TAB_ITEMS.forEach((item, index) => {
-    const icons = tabIconPaths(theme, item.key)
-    wx.setTabBarItem({
-      index,
-      text: item.text,
-      iconPath: icons.iconPath,
-      selectedIconPath: icons.selectedIconPath,
-      fail() {},
-    })
-  })
-}
-
 function syncNavigationBar(theme) {
-  const isDark = theme === 'dark'
+  const t = theme === 'dark' || theme === 'light' ? theme : resolveTheme()
+  const isDark = t === 'dark'
   wx.setNavigationBarColor({
     frontColor: isDark ? '#ffffff' : '#000000',
     backgroundColor: isDark ? NAV_BG.dark : NAV_BG.light,
     fail() {},
   })
   if (typeof wx.setBackgroundColor === 'function') {
-    const bg = isDark ? '#0b1018' : '#eef1f8'
+    const bg = getPageBg(isDark ? 'dark' : 'light')
     wx.setBackgroundColor({
       backgroundColor: bg,
       backgroundColorTop: bg,
@@ -115,17 +105,26 @@ function syncNavigationBar(theme) {
       fail() {},
     })
   }
-  syncTabBar(theme)
+}
+
+/** 跳转前先同步导航/窗口底色，减轻二级页过渡闪白 */
+function navigateTo(options) {
+  syncNavigationBar(resolveTheme())
+  return wx.navigateTo(typeof options === 'string' ? {url: options} : options)
 }
 
 module.exports = {
   THEME_STORAGE_KEY,
   NAV_BG,
   TAB_BG,
+  PAGE_BG,
   TAB_STYLE,
+  getPageBg,
+  resolveTheme,
+  getThemeViewState,
   getStoredTheme,
   applyTheme,
   toggleTheme,
   syncNavigationBar,
-  syncTabBar,
+  navigateTo,
 }

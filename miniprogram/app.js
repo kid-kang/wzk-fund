@@ -1,9 +1,11 @@
 const {getStoredTheme, applyTheme, syncNavigationBar} = require('./utils/theme')
 const {getApiBase} = require('./utils/config')
 
+const bootTheme = getStoredTheme()
+
 App({
   globalData: {
-    theme: 'light',
+    theme: bootTheme,
     apiBase: '',
     refreshMs: 30000,
   },
@@ -12,10 +14,13 @@ App({
     const theme = applyTheme(getStoredTheme())
     this.globalData.theme = theme
     this.globalData.apiBase = getApiBase()
+    syncNavigationBar(theme)
   },
 
   onShow() {
-    syncNavigationBar(this.globalData.theme || getStoredTheme())
+    const theme = this.globalData.theme || getStoredTheme()
+    this.globalData.theme = theme
+    syncNavigationBar(theme)
   },
 
   setTheme(theme) {

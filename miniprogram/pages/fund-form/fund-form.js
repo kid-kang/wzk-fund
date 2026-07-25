@@ -1,22 +1,36 @@
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
 const {isTradingDay} = require('../../utils/tradingCalendar')
-const {getStoredTheme, syncNavigationBar} = require('../../utils/theme')
+const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
 const Toast = require('@vant/weapp/toast/toast').default
+
+const themeView = getThemeViewState()
+syncNavigationBar(themeView.theme)
+
+/** 首屏前就算好，避免非交易日先露出口径单选再隐藏 */
+const initialShowAmountBasis = isTradingDay()
+const initialAmountBasis = initialShowAmountBasis ? 'prev' : 'today'
+const initialAmountPlaceholder = initialShowAmountBasis
+  ? '填写与上方口径一致的金额'
+  : '填写今日结算的持仓金额'
+const initialAmountTip = initialShowAmountBasis
+  ? '填写与上方口径一致的金额'
+  : '非交易日按今日结算市值填写'
 
 Page({
   data: {
-    theme: 'light',
+    ...themeView,
+    navTitle: '基金',
     mode: 'hold',
     code: '',
     name: '',
     nameHint: '',
     codeLocked: false,
     amount: '',
-    amountBasis: 'prev',
-    showAmountBasis: true,
-    amountPlaceholder: '填写与上方口径一致的金额',
-    amountTip: '填写与上方口径一致的金额',
+    amountBasis: initialAmountBasis,
+    showAmountBasis: initialShowAmountBasis,
+    amountPlaceholder: initialAmountPlaceholder,
+    amountTip: initialAmountTip,
     resolving: false,
     saving: false,
     error: '',
@@ -26,15 +40,23 @@ Page({
   _resolveSeq: 0,
 
   onLoad(query) {
+    const themePatch = getThemeViewState()
+    syncNavigationBar(themePatch.theme)
     const mode = query.mode === 'watch' ? 'watch' : 'hold'
     const code = query.code ? String(query.code).padStart(6, '0') : ''
     const name = query.name ? decodeURIComponent(query.name) : ''
-    const theme = getStoredTheme()
     const showAmountBasis = isTradingDay()
-    syncNavigationBar(theme)
+    const navTitle = code
+      ? mode === 'hold'
+        ? '编辑持仓'
+        : '编辑自选'
+      : mode === 'hold'
+        ? '添加持仓'
+        : '添加自选'
 
     const patch = {
-      theme,
+      ...themePatch,
+      navTitle,
       mode,
       code,
       name,
@@ -49,22 +71,18 @@ Page({
         : '非交易日按今日结算市值填写',
     }
 
-    wx.setNavigationBarTitle({
-      title: code
-        ? mode === 'hold'
-          ? '编辑持仓'
-          : '编辑自选'
-        : mode === 'hold'
-          ? '添加持仓'
-          : '添加自选',
-    })
-
     if (code && mode === 'hold') {
       this.prefillHold(code, name, patch)
     } else {
       this.setData(patch)
       if (code) this.resolveName(code)
     }
+  },
+
+  onShow() {
+    const next = getThemeViewState()
+    if (next.theme !== this.data.theme) this.setData(next)
+    syncNavigationBar(next.theme)
   },
 
   onUnload() {

@@ -1,5 +1,12 @@
 /* 本地控制台：行情台报头 + 编号轨，无卡片容器 */
 
+.tab-root,
+.page-scroller {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+}
+
 .mine-page {
   position: relative;
   z-index: 1;

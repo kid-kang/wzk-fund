@@ -1,0 +1,22 @@
+.main-shell {
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background-color: var(--bg);
+  background: var(--bg);
+}
+
+.main-panels {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.main-panel {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}

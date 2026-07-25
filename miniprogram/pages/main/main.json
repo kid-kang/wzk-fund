@@ -1,0 +1,17 @@
+{
+  "navigationBarTitleText": "持仓",
+  "navigationBarBackgroundColor": "#121722",
+  "navigationBarTextStyle": "white",
+  "disableScroll": true,
+  "backgroundColor": "#0B1018",
+  "backgroundColorTop": "#0B1018",
+  "backgroundColorBottom": "#0B1018",
+  "initialRenderingCache": "capture",
+  "usingComponents": {
+    "app-tab-bar": "/components/app-tab-bar/app-tab-bar",
+    "tab-holdings": "/components/tab-holdings/tab-holdings",
+    "tab-watchlist": "/components/tab-watchlist/tab-watchlist",
+    "tab-market": "/components/tab-market/tab-market",
+    "tab-mine": "/components/tab-mine/tab-mine"
+  }
+}

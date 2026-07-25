@@ -1,0 +1,88 @@
+<view
+  class="desk-sync theme-{{theme}} is-{{variant}}"
+  style="min-height: {{minHeight}}px"
+  aria-busy="true"
+  aria-label="{{label}}"
+>
+  <!-- 持仓区保留顶栏；自选 / 行情仅骨架 -->
+  <view class="desk-sync-head" wx:if="{{variant === 'hold' || variant === 'gold'}}">
+    <view class="desk-sync-meta">
+      <text class="desk-sync-code mono">{{code}}</text>
+      <text class="desk-sync-label">{{label}}</text>
+    </view>
+    <view class="desk-sync-rail" aria-hidden="true">
+      <view class="desk-sync-scan"></view>
+    </view>
+  </view>
+
+  <!-- 自选：密行卡骨架 -->
+  <block wx:if="{{variant === 'watch'}}">
+    <view class="desk-sync-list">
+      <view class="glass desk-sync-row" wx:for="{{rows}}" wx:key="*this">
+        <view class="bone bone-mark"></view>
+        <view class="desk-sync-main">
+          <view class="bone bone-name"></view>
+          <view class="bone bone-tag"></view>
+        </view>
+        <view class="bone bone-spark"></view>
+        <view class="bone bone-pct"></view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 持仓基金：金额 / 仓位 / 盈亏骨架 -->
+  <block wx:elif="{{variant === 'hold'}}">
+    <view class="desk-sync-list">
+      <view class="glass desk-sync-row is-hold" wx:for="{{holdRows}}" wx:key="*this">
+        <view class="bone bone-mark"></view>
+        <view class="desk-sync-main">
+          <view class="bone bone-name"></view>
+          <view class="desk-sync-meta-row">
+            <view class="bone bone-amt"></view>
+            <view class="bone bone-weight"></view>
+          </view>
+        </view>
+        <view class="bone bone-spark"></view>
+        <view class="desk-sync-right">
+          <view class="bone bone-pnl"></view>
+          <view class="bone bone-pct"></view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 持仓黄金：金仓卡片骨架 -->
+  <block wx:elif="{{variant === 'gold'}}">
+    <view class="glass desk-sync-gold">
+      <view class="desk-sync-gold-bar" aria-hidden="true"></view>
+      <view class="desk-sync-gold-grid">
+        <view class="desk-sync-gold-cell" wx:for="{{goldCells}}" wx:key="*this">
+          <view class="bone bone-gk"></view>
+          <view class="bone bone-gv"></view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 行情：涨跌板 + 指数格骨架 -->
+  <block wx:else>
+    <view class="desk-sync-board">
+      <view class="glass desk-sync-col" wx:for="{{boardCols}}" wx:key="*this">
+        <view class="desk-sync-col-h">
+          <view class="bone bone-col-title"></view>
+          <view class="bone bone-col-stat"></view>
+        </view>
+        <view class="desk-sync-srow" wx:for="{{boardRows}}" wx:for-item="row" wx:key="*this">
+          <view class="bone bone-sname"></view>
+          <view class="bone bone-spct"></view>
+        </view>
+      </view>
+    </view>
+    <view class="desk-sync-grid">
+      <view class="glass desk-sync-card" wx:for="{{indices}}" wx:key="*this">
+        <view class="bone bone-iname"></view>
+        <view class="bone bone-ipct"></view>
+      </view>
+    </view>
+  </block>
+</view>

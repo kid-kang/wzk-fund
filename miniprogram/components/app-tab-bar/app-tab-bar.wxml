@@ -1,0 +1,18 @@
+<view class="tab-bar theme-{{theme}}">
+  <view
+    class="tab-item {{active === item.key ? 'is-active' : ''}}"
+    wx:for="{{tabs}}"
+    wx:key="key"
+    data-key="{{item.key}}"
+    bindtap="onTap"
+    hover-class="tab-item-hover"
+    hover-stay-time="70"
+  >
+    <image
+      class="tab-icon"
+      src="{{active === item.key ? item.activeIcon : item.icon}}"
+      mode="aspectFit"
+    />
+    <text class="tab-text">{{item.text}}</text>
+  </view>
+</view>

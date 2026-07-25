@@ -1,5 +1,27 @@
+.tab-root,
+.page-scroller {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+}
+
 .watch-page {
   padding-bottom: 140rpx;
+}
+
+.watch-page.is-skeleton {
+  display: flex;
+  flex-direction: column;
+}
+
+.watch-page.is-skeleton .desk-sync-fill {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.section-empty {
+  padding: 24rpx 0 40rpx;
 }
 
 .err {
@@ -74,7 +96,8 @@
   transform: scale(0.96);
 }
 
-.theme-dark .fab-add {
+.theme-dark .fab-add,
+.fab-add.theme-dark {
   color: var(--accent);
   background:
     radial-gradient(120% 100% at 28% 18%, rgba(255, 255, 255, 0.12) 0%, transparent 48%),

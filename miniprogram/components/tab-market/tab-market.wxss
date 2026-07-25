@@ -1,3 +1,21 @@
+.tab-root,
+.page-scroller {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+}
+
+.page.is-skeleton {
+  display: flex;
+  flex-direction: column;
+}
+
+.page.is-skeleton .desk-sync-fill {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
 .err {
   margin-bottom: 12rpx;
   padding: 14rpx 18rpx;

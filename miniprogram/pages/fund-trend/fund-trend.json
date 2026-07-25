@@ -1,6 +1,12 @@
 {
-  "navigationBarTitleText": "基金走势",
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "backgroundColor": "#0B1018",
+  "backgroundColorTop": "#0B1018",
+  "backgroundColorBottom": "#0B1018",
+  "initialRenderingCache": "static",
   "usingComponents": {
+    "app-nav-bar": "/components/app-nav-bar/app-nav-bar",
     "ec-line": "/components/ec-line/ec-line",
     "van-empty": "@vant/weapp/empty/index"
   }

@@ -1,0 +1,104 @@
+<view class="tab-root theme-{{theme}}">
+  <scroll-view
+    class="page-scroller"
+    scroll-y
+    enhanced
+    bounces="{{false}}"
+    show-scrollbar="{{false}}"
+  >
+    <view
+      class="page theme-{{theme}} watch-page {{loading && !list.length && !error ? 'is-skeleton' : ''}}"
+      style="min-height: {{contentMinHeight}}px"
+    >
+      <view class="err" wx:if="{{error}}">{{error}}</view>
+      <desk-sync
+        wx:if="{{loading && !list.length && !error}}"
+        class="desk-sync-fill"
+        theme="{{theme}}"
+        variant="watch"
+        min-height="{{contentMinHeight}}"
+      />
+      <view class="section-empty" wx:if="{{!loading && !list.length}}">
+        <van-empty image="search" description="暂无自选，点右下角 + 添加" />
+      </view>
+
+      <view class="list-gap">
+        <view class="swipe-row" wx:for="{{list}}" wx:key="code">
+          <van-swipe-cell right-width="{{65}}">
+            <view class="glass dense-row tone-{{item.pctClass}}">
+              <view class="dense-row-skin" aria-hidden="true">
+                <text class="card-mark mono">{{item.codeMark}}</text>
+              </view>
+              <view class="dense-main">
+                <view class="name-clip {{item.nameMarquee ? 'is-marquee' : ''}}">
+                  <view class="name-track">
+                    <text class="dense-name name-unit">{{item.name}}</text>
+                    <text class="dense-name name-unit" wx:if="{{item.nameMarquee}}">{{item.name}}</text>
+                  </view>
+                  <text class="name-measure">{{item.name}}</text>
+                </view>
+                <view class="tag-row" wx:if="{{item.hasTags}}">
+                  <view
+                    class="confirmed-badge {{item.confirmPctClass}}"
+                    wx:if="{{item.confirmedUpdated}}"
+                    aria-label="净值已更新"
+                  >
+                    <van-icon name="certificate" size="12px" />
+                    <text class="mono" wx:if="{{item.confirmPctText !== '--'}}">{{item.confirmPctText}}</text>
+                  </view>
+                  <text
+                    class="sector-tag"
+                    wx:for="{{item.sectorTags}}"
+                    wx:for-item="tag"
+                    wx:key="*this"
+                  >{{tag}}</text>
+                </view>
+              </view>
+
+              <view
+                class="spark"
+                data-code="{{item.code}}"
+                data-name="{{item.name}}"
+                catchtap="onOpenTrend"
+              >
+                <ec-line
+                  wx:if="{{item.trend.length}}"
+                  points="{{item.trend}}"
+                  valueKey="growth"
+                  mode="spark"
+                  theme="{{theme}}"
+                  height="{{40}}"
+                  toneDelta="{{item.percent}}"
+                />
+              </view>
+
+              <view class="dense-right">
+                <text class="mono dense-pct pct-lg {{item.pctClass}}">{{item.pctText}}</text>
+              </view>
+            </view>
+            <view slot="right" class="swipe-actions">
+              <view
+                class="swipe-btn del"
+                data-code="{{item.code}}"
+                data-name="{{item.name}}"
+                catchtap="onRemove"
+                aria-label="删除"
+              >
+                <van-icon
+                  name="delete-o"
+                  size="17px"
+                  color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}"
+                />
+                <text class="swipe-label">删除</text>
+              </view>
+            </view>
+          </van-swipe-cell>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="fab-add" catchtap="onAdd" hover-class="fab-add-hover" aria-label="添加自选">
+    <van-icon name="plus" size="22px" color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}" />
+  </view>
+</view>

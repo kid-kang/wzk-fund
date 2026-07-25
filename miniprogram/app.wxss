@@ -1,29 +1,41 @@
-/* Crystal Ticker — 水晶行情台：毛玻璃面板 + 3D 悬浮数字 */
+/* Crystal Ticker
+ * 默认即深色：冷启动时 WXSS 先于 JS，若 page 默认浅色必然闪白。
+ * 亮色通过 .theme-light 覆盖。
+ */
 page {
-  --bg: #eef1f8;
-  --bg-deep: #e2e7f2;
-  --panel: rgba(255, 255, 255, 0.72);
-  --panel-solid: #ffffff;
-  --ink: #10141c;
-  --muted: #7a8494;
-  --line: rgba(16, 20, 28, 0.08);
+  --bg: #0b1018;
+  --bg-deep: #070a10;
+  --panel: rgba(28, 34, 48, 0.78);
+  --panel-solid: #161b27;
+  --ink: #eef2ff;
+  --muted: #8b93a7;
+  --line: rgba(238, 242, 255, 0.1);
   /* 与 utils/palette.js 同步：红涨 / 玉青绿跌 */
-  --rise: #d7263d;
-  --fall: #0b6b4f;
-  --accent: #4f5dff;
-  --accent-soft: rgba(79, 93, 255, 0.12);
-  --gold: #d4a017;
-  --glass-border: rgba(255, 255, 255, 0.72);
+  --rise: #ff6b7a;
+  --fall: #4bb892;
+  --accent: #7b88ff;
+  --accent-soft: rgba(123, 136, 255, 0.18);
+  --gold: #e6b84a;
+  --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow:
-    0 18rpx 50rpx rgba(28, 40, 80, 0.1),
-    inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+    0 20rpx 56rpx rgba(0, 0, 0, 0.45),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.08);
   --radius: 24rpx;
-  /* 顶部与导航栏同色衔接，光晕下移，避免接缝色差 */
+  --cell-background-color: transparent;
+  --cell-text-color: var(--ink);
+  --cell-label-color: var(--muted);
+  --cell-value-color: var(--muted);
+  --cell-right-icon-color: var(--muted);
+  --cell-active-color: rgba(238, 242, 255, 0.06);
+  --cell-border-color: var(--line);
+  --field-label-color: var(--muted);
+  --field-input-text-color: var(--ink);
+  --field-placeholder-text-color: rgba(139, 147, 167, 0.7);
+  background-color: #0b1018;
   background:
-    linear-gradient(180deg, #eef1f8 0%, #eef1f8 120rpx, transparent 280rpx),
-    radial-gradient(900rpx 520rpx at 12% 28%, rgba(79, 93, 255, 0.14), transparent 58%),
-    radial-gradient(700rpx 480rpx at 96% 36%, rgba(20, 184, 122, 0.08), transparent 52%),
-    radial-gradient(600rpx 400rpx at 50% 100%, rgba(255, 59, 69, 0.05), transparent 55%),
+    linear-gradient(180deg, #0b1018 0%, #0b1018 120rpx, transparent 280rpx),
+    radial-gradient(800rpx 480rpx at 12% 30%, rgba(79, 93, 255, 0.2), transparent 58%),
+    radial-gradient(600rpx 400rpx at 96% 40%, rgba(61, 214, 160, 0.08), transparent 52%),
     var(--bg);
   color: var(--ink);
   font-size: 26rpx;
@@ -50,7 +62,6 @@ page.theme-dark,
   --glass-shadow:
     0 20rpx 56rpx rgba(0, 0, 0, 0.45),
     inset 0 1rpx 0 rgba(255, 255, 255, 0.08);
-  /* Vant Cell / Field 深色变量（继承进自定义组件） */
   --cell-background-color: transparent;
   --cell-text-color: var(--ink);
   --cell-label-color: var(--muted);
@@ -61,10 +72,49 @@ page.theme-dark,
   --field-label-color: var(--muted);
   --field-input-text-color: var(--ink);
   --field-placeholder-text-color: rgba(139, 147, 167, 0.7);
+  background-color: #0b1018;
   background:
     linear-gradient(180deg, #0b1018 0%, #0b1018 120rpx, transparent 280rpx),
     radial-gradient(800rpx 480rpx at 12% 30%, rgba(79, 93, 255, 0.2), transparent 58%),
     radial-gradient(600rpx 400rpx at 96% 40%, rgba(61, 214, 160, 0.08), transparent 52%),
+    var(--bg);
+  color: var(--ink);
+}
+
+page.theme-light,
+.theme-light {
+  --bg: #eef1f8;
+  --bg-deep: #e2e7f2;
+  --panel: rgba(255, 255, 255, 0.72);
+  --panel-solid: #ffffff;
+  --ink: #10141c;
+  --muted: #7a8494;
+  --line: rgba(16, 20, 28, 0.08);
+  --rise: #d7263d;
+  --fall: #0b6b4f;
+  --accent: #4f5dff;
+  --accent-soft: rgba(79, 93, 255, 0.12);
+  --gold: #d4a017;
+  --glass-border: rgba(255, 255, 255, 0.72);
+  --glass-shadow:
+    0 18rpx 50rpx rgba(28, 40, 80, 0.1),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+  --cell-background-color: transparent;
+  --cell-text-color: var(--ink);
+  --cell-label-color: var(--muted);
+  --cell-value-color: var(--muted);
+  --cell-right-icon-color: var(--muted);
+  --cell-active-color: rgba(16, 20, 28, 0.04);
+  --cell-border-color: var(--line);
+  --field-label-color: var(--muted);
+  --field-input-text-color: var(--ink);
+  --field-placeholder-text-color: rgba(122, 132, 148, 0.7);
+  background-color: #eef1f8;
+  background:
+    linear-gradient(180deg, #eef1f8 0%, #eef1f8 120rpx, transparent 280rpx),
+    radial-gradient(900rpx 520rpx at 12% 28%, rgba(79, 93, 255, 0.14), transparent 58%),
+    radial-gradient(700rpx 480rpx at 96% 36%, rgba(20, 184, 122, 0.08), transparent 52%),
+    radial-gradient(600rpx 400rpx at 50% 100%, rgba(255, 59, 69, 0.05), transparent 55%),
     var(--bg);
   color: var(--ink);
 }
@@ -85,17 +135,48 @@ button {
   overflow-x: hidden;
 }
 
-/* tab 页自定义下拉：阈值更长，不易误触 */
+/* 单壳内 Tab 内容区：高度由壳页面板约束；内容至少铺满一屏可视区 */
 .page-scroller {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   box-sizing: border-box;
 }
 
 .page-scroller .page {
-  min-height: auto;
-  /* 给 tabBar 留空，避免最后一项贴底被挡 */
-  padding-bottom: calc(48rpx + 100rpx + env(safe-area-inset-bottom));
+  /* min-height 由各 tab 组件按「窗口高 - TabBar」内联设置 */
+  padding-bottom: 48rpx;
+}
+
+/* 二级页：自定义导航 + 禁用回弹的内容区 */
+.subpage-root {
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  /* 实色底，避免返回右滑动画时左侧透出窗口默认浅色 */
+  background-color: var(--bg);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.subpage-nav {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.subpage-scroller {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 0;
+  box-sizing: border-box;
+  background: var(--bg);
+}
+
+.subpage-scroller .page {
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 .glass {

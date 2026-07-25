@@ -1,0 +1,480 @@
+/* Crystal desk sync：报价带扫描 + 内容位骨架，不用居中转圈 */
+
+.desk-sync {
+  padding: 8rpx 0 24rpx;
+  box-sizing: border-box;
+}
+
+/* 自选 / 行情：骨架占满可用高度，避免短内容露出壳层底色造成色差 */
+.desk-sync.is-watch,
+.desk-sync.is-market {
+  flex: 1;
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+}
+
+.desk-sync-head {
+  margin: 4rpx 4rpx 22rpx;
+}
+
+.desk-sync-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 14rpx;
+}
+
+.desk-sync-code {
+  font-size: 20rpx;
+  font-weight: 720;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+}
+
+.desk-sync-label {
+  font-size: 22rpx;
+  font-weight: 560;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.desk-sync-rail {
+  position: relative;
+  height: 2rpx;
+  overflow: hidden;
+  border-radius: 2rpx;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(79, 93, 255, 0.14) 18%,
+    rgba(79, 93, 255, 0.14) 82%,
+    transparent 100%
+  );
+}
+
+.theme-dark .desk-sync-rail {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(123, 136, 255, 0.22) 18%,
+    rgba(123, 136, 255, 0.22) 82%,
+    transparent 100%
+  );
+}
+
+.desk-sync-scan {
+  position: absolute;
+  top: -3rpx;
+  left: 0;
+  width: 28%;
+  height: 8rpx;
+  border-radius: 8rpx;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(79, 93, 255, 0.85),
+    transparent
+  );
+  filter: blur(0.5px);
+  animation: desk-scan 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.theme-dark .desk-sync-scan {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(123, 136, 255, 0.95),
+    transparent
+  );
+}
+
+@keyframes desk-scan {
+  0% {
+    transform: translateX(-40%);
+    opacity: 0.35;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(360%);
+    opacity: 0.2;
+  }
+}
+
+.bone {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10rpx;
+  background: rgba(36, 53, 82, 0.06);
+}
+
+.bone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 46%,
+    transparent 72%
+  );
+  animation: desk-shimmer 1.55s ease-in-out infinite;
+}
+
+.theme-dark .bone {
+  background: rgba(238, 242, 255, 0.06);
+}
+
+.theme-dark .bone::after {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 46%,
+    transparent 72%
+  );
+}
+
+@keyframes desk-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(140%);
+  }
+}
+
+/* —— 自选密行 —— */
+.desk-sync-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.desk-sync-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  min-height: 88rpx;
+  padding: 14rpx 16rpx;
+}
+
+.bone-mark {
+  width: 56rpx;
+  height: 28rpx;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.desk-sync-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.bone-name {
+  width: 52%;
+  height: 24rpx;
+}
+
+.bone-tag {
+  width: 34%;
+  height: 18rpx;
+}
+
+.bone-spark {
+  width: 120rpx;
+  height: 36rpx;
+  flex-shrink: 0;
+  border-radius: 12rpx;
+}
+
+.bone-pct {
+  width: 88rpx;
+  height: 28rpx;
+  flex-shrink: 0;
+}
+
+.desk-sync-row:nth-child(2) .bone-name {
+  width: 44%;
+}
+.desk-sync-row:nth-child(3) .bone-name {
+  width: 61%;
+}
+.desk-sync-row:nth-child(4) .bone-name {
+  width: 38%;
+}
+.desk-sync-row:nth-child(5) .bone-name {
+  width: 55%;
+}
+
+.desk-sync-row:nth-child(even) .bone::after {
+  animation-delay: 0.18s;
+}
+.desk-sync-row:nth-child(3n) .bone::after {
+  animation-delay: 0.32s;
+}
+
+/* —— 持仓基金行 —— */
+.desk-sync-row.is-hold {
+  min-height: 108rpx;
+  padding: 16rpx 16rpx;
+}
+
+.desk-sync-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.bone-amt {
+  width: 110rpx;
+  height: 22rpx;
+}
+
+.bone-weight {
+  width: 72rpx;
+  height: 22rpx;
+}
+
+.desk-sync-right {
+  width: 108rpx;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10rpx;
+}
+
+.bone-pnl {
+  width: 96rpx;
+  height: 24rpx;
+}
+
+.desk-sync-row.is-hold:nth-child(2) .bone-name {
+  width: 48%;
+}
+.desk-sync-row.is-hold:nth-child(3) .bone-name {
+  width: 58%;
+}
+.desk-sync-row.is-hold:nth-child(4) .bone-name {
+  width: 41%;
+}
+
+/* —— 持仓黄金卡 —— */
+.desk-sync-gold {
+  position: relative;
+  overflow: hidden;
+  padding: 22rpx 18rpx 20rpx 28rpx;
+  border: 1rpx solid rgba(176, 138, 72, 0.28);
+}
+
+.desk-sync-gold-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6rpx;
+  background: linear-gradient(180deg, #e8c97a, #b08a48 55%, #8a6a32);
+}
+
+.theme-dark .desk-sync-gold {
+  border-color: rgba(160, 140, 100, 0.2);
+}
+
+.theme-dark .desk-sync-gold-bar {
+  background: linear-gradient(180deg, #8a7858, #6b5c42 55%, #524636);
+}
+
+.desk-sync-gold-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 0.95fr 1.15fr;
+  gap: 8rpx;
+}
+
+.desk-sync-gold-cell {
+  min-width: 0;
+  padding-right: 6rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.desk-sync-gold-cell + .desk-sync-gold-cell {
+  border-left: 1rpx solid rgba(176, 138, 72, 0.2);
+  padding-left: 12rpx;
+}
+
+.theme-dark .desk-sync-gold-cell + .desk-sync-gold-cell {
+  border-left-color: rgba(160, 140, 100, 0.16);
+}
+
+.bone-gk {
+  width: 64rpx;
+  height: 18rpx;
+}
+
+.bone-gv {
+  width: 88rpx;
+  height: 26rpx;
+}
+
+.desk-sync-gold-cell:nth-child(2) .bone-gv {
+  width: 72rpx;
+}
+.desk-sync-gold-cell:nth-child(3) .bone-gk {
+  width: 52rpx;
+}
+.desk-sync-gold-cell:nth-child(4) .bone-gv {
+  width: 96rpx;
+}
+
+.desk-sync-gold-cell:nth-child(odd) .bone::after {
+  animation-delay: 0.14s;
+}
+.desk-sync-gold-cell:nth-child(even) .bone::after {
+  animation-delay: 0.3s;
+}
+
+.is-gold .desk-sync-code {
+  color: #b8892d;
+}
+
+.theme-dark .is-gold .desk-sync-code {
+  color: #c4b496;
+}
+
+.is-gold .desk-sync-rail {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(176, 138, 72, 0.28) 18%,
+    rgba(176, 138, 72, 0.28) 82%,
+    transparent 100%
+  );
+}
+
+.is-gold .desk-sync-scan {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 160, 23, 0.9),
+    transparent
+  );
+}
+
+/* —— 行情板 —— */
+.desk-sync-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10rpx;
+}
+
+.desk-sync-col {
+  padding: 14rpx 14rpx 10rpx;
+}
+
+.desk-sync-col-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+  margin-bottom: 8rpx;
+  min-height: 36rpx;
+}
+
+.bone-col-title {
+  width: 64rpx;
+  height: 26rpx;
+}
+
+.bone-col-stat {
+  width: 96rpx;
+  height: 26rpx;
+}
+
+.desk-sync-srow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+  padding: 12rpx 0;
+  border-top: 1rpx solid var(--line);
+}
+
+.bone-sname {
+  width: 58%;
+  height: 20rpx;
+}
+
+.bone-spct {
+  width: 72rpx;
+  height: 22rpx;
+}
+
+.desk-sync-col:nth-child(1) .desk-sync-srow:nth-child(2) .bone-sname {
+  width: 48%;
+}
+.desk-sync-col:nth-child(1) .desk-sync-srow:nth-child(3) .bone-sname {
+  width: 66%;
+}
+.desk-sync-col:nth-child(2) .desk-sync-srow:nth-child(2) .bone-sname {
+  width: 52%;
+}
+.desk-sync-col:nth-child(2) .desk-sync-srow:nth-child(4) .bone-sname {
+  width: 40%;
+}
+
+.desk-sync-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.desk-sync-card {
+  padding: 18rpx 18rpx 20rpx;
+  min-height: 108rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  justify-content: center;
+}
+
+.bone-iname {
+  width: 46%;
+  height: 20rpx;
+}
+
+.bone-ipct {
+  width: 58%;
+  height: 32rpx;
+}
+
+.desk-sync-card:nth-child(2) .bone-iname {
+  width: 54%;
+}
+.desk-sync-card:nth-child(3) .bone-ipct {
+  width: 42%;
+}
+.desk-sync-card:nth-child(4) .bone-iname {
+  width: 38%;
+}
+.desk-sync-card:nth-child(5) .bone-ipct {
+  width: 64%;
+}
+.desk-sync-card:nth-child(6) .bone-iname {
+  width: 50%;
+}
+
+.desk-sync-card:nth-child(odd) .bone::after {
+  animation-delay: 0.12s;
+}
+.desk-sync-card:nth-child(even) .bone::after {
+  animation-delay: 0.28s;
+}

@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "styleIsolation": "apply-shared",
+  "usingComponents": {
+    "ec-line": "/components/ec-line/ec-line",
+    "desk-sync": "/components/desk-sync/desk-sync"
+  }
+}

@@ -1,11 +1,15 @@
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
-const {getStoredTheme, syncNavigationBar} = require('../../utils/theme')
+const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
 const Toast = require('@vant/weapp/toast/toast').default
+
+const themeView = getThemeViewState()
+syncNavigationBar(themeView.theme)
 
 Page({
   data: {
-    theme: 'light',
+    ...themeView,
+    navTitle: '黄金设置',
     holding: '',
     avgPrice: '',
     saving: false,
@@ -13,14 +17,20 @@ Page({
   },
 
   onLoad() {
-    const theme = getStoredTheme()
-    syncNavigationBar(theme)
+    const themePatch = getThemeViewState()
+    syncNavigationBar(themePatch.theme)
     const gold = store.loadConfig().gold || {}
     this.setData({
-      theme,
+      ...themePatch,
       holding: gold.holding != null ? String(gold.holding) : '',
       avgPrice: gold.avgPrice != null ? String(gold.avgPrice) : '',
     })
+  },
+
+  onShow() {
+    const next = getThemeViewState()
+    if (next.theme !== this.data.theme) this.setData(next)
+    syncNavigationBar(next.theme)
   },
 
   onHolding(e) {

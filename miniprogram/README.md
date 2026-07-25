@@ -26,56 +26,58 @@
 
 ## 功能模块
 
-### Tab 栏
+### Tab 栏（单壳页）
 
-| Tab | 路径 | 说明 |
+首页为 `pages/main/main`：自定义底栏 + 页内切换内容（**不用**原生 `tabBar` / `wx.switchTab`，避免真机切 Tab 闪白）。
+
+| Tab | 组件 | 说明 |
 |-----|------|------|
-| 持仓 | `pages/holdings/holdings` | 基金持仓汇总与列表，可选黄金模块 |
-| 自选 | `pages/watchlist/watchlist` | 自选基金列表 |
-| 行情 | `pages/market/market` | A 股涨跌家数、涨跌榜、指数网格 |
-| 我的 | `pages/mine/mine` | 显示开关、主题、API、配置导入导出 |
+| 持仓 | `components/tab-holdings` | 基金持仓汇总与列表，可选黄金模块 |
+| 自选 | `components/tab-watchlist` | 自选基金列表 |
+| 行情 | `components/tab-market` | A 股涨跌家数、涨跌榜、指数网格 |
+| 我的 | `components/tab-mine` | 显示开关、主题、API、配置导入导出 |
 
-深色主题下 Tab 图标与配色会随主题切换。
+深色主题下底栏图标与配色会随主题切换。
 
 ---
 
 ### 持仓
 
-**路径**：`pages/holdings/holdings`
+**组件**：`components/tab-holdings`（挂载于壳页）
 
 - **汇总**：基金持仓总金额、当日收益、当日收益率；眼睛图标可隐藏金额（本地键 `holdings_hide_amounts`）
 - **列表**：名称（过长跑马灯）、金额、仓位占比、当日盈亏 / 涨跌幅、板块标签（最多 2 个）、净值已确认徽章、迷你估值走势
 - **黄金**（可关）：总价值、相对成本、收益率、实时金价；与基金汇总分开计算
 - **交互**：分区标题旁 `+` 添加持仓；左滑编辑 / 删除（删除用系统确认框，避免 canvas 遮挡）；点迷你图进基金走势；点金价进金价走势；点设置进黄金编辑
-- **刷新**：自定义下拉刷新（触发阈值 **400px**）+ 约 30s 静默轮询
+- **刷新**：约 30s 静默轮询
 
 ---
 
 ### 自选
 
-**路径**：`pages/watchlist/watchlist`
+**组件**：`components/tab-watchlist`（挂载于壳页）
 
 - 列表：名称、涨跌幅、板块、确认徽章、迷你走势
 - 导航标题动态为 `自选(N)`
 - 右下角 **FAB `+`** 添加自选；左滑删除
 - 点迷你图进基金走势
-- 同样支持 400px 阈值下拉刷新与约 30s 轮询
+- 约 30s 静默轮询
 
 ---
 
 ### 行情
 
-**路径**：`pages/market/market`
+**组件**：`components/tab-market`（挂载于壳页）
 
 - **涨跌榜**：涨幅 / 跌幅侧展示家数与占比（占比按涨跌家数合计，不含平盘）及板块指数前列
 - **指数网格**：上证、深证、创业板、北证50、科创50、上证50、沪深300、中证500、纳斯达克100、标普500 等；点卡片进指数走势
-- 下拉刷新（400px）+ 约 30s 轮询
+- 约 30s 静默轮询
 
 ---
 
 ### 我的
 
-**路径**：`pages/mine/mine`
+**组件**：`components/tab-mine`（挂载于壳页）
 
 | 区块 | 功能 |
 |------|------|
@@ -148,17 +150,15 @@
 ## 路由关系
 
 ```
-持仓 ─┬─ fund-form（添加/编辑持仓）
-     ├─ fund-trend
-     ├─ gold-edit
-     └─ gold-trend
-
-自选 ─┬─ fund-form（添加自选）
-     └─ fund-trend
-
-行情 ─── index-trend
-
-我的 ─── （本页完成配置）
+main（壳页）
+ ├─ tab-holdings ─┬─ fund-form（添加/编辑持仓）
+ │                ├─ fund-trend
+ │                ├─ gold-edit
+ │                └─ gold-trend
+ ├─ tab-watchlist ─┬─ fund-form（添加自选）
+ │                 └─ fund-trend
+ ├─ tab-market ──── index-trend
+ └─ tab-mine ────── （本页完成配置）
 ```
 
 ## 本地存储
@@ -193,15 +193,16 @@ npm install
 | UI | Vant Weapp（swipe-cell / field / switch / empty / toast 等） |
 | 图表 | ECharts（`components/ec-canvas` + `ec-line`：spark / trend） |
 | 金额精度 | `decimal.js`（与 Web 对齐支付宝口径） |
-| 主题 | `utils/theme.js` 同步导航栏、TabBar、窗口底色 |
+| 主题 | `utils/theme.js` 同步原生导航栏与窗口底色（无原生 TabBar） |
+| 架构 | 单壳页 `pages/main` + 自定义底栏 + 四个 Tab 组件，页内 `setData` 切换 |
 
 ## 目录结构
 
 ```
 miniprogram/
   app.js|json|wxss
-  pages/          # 4 Tab + 5 二级页
-  components/     # ec-canvas / ec-line
+  pages/          # main 壳页 + 5 二级页
+  components/     # tab-* / app-tab-bar / ec-canvas / ec-line
   utils/          # api / store / money / chart / theme …
   assets/         # tab 图标等
   package.json    # @vant/weapp

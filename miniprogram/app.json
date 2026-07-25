@@ -1,9 +1,6 @@
 {
   "pages": [
-    "pages/holdings/holdings",
-    "pages/watchlist/watchlist",
-    "pages/market/market",
-    "pages/mine/mine",
+    "pages/main/main",
     "pages/fund-form/fund-form",
     "pages/gold-edit/gold-edit",
     "pages/gold-trend/gold-trend",
@@ -12,46 +9,15 @@
   ],
   "window": {
     "navigationBarTitleText": "WZK Fund",
-    "navigationBarBackgroundColor": "#FFFFFF",
-    "navigationBarTextStyle": "black",
-    "backgroundColor": "#EEF1F8",
-    "backgroundColorTop": "#EEF1F8",
-    "backgroundColorBottom": "#EEF1F8",
-    "backgroundTextStyle": "dark"
-  },
-  "tabBar": {
-    "color": "#7A8494",
-    "selectedColor": "#4F5DFF",
-    "backgroundColor": "#EEF1F8",
-    "borderStyle": "black",
-    "list": [
-      {
-        "pagePath": "pages/holdings/holdings",
-        "text": "持仓",
-        "iconPath": "assets/tab/holdings.png",
-        "selectedIconPath": "assets/tab/holdings-active.png"
-      },
-      {
-        "pagePath": "pages/watchlist/watchlist",
-        "text": "自选",
-        "iconPath": "assets/tab/watchlist.png",
-        "selectedIconPath": "assets/tab/watchlist-active.png"
-      },
-      {
-        "pagePath": "pages/market/market",
-        "text": "行情",
-        "iconPath": "assets/tab/market.png",
-        "selectedIconPath": "assets/tab/market-active.png"
-      },
-      {
-        "pagePath": "pages/mine/mine",
-        "text": "我的",
-        "iconPath": "assets/tab/mine.png",
-        "selectedIconPath": "assets/tab/mine-active.png"
-      }
-    ]
+    "navigationBarBackgroundColor": "#121722",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0B1018",
+    "backgroundColorTop": "#0B1018",
+    "backgroundColorBottom": "#0B1018",
+    "backgroundTextStyle": "light"
   },
   "usingComponents": {
+    "app-nav-bar": "/components/app-nav-bar/app-nav-bar",
     "van-swipe-cell": "@vant/weapp/swipe-cell/index",
     "van-button": "@vant/weapp/button/index",
     "van-cell": "@vant/weapp/cell/index",

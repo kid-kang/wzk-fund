@@ -6,7 +6,7 @@ const {
   formatFundAge,
   isRangeAvailable,
 } = require('../../utils/fundRanges')
-const {getStoredTheme, syncNavigationBar} = require('../../utils/theme')
+const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
 
 function emptyRanges(ageDays) {
   return availableFundRanges(ageDays).map((t) =>
@@ -14,9 +14,13 @@ function emptyRanges(ageDays) {
   )
 }
 
+const themeView = getThemeViewState()
+syncNavigationBar(themeView.theme)
+
 Page({
   data: {
-    theme: 'light',
+    ...themeView,
+    navTitle: '基金走势',
     code: '',
     name: '',
     ageDays: null,
@@ -32,20 +36,26 @@ Page({
   },
 
   onLoad(query) {
+    const themePatch = getThemeViewState()
+    syncNavigationBar(themePatch.theme)
     const code = String(query.code || '').padStart(6, '0')
     const name = query.name ? decodeURIComponent(query.name) : ''
-    const theme = getStoredTheme()
     const win = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
     const chartHeight = Math.max(260, Math.floor((win.windowWidth || 375) * 0.72))
-    this.setData({theme, code, name, chartHeight, loading: true})
-    syncNavigationBar(theme)
+    this.setData({
+      ...themePatch,
+      code,
+      name,
+      chartHeight,
+      loading: true,
+    })
     this.bootstrap()
   },
 
   onShow() {
-    const theme = getStoredTheme()
-    if (theme !== this.data.theme) this.setData({theme})
-    syncNavigationBar(theme)
+    const next = getThemeViewState()
+    if (next.theme !== this.data.theme) this.setData(next)
+    syncNavigationBar(next.theme)
   },
 
   async bootstrap() {

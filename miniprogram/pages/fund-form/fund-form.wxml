@@ -1,76 +1,99 @@
-<view class="page theme-{{theme}} fund-form">
-  <view class="mast">
-    <text class="mast-kicker mono">{{mode === 'hold' ? (codeLocked ? 'EDIT HOLDING' : 'ADD HOLDING') : (codeLocked ? 'EDIT WATCH' : 'ADD WATCH')}}</text>
-    <text class="mast-name">{{name || (resolving ? '识别中…' : (codeLocked ? '基金持仓' : '输入代码开始'))}}</text>
-    <text class="mast-hint" wx:if="{{nameHint}}">{{nameHint}}</text>
+<page-meta
+  page-style="background-color: {{pageBg}};"
+  background-color="{{pageBg}}"
+  background-color-top="{{pageBg}}"
+  background-color-bottom="{{pageBg}}"
+  root-background-color="{{pageBg}}"
+  background-text-style="{{bgTextStyle}}"
+/>
+
+<view class="subpage-root theme-{{theme}}">
+  <view class="subpage-nav">
+    <app-nav-bar title="{{navTitle}}" theme="{{theme}}" />
   </view>
 
-  <view class="rail">
-    <view class="rail-head">
-      <text class="rail-code mono">01</text>
-      <text class="rail-name">代码</text>
-    </view>
-    <view class="field-row {{codeLocked ? 'is-locked' : ''}}">
-      <input
-        class="field-input mono"
-        type="number"
-        maxlength="6"
-        value="{{code}}"
-        disabled="{{codeLocked}}"
-        placeholder="6 位基金代码"
-        placeholder-class="field-ph"
-        bindinput="onCodeInput"
-      />
-      <text class="field-suffix" wx:if="{{codeLocked}}">已锁定</text>
-    </view>
-  </view>
-
-  <view class="rail" wx:if="{{mode === 'hold'}}">
-    <view class="rail-head">
-      <text class="rail-code mono">02</text>
-      <text class="rail-name">金额</text>
-    </view>
-
-    <view class="basis" wx:if="{{showAmountBasis}}">
-      <view
-        class="basis-card {{amountBasis === 'prev' ? 'is-on' : ''}}"
-        data-basis="prev"
-        bindtap="onBasisTap"
-      >
-        <text class="basis-title">昨日结算的持仓金额</text>
-        <text class="basis-desc">用昨确认净值算份额；列表金额之后按最新净值实时计算</text>
+  <scroll-view
+    class="subpage-scroller"
+    scroll-y
+    enhanced
+    bounces="{{false}}"
+    show-scrollbar="{{false}}"
+  >
+    <view class="page theme-{{theme}} fund-form">
+      <view class="mast">
+        <text class="mast-kicker mono">{{mode === 'hold' ? (codeLocked ? 'EDIT HOLDING' : 'ADD HOLDING') : (codeLocked ? 'EDIT WATCH' : 'ADD WATCH')}}</text>
+        <text class="mast-name">{{name || (resolving ? '识别中…' : (codeLocked ? '基金持仓' : '输入代码开始'))}}</text>
+        <text class="mast-hint" wx:if="{{nameHint}}">{{nameHint}}</text>
       </view>
-      <view
-        class="basis-card {{amountBasis === 'today' ? 'is-on' : ''}}"
-        data-basis="today"
-        bindtap="onBasisTap"
-      >
-        <text class="basis-title">今日结算的持仓金额</text>
-        <text class="basis-desc">输入即今日确认市值（与列表一致）；用今净值算份额</text>
+
+      <view class="rail">
+        <view class="rail-head">
+          <text class="rail-code mono">01</text>
+          <text class="rail-name">代码</text>
+        </view>
+        <view class="field-row {{codeLocked ? 'is-locked' : ''}}">
+          <input
+            class="field-input mono"
+            type="number"
+            maxlength="6"
+            value="{{code}}"
+            disabled="{{codeLocked}}"
+            placeholder="6 位基金代码"
+            placeholder-class="field-ph"
+            bindinput="onCodeInput"
+          />
+          <text class="field-suffix" wx:if="{{codeLocked}}">已锁定</text>
+        </view>
       </view>
+
+      <view class="rail" wx:if="{{mode === 'hold'}}">
+        <view class="rail-head">
+          <text class="rail-code mono">02</text>
+          <text class="rail-name">金额</text>
+        </view>
+
+        <view class="basis" wx:if="{{showAmountBasis}}">
+          <view
+            class="basis-card {{amountBasis === 'prev' ? 'is-on' : ''}}"
+            data-basis="prev"
+            bindtap="onBasisTap"
+          >
+            <text class="basis-title">昨日结算的持仓金额</text>
+            <text class="basis-desc">用昨确认净值算份额；列表金额之后按最新净值实时计算</text>
+          </view>
+          <view
+            class="basis-card {{amountBasis === 'today' ? 'is-on' : ''}}"
+            data-basis="today"
+            bindtap="onBasisTap"
+          >
+            <text class="basis-title">今日结算的持仓金额</text>
+            <text class="basis-desc">输入即今日确认市值（与列表一致）；用今净值算份额</text>
+          </view>
+        </view>
+
+        <view class="field-row">
+          <text class="field-prefix">¥</text>
+          <input
+            class="field-input mono"
+            type="digit"
+            value="{{amount}}"
+            placeholder="{{amountPlaceholder}}"
+            placeholder-class="field-ph"
+            bindinput="onAmountInput"
+          />
+        </view>
+        <text class="field-tip" wx:if="{{!showAmountBasis}}">{{amountTip}}</text>
+      </view>
+
+      <view class="err" wx:if="{{error}}">{{error}}</view>
+
+      <view
+        class="save-btn {{saving ? 'is-busy' : ''}}"
+        hover-class="save-btn-hover"
+        bindtap="onSubmit"
+      >{{saving ? '保存中…' : '保存'}}</view>
     </view>
-
-    <view class="field-row">
-      <text class="field-prefix">¥</text>
-      <input
-        class="field-input mono"
-        type="digit"
-        value="{{amount}}"
-        placeholder="{{amountPlaceholder}}"
-        placeholder-class="field-ph"
-        bindinput="onAmountInput"
-      />
-    </view>
-    <text class="field-tip" wx:if="{{!showAmountBasis}}">{{amountTip}}</text>
-  </view>
-
-  <view class="err" wx:if="{{error}}">{{error}}</view>
-
-  <view
-    class="save-btn {{saving ? 'is-busy' : ''}}"
-    hover-class="save-btn-hover"
-    bindtap="onSubmit"
-  >{{saving ? '保存中…' : '保存'}}</view>
-
-  <van-toast id="van-toast" />
+  </scroll-view>
 </view>
+
+<van-toast id="van-toast" />
