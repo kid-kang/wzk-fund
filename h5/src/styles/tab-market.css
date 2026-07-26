@@ -1,0 +1,109 @@
+﻿.tab-root,
+.page-scroller {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+}
+
+.page.is-skeleton {
+  display: flex;
+  flex-direction: column;
+}
+
+.page.is-skeleton .desk-sync-fill {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.err {
+  margin-bottom: 12rem;
+  padding: 14rem 18rem;
+  border-radius: 16rem;
+  background: rgba(255, 59, 69, 0.1);
+  color: var(--rise);
+  font-size: 22rem;
+}
+
+.index-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10rem;
+  margin-top: 12rem;
+}
+
+.index-card {
+  padding: 16rem 18rem;
+  min-height: 108rem;
+}
+
+.index-name {
+  display: block;
+  font-size: 22rem;
+  color: var(--muted);
+  margin-bottom: 8rem;
+}
+
+.index-pct {
+  font-size: 34rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10rem;
+}
+
+.board-col {
+  padding: 12rem 14rem 8rem;
+}
+
+.col-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8rem;
+  margin-bottom: 4rem;
+  min-width: 0;
+}
+
+.col-title {
+  font-size: 28rem;
+  font-weight: 740;
+  flex-shrink: 0;
+}
+
+.col-stat {
+  font-size: 28rem;
+  font-weight: 740;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.s-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8rem;
+  padding: 10rem 0;
+  border-top: 1rem solid var(--line);
+  font-size: 22rem;
+}
+
+.s-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.s-row .mono {
+  font-size: 26rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}

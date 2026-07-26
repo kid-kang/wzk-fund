@@ -1,0 +1,462 @@
+﻿.tab-root,
+.page-scroller {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+}
+
+.section-empty {
+  padding: 12rem 0 28rem;
+}
+
+.gold-empty {
+  padding-top: 4rem;
+}
+
+/* —— 总览：冷雾水晶台面（与 Crystal Ticker 同系，不用暖金） —— */
+.summary {
+  /* 与分区标题「+」右缘对齐：标题行 margin 8 + action 12 */
+  --action-inset: 20rem;
+  position: relative;
+  overflow: hidden;
+  margin: 12rem 0 18rem;
+  border-radius: var(--radius);
+  border: 1rem solid rgba(120, 140, 180, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 247, 252, 0.9) 100%);
+  box-shadow:
+    0 14rem 36rem rgba(28, 40, 80, 0.1),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+}
+
+/* 顶缘淡靛线：点明「总览台」身份，不抢基金卡 */
+.summary::before {
+  content: "";
+  position: absolute;
+  left: 28rem;
+  right: 28rem;
+  top: 0;
+  height: 3rem;
+  border-radius: 0 0 4rem 4rem;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(79, 93, 255, 0.42) 35%,
+    rgba(79, 93, 255, 0.42) 65%,
+    transparent 100%
+  );
+  z-index: 2;
+}
+
+/* 右上冷光，呼应页面 indigo 氛围光 */
+.summary-glow {
+  position: absolute;
+  right: -48rem;
+  top: -72rem;
+  width: 260rem;
+  height: 260rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 93, 255, 0.12) 0%, transparent 68%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.summary-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 20rem 60rem 18rem 22rem;
+}
+
+.summary-metrics {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.icon-btn {
+  position: absolute;
+  right: var(--action-inset);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40rem;
+  height: 40rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  line-height: 1;
+  z-index: 2;
+}
+
+.icon-btn-hover {
+  opacity: 0.5;
+}
+
+.summary-cell {
+  flex: 0 0 auto;
+  width: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8rem;
+}
+
+.summary-cell-amount {
+  max-width: 48%;
+  min-width: 0;
+}
+
+.summary-divider {
+  width: 1rem;
+  margin: 4rem 18rem;
+  background: rgba(36, 53, 82, 0.1);
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.summary-cell-label {
+  font-size: 18rem;
+  font-weight: 620;
+  letter-spacing: 0.04em;
+  color: #8a93a3;
+  white-space: nowrap;
+}
+
+.summary-amount-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4rem;
+  min-width: 0;
+}
+
+.summary-currency {
+  font-size: 22rem;
+  font-weight: 700;
+  color: rgba(36, 53, 82, 0.5);
+  line-height: 1;
+}
+
+.summary-cell-value,
+.summary-amount {
+  font-size: 36rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #243552;
+}
+
+.summary-amount {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-dark .summary {
+  border-color: rgba(160, 180, 220, 0.14);
+  background: linear-gradient(
+    180deg,
+    rgba(36, 44, 62, 0.96) 0%,
+    rgba(24, 30, 44, 0.92) 100%
+  );
+  box-shadow:
+    0 14rem 36rem rgba(0, 0, 0, 0.34),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.06);
+}
+
+.theme-dark .summary::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(123, 136, 255, 0.5) 35%,
+    rgba(123, 136, 255, 0.5) 65%,
+    transparent 100%
+  );
+}
+
+.theme-dark .summary-glow {
+  background: radial-gradient(circle, rgba(123, 136, 255, 0.14) 0%, transparent 68%);
+}
+
+.theme-dark .summary-cell-label {
+  color: #7a8496;
+}
+
+.theme-dark .summary-currency {
+  color: rgba(197, 208, 230, 0.5);
+}
+
+.theme-dark .summary-cell-value,
+.theme-dark .summary-amount {
+  color: #e8eef8;
+}
+
+.theme-dark .summary-divider {
+  background: rgba(197, 208, 230, 0.12);
+}
+
+
+
+.err {
+  margin-bottom: 12rem;
+  padding: 14rem 18rem;
+  border-radius: 16rem;
+  background: rgba(255, 59, 69, 0.1);
+  color: var(--rise);
+  font-size: 22rem;
+}
+
+/* 基金分区标题：左右等宽留白保证标题居中，右侧线不压加号 */
+.fund-divider {
+  --action-inset: 12rem;
+  position: relative;
+  margin: 6rem 8rem 14rem;
+  min-height: 40rem;
+}
+
+.fund-divider-main {
+  display: flex;
+  align-items: center;
+  gap: 16rem;
+  min-height: 40rem;
+  padding: 0 48rem;
+}
+
+.fund-divider-line {
+  flex: 1;
+  height: 1rem;
+}
+
+.fund-divider-line:first-child {
+  background: linear-gradient(90deg, transparent, rgba(36, 53, 82, 0.18));
+}
+
+.fund-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(36, 53, 82, 0.18), transparent);
+}
+
+.fund-divider-text {
+  flex-shrink: 0;
+  font-size: 22rem;
+  color: #243552;
+  letter-spacing: 0.12em;
+  font-weight: 680;
+}
+
+.section-action {
+  position: absolute;
+  right: var(--action-inset, 12rem);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40rem;
+  height: 40rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  background: transparent;
+  line-height: 1;
+}
+
+.section-action-hover {
+  opacity: 0.5;
+}
+
+.theme-dark .fund-divider-line:first-child {
+  background: linear-gradient(90deg, transparent, rgba(197, 208, 230, 0.2));
+}
+
+.theme-dark .fund-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(197, 208, 230, 0.2), transparent);
+}
+
+.theme-dark .fund-divider-text {
+  color: #c5d0e6;
+}
+
+.list-gap {
+  margin-top: 4rem;
+}
+
+.gold-divider {
+  --action-inset: 12rem;
+  position: relative;
+  margin: 22rem 8rem 14rem;
+  min-height: 40rem;
+}
+
+.gold-divider-main {
+  display: flex;
+  align-items: center;
+  gap: 16rem;
+  min-height: 40rem;
+  padding: 0 48rem;
+}
+
+.gold-divider-line {
+  flex: 1;
+  height: 1rem;
+}
+
+.gold-divider-line:first-child {
+  background: linear-gradient(90deg, transparent, rgba(176, 138, 72, 0.4));
+}
+
+.gold-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(176, 138, 72, 0.4), transparent);
+}
+
+.gold-divider-text {
+  flex-shrink: 0;
+  font-size: 22rem;
+  color: #6b4e1e;
+  letter-spacing: 0.12em;
+  font-weight: 680;
+}
+
+.theme-dark .gold-divider-text {
+  color: #b8a078;
+}
+
+.theme-dark .gold-divider-line:first-child {
+  background: linear-gradient(90deg, transparent, rgba(184, 160, 120, 0.28));
+}
+
+.theme-dark .gold-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(184, 160, 120, 0.28), transparent);
+}
+
+.gold-wrap {
+  margin: 0 0 8rem;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.gold-card {
+  position: relative;
+  overflow: hidden;
+  padding: 18rem 18rem 16rem 24rem;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1rem solid rgba(176, 138, 72, 0.28);
+  box-shadow:
+    0 12rem 32rem rgba(90, 70, 30, 0.06),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.9);
+}
+
+.gold-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6rem;
+  background: linear-gradient(180deg, #e8c97a, #b08a48 55%, #8a6a32);
+}
+
+.gold-metrics {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 0.95fr 1.15fr;
+  gap: 6rem;
+  align-items: start;
+}
+
+.gm {
+  min-width: 0;
+  padding-right: 6rem;
+}
+
+.gm + .gm {
+  border-left: 1rem solid rgba(176, 138, 72, 0.2);
+  padding-left: 10rem;
+}
+
+.gm-k {
+  display: block;
+  font-size: 20rem;
+  font-weight: 620;
+  color: #6b4e1e;
+  margin-bottom: 6rem;
+  letter-spacing: 0.02em;
+}
+
+.gm-v {
+  font-size: 26rem;
+  font-weight: 720;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.gm-v.rise {
+  color: var(--rise);
+}
+
+.gm-v.fall {
+  color: var(--fall);
+}
+
+.gm-v.flat {
+  color: var(--muted);
+}
+
+.gm-price {
+  display: block;
+  width: 100%;
+  padding-right: 0;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.gm-price-head {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  width: fit-content;
+  margin-bottom: 6rem;
+}
+
+.gm-price .gm-k {
+  margin-bottom: 0;
+}
+
+.gm-price .gm-v {
+  display: block;
+  text-align: left;
+}
+
+.gm-price-hover {
+  opacity: 0.72;
+}
+
+.gold-price {
+  color: #7a5418;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.theme-dark .gold-card {
+  background: rgba(28, 34, 48, 0.88);
+  border-color: rgba(160, 140, 100, 0.2);
+}
+
+.theme-dark .gold-card::before {
+  background: linear-gradient(180deg, #8a7858, #6b5c42 55%, #524636);
+}
+
+.theme-dark .gm + .gm {
+  border-left-color: rgba(160, 140, 100, 0.16);
+}
+
+.theme-dark .gm-k {
+  color: #9a8a6e;
+}
+
+.theme-dark .gold-price {
+  color: #c4b496;
+}

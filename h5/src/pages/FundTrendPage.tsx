@@ -1,0 +1,257 @@
+import {useEffect, useRef, useState} from 'react'
+import {useSearchParams} from 'react-router-dom'
+import '@/styles/fund-trend.css'
+import AppNavBar from '@/components/AppNavBar'
+import EcLine from '@/components/EcLine'
+import FortuneWatermark from '@/components/FortuneWatermark'
+import {
+  fetchFundHistory,
+  fetchFundQuote,
+  type FundHistoryPayload,
+  type FundHistoryRange,
+} from '@/lib/api'
+import {
+  availableFundRanges,
+  defaultFundRange,
+  formatFundAge,
+  formatPct,
+  isFundRangeAvailable,
+  pctClass,
+} from '@/lib/utils'
+import {getStoredTheme, type AppTheme} from '@/lib/theme'
+
+type RangeChip = {
+  key: FundHistoryRange
+  label: string
+  pctText: string
+  pctClass: string
+}
+
+function emptyRanges(ageDays: number | null): RangeChip[] {
+  return availableFundRanges(ageDays).map((t) => ({
+    ...t,
+    pctText: '--',
+    pctClass: 'flat',
+  }))
+}
+
+export default function FundTrendPage() {
+  const [params] = useSearchParams()
+  const theme: AppTheme = getStoredTheme()
+  const code = String(params.get('code') || '').padStart(6, '0')
+  const [name, setName] = useState(
+    params.get('name') ? decodeURIComponent(params.get('name') || '') : '',
+  )
+  const [ageDays, setAgeDays] = useState<number | null>(null)
+  const [ageText, setAgeText] = useState('')
+  const [range, setRange] = useState<FundHistoryRange>('3m')
+  const [ranges, setRanges] = useState<RangeChip[]>(() => emptyRanges(null))
+  const [chartPoints, setChartPoints] = useState<Record<string, unknown>[]>([])
+  const [chartHeight] = useState(() =>
+    Math.max(260, Math.floor((typeof window !== 'undefined' ? window.innerWidth : 375) * 0.72)),
+  )
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const byRange = useRef<Record<string, FundHistoryPayload>>({})
+  const chartEpoch = useRef(0)
+  const rangeRef = useRef(range)
+  const ageDaysRef = useRef(ageDays)
+
+  useEffect(() => {
+    rangeRef.current = range
+  }, [range])
+
+  useEffect(() => {
+    ageDaysRef.current = ageDays
+  }, [ageDays])
+
+  const refreshRanges = (days: number | null = ageDaysRef.current) => {
+    setRanges(
+      availableFundRanges(days).map((t) => {
+        const hist = byRange.current[t.key]
+        const pct = hist ? hist.periodPercent : null
+        return {...t, pctText: formatPct(pct), pctClass: pctClass(pct)}
+      }),
+    )
+  }
+
+  const mergeByRange = (r: FundHistoryRange, data: FundHistoryPayload) => {
+    byRange.current = {...byRange.current, [r]: data}
+    refreshRanges(ageDaysRef.current)
+    return data
+  }
+
+  const fetchAndStoreRange = async (r: FundHistoryRange) => {
+    const cached = byRange.current[r]
+    if (cached) {
+      refreshRanges(ageDaysRef.current)
+      return cached
+    }
+    const data = await fetchFundHistory(code, r)
+    return mergeByRange(r, data)
+  }
+
+  const applyChart = (r: FundHistoryRange) => {
+    const hist = byRange.current[r]
+    if (!hist) {
+      setChartPoints([])
+      return
+    }
+    setChartPoints(
+      (hist.points || []).map((p) => ({
+        date: p.date,
+        value: p.percent,
+        percent: p.percent,
+        netValue: p.netValue,
+      })),
+    )
+    setError('')
+    refreshRanges(ageDaysRef.current)
+  }
+
+  const prefetchHistory = (days: number | null) => {
+    availableFundRanges(days).forEach((t) => {
+      const r = t.key
+      if (byRange.current[r]) return
+      fetchFundHistory(code, r)
+        .then((data) => {
+          if (byRange.current[r]) return
+          mergeByRange(r, data)
+        })
+        .catch(() => {})
+    })
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    async function bootstrap() {
+      let nextAge: number | null = null
+      let nextRange: FundHistoryRange = '3m'
+      try {
+        const quote = await fetchFundQuote(code)
+        if (cancelled) return
+        nextAge =
+          quote.ageDays != null && Number.isFinite(Number(quote.ageDays))
+            ? Number(quote.ageDays)
+            : null
+        nextRange = defaultFundRange(nextAge)
+        byRange.current = {}
+        setName(quote.name || name || code)
+        setAgeDays(nextAge)
+        setAgeText(formatFundAge(quote.establishDate, nextAge))
+        setRange(nextRange)
+        setRanges(emptyRanges(nextAge))
+      } catch (e) {
+        if (!name) setError(e instanceof Error ? e.message : '行情加载失败')
+      }
+
+      try {
+        await fetchAndStoreRange(nextRange)
+        if (cancelled) return
+        applyChart(nextRange)
+        setLoading(false)
+      } catch (e) {
+        if (cancelled) return
+        setLoading(false)
+        setError(e instanceof Error ? e.message : '加载失败')
+        setChartPoints([])
+      }
+      prefetchHistory(nextAge)
+    }
+    void bootstrap()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code])
+
+  const onRangeTap = async (key: FundHistoryRange) => {
+    if (!key || key === range) return
+    if (!isFundRangeAvailable(key, ageDays)) return
+    const epoch = ++chartEpoch.current
+    const cached = byRange.current[key]
+    setRange(key)
+    setError('')
+    setChartPoints([])
+    if (cached) {
+      setLoading(false)
+      applyChart(key)
+      return
+    }
+    setLoading(true)
+    try {
+      await fetchAndStoreRange(key)
+      if (key !== rangeRef.current || epoch !== chartEpoch.current) return
+      setLoading(false)
+      applyChart(key)
+    } catch (e) {
+      if (key !== rangeRef.current || epoch !== chartEpoch.current) return
+      setLoading(false)
+      setError(e instanceof Error ? e.message : '加载失败')
+      setChartPoints([])
+    }
+  }
+
+  return (
+    <div className={`subpage-root theme-${theme}`}>
+      <div className="subpage-nav">
+        <AppNavBar title="基金走势" theme={theme} />
+      </div>
+      <div className="subpage-scroller" style={{overflowY: 'auto'}}>
+        <div className={`page theme-${theme} fund-trend`}>
+          <FortuneWatermark />
+          <div className="trend-fg">
+            <div className="ticket">
+              <div className="ticket-id">
+                <div className="ticket-meta">
+                  <span className="ticket-code mono">{code}</span>
+                  <span className="ticket-sep">·</span>
+                  <span className="ticket-name">{name || '基金走势'}</span>
+                  {ageText ? <span className="ticket-age mono">{ageText}</span> : null}
+                </div>
+              </div>
+              <div className="ticket-rule" aria-hidden />
+            </div>
+
+            <div className="range-scroll" style={{overflowX: 'auto', display: 'flex'}}>
+              {ranges.map((item) => (
+                <button
+                  type="button"
+                  key={item.key}
+                  className={`range-chip${range === item.key ? ' is-on' : ''}`}
+                  onClick={() => void onRangeTap(item.key)}
+                >
+                  <span className="range-label">{item.label}</span>
+                  <span className={`range-pct mono ${item.pctClass}`}>{item.pctText}</span>
+                </button>
+              ))}
+            </div>
+
+            {error ? <div className="err">{error}</div> : null}
+            {loading ? <div className="section-empty">加载中…</div> : null}
+            {!loading && !chartPoints.length ? (
+              <div className="section-empty">暂无该周期数据</div>
+            ) : null}
+
+            {!loading && chartPoints.length ? (
+              <div className="chart-stage">
+                <EcLine
+                  points={chartPoints}
+                  valueKey="value"
+                  mode="trend"
+                  theme={theme}
+                  valueMode="percent"
+                  extraKey="netValue"
+                  extraLabel="净值"
+                  showExtremes
+                  range={range}
+                  height={chartHeight}
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

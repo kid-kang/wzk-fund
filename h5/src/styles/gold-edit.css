@@ -1,0 +1,115 @@
+﻿.gold-edit-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding-bottom: 0;
+}
+
+.gold-form {
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  flex-shrink: 0;
+  padding: 8rem 8rem 12rem;
+  margin-top: 8rem;
+  background: rgba(255, 252, 245, 0.88);
+  border: 1rem solid rgba(176, 138, 72, 0.3);
+  box-shadow:
+    0 12rem 32rem rgba(90, 70, 30, 0.07),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.92);
+}
+
+.gold-form::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6rem;
+  background: linear-gradient(180deg, #e8c97a, #b08a48 55%, #8a6a32);
+}
+
+.gold-field-line {
+  height: 1rem;
+  margin: 0 28rem;
+  background: rgba(176, 138, 72, 0.22);
+}
+
+.gold-field {
+  background: transparent !important;
+  padding: 22rem 28rem !important;
+}
+
+.gold-field-label {
+  color: #6b4e1e !important;
+  font-weight: 650 !important;
+  font-size: 28rem !important;
+}
+
+.gold-field-input {
+  color: #7a5418 !important;
+  font-weight: 700 !important;
+  font-family: "DIN Alternate", "Tabular Numbers", "SF Mono", ui-monospace, Menlo, Consolas, monospace !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.err {
+  margin: 8rem 28rem 12rem;
+  color: var(--rise);
+  font-size: 22rem;
+}
+
+/* —— 普通金色保存按钮：独立于表单，全宽 —— */
+.save-row {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  margin-top: 28rem;
+  width: 100%;
+}
+
+.gold-save {
+  height: 80rem !important;
+  border: none !important;
+  color: #3a2810 !important;
+  font-size: 30rem !important;
+  font-weight: 740 !important;
+  letter-spacing: 0.28em !important;
+  text-indent: 0.28em;
+  background: linear-gradient(145deg, #f3df9a 0%, #d4a84a 42%, #a67c2d 100%) !important;
+  box-shadow:
+    0 10rem 24rem rgba(138, 106, 50, 0.22),
+    inset 0 1rem 0 rgba(255, 248, 220, 0.7) !important;
+}
+
+.gold-save::after {
+  border: none !important;
+}
+
+.theme-dark .gold-form {
+  background: rgba(36, 30, 20, 0.92);
+  border-color: rgba(212, 175, 90, 0.3);
+  box-shadow:
+    0 12rem 32rem rgba(0, 0, 0, 0.3),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.06);
+}
+
+.theme-dark .gold-field-line {
+  background: rgba(230, 184, 74, 0.22);
+}
+
+.theme-dark .gold-field-label {
+  color: #e8c97a !important;
+}
+
+.theme-dark .gold-field-input {
+  color: #f0d48a !important;
+}
+
+.theme-dark .gold-save {
+  color: #1f1608 !important;
+  background: linear-gradient(145deg, #e8c97a 0%, #c9a04a 48%, #8f6d2e 100%) !important;
+  box-shadow:
+    0 10rem 24rem rgba(0, 0, 0, 0.3),
+    inset 0 1rem 0 rgba(255, 236, 180, 0.28) !important;
+}

@@ -1,0 +1,111 @@
+﻿.tab-root,
+.page-scroller {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+}
+
+.watch-page {
+  padding-bottom: 140rem;
+}
+
+.watch-page.is-skeleton {
+  display: flex;
+  flex-direction: column;
+}
+
+.watch-page.is-skeleton .desk-sync-fill {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.section-empty {
+  padding: 24rem 0 40rem;
+}
+
+.err {
+  margin-bottom: 12rem;
+  padding: 14rem 18rem;
+  border-radius: 16rem;
+  background: rgba(255, 59, 69, 0.1);
+  color: var(--rise);
+  font-size: 22rem;
+}
+
+.list-gap {
+  margin-top: 4rem;
+}
+
+/* 自选无金额行：整体更扁，标题与标签拉开 */
+.list-gap .dense-row {
+  min-height: 88rem;
+  padding: 10rem 14rem;
+}
+
+.list-gap .dense-main {
+  flex: 0 1 42%;
+  max-width: 42%;
+  justify-content: center;
+  gap: 14rem;
+}
+
+.list-gap .spark {
+  height: 40px;
+  min-width: 140rem;
+}
+
+.list-gap .dense-right {
+  width: 120rem;
+}
+
+.pct-lg {
+  font-size: 28rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* 右下悬浮添加：贴 tab 内容区右下（非 viewport fixed，避免宽屏跑出 480 壳） */
+.fab-add {
+  position: absolute;
+  right: 36rem;
+  bottom: calc(20rem + env(safe-area-inset-bottom));
+  z-index: 100;
+  width: 104rem;
+  height: 104rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background:
+    radial-gradient(120% 100% at 28% 18%, rgba(255, 255, 255, 0.92) 0%, transparent 46%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.88) 0%, rgba(238, 241, 248, 0.78) 100%);
+  border: 1rem solid rgba(79, 93, 255, 0.22);
+  box-shadow:
+    0 14rem 36rem rgba(28, 40, 80, 0.14),
+    0 0 0 6rem var(--accent-soft),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.fab-add-hover {
+  opacity: 0.88;
+  transform: scale(0.96);
+}
+
+.theme-dark .fab-add,
+.fab-add.theme-dark {
+  color: var(--accent);
+  background:
+    radial-gradient(120% 100% at 28% 18%, rgba(255, 255, 255, 0.12) 0%, transparent 48%),
+    linear-gradient(165deg, rgba(40, 48, 68, 0.92) 0%, rgba(22, 27, 39, 0.88) 100%);
+  border: 1rem solid rgba(123, 136, 255, 0.34);
+  box-shadow:
+    0 14rem 36rem rgba(0, 0, 0, 0.42),
+    0 0 0 6rem var(--accent-soft),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.1);
+}
