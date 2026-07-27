@@ -9,5 +9,8 @@ web/dist/
 .probe*
 server/probe*.mjs
 
+# 本机 Cloudflare Tunnel / launchd 自启动配置，勿提交
+scripts/cloudflare/
+
 # 遗留目录（个人配置已改存浏览器，勿再提交）
 data/
