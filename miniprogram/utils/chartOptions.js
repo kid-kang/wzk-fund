@@ -287,7 +287,6 @@ function buildTrendOption({
   extraLabel,
   showExtremes = false,
   range = '',
-  periodPercent = null,
 }) {
   const muted = theme === 'dark' ? '#8b93a7' : '#7a8494'
   const axisLine = theme === 'dark' ? 'rgba(238,242,255,0.12)' : 'rgba(16,20,28,0.1)'
@@ -507,11 +506,6 @@ function buildTrendOption({
 }
 
 module.exports = {
-  RISE,
-  FALL,
-  FLAT,
-  toneByDelta,
-  sampleTrendPoints,
   buildSparkOption,
   buildTrendOption,
 }

@@ -74,7 +74,9 @@ Component({
 
     startTimer() {
       this.clearTimer()
-      this.timer = setInterval(() => this.load(), 30000)
+      const app = getApp()
+      const ms = (app && app.globalData && app.globalData.refreshMs) || 30000
+      this.timer = setInterval(() => this.load(), ms)
     },
 
     clearTimer() {
@@ -151,6 +153,23 @@ Component({
       navigateTo(`/pages/fund-trend/fund-trend?${q}`)
     },
 
+    dropWatchRow(code) {
+      const key = String(code || '').padStart(6, '0')
+      const groups = (this.data.groups || [])
+        .map((group) => {
+          const list = (group.list || []).filter((r) => r.code !== key)
+          if (!list.length) return null
+          return Object.assign({}, group, {
+            list,
+            title: `${group.key}(${list.length})`,
+          })
+        })
+        .filter(Boolean)
+      const count = groups.reduce((n, g) => n + (g.list ? g.list.length : 0), 0)
+      this.emitCount(count)
+      this.setData({groups})
+    },
+
     onRemove(e) {
       const code = e.currentTarget.dataset.code
       const name = e.currentTarget.dataset.name || code
@@ -163,6 +182,7 @@ Component({
           if (!res.confirm) return
           try {
             await api.removeFund(code)
+            this.dropWatchRow(code)
             this.load()
           } catch (err) {
             Toast.fail((err && err.message) || '删除失败')

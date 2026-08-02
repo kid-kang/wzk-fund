@@ -5,12 +5,6 @@ const NAV_BG = {
   dark: '#121722',
 }
 
-const TAB_BG = {
-  // 与页面底色一致，避免滑到底时露出白边/白线
-  light: '#EEF1F8',
-  dark: '#0B1018',
-}
-
 /** 窗口回弹 / page-meta 底色，与页面 --bg 一致 */
 const PAGE_BG = {
   light: '#EEF1F8',
@@ -43,21 +37,6 @@ function getThemeViewState(theme) {
   }
 }
 
-const TAB_STYLE = {
-  light: {
-    color: '#7A8494',
-    selectedColor: '#4F5DFF',
-    backgroundColor: TAB_BG.light,
-    borderStyle: 'black',
-  },
-  dark: {
-    color: '#9AA3B5',
-    selectedColor: '#7B88FF',
-    backgroundColor: TAB_BG.dark,
-    borderStyle: 'black',
-  },
-}
-
 function getStoredTheme() {
   try {
     const v = wx.getStorageSync(THEME_STORAGE_KEY)
@@ -76,10 +55,6 @@ function applyTheme(theme) {
     // ignore
   }
   return next
-}
-
-function toggleTheme() {
-  return applyTheme(getStoredTheme() === 'light' ? 'dark' : 'light')
 }
 
 function syncNavigationBar(theme) {
@@ -114,17 +89,11 @@ function navigateTo(options) {
 }
 
 module.exports = {
-  THEME_STORAGE_KEY,
   NAV_BG,
-  TAB_BG,
-  PAGE_BG,
-  TAB_STYLE,
-  getPageBg,
   resolveTheme,
   getThemeViewState,
   getStoredTheme,
   applyTheme,
-  toggleTheme,
   syncNavigationBar,
   navigateTo,
 }

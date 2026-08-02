@@ -22,7 +22,6 @@ Page({
     points: [],
     priceText: '--',
     periodText: '--',
-    periodPercent: null,
     chartHeight: 300,
     chartEpoch: 0,
     loading: false,
@@ -99,7 +98,6 @@ Page({
       points: trend,
       priceText: gold.price != null ? formatAmount(gold.price, 2) : '--',
       periodText: formatPct(periodPercent),
-      periodPercent,
       loading: false,
     })
   },
@@ -121,7 +119,6 @@ Page({
       points,
       priceText: last != null ? formatAmount(last, 2) : '--',
       periodText: formatPct(periodPercent),
-      periodPercent,
       loading: false,
     })
   },

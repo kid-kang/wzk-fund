@@ -36,7 +36,8 @@ Page({
     this.setData(patch)
     if (QA_IDS[q]) {
       // 等展开渲染后再滚到对应问答
-      setTimeout(() => {
+      this._scrollTimer = setTimeout(() => {
+        this._scrollTimer = null
         this.setData({scrollInto: `qa-${q}`})
       }, 80)
     }
@@ -46,6 +47,13 @@ Page({
     const next = getThemeViewState()
     if (next.theme !== this.data.theme) this.setData(next)
     syncNavigationBar(next.theme)
+  },
+
+  onUnload() {
+    if (this._scrollTimer) {
+      clearTimeout(this._scrollTimer)
+      this._scrollTimer = null
+    }
   },
 
   onToggle(e) {

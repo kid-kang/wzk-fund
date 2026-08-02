@@ -1,4 +1,4 @@
-const {getThemeViewState, getStoredTheme, syncNavigationBar} = require('../../utils/theme')
+const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
 
 const TAB_TITLES = {
   holdings: '持仓',
@@ -66,8 +66,12 @@ Page({
     if (key === this.data.activeTab) return
     const mounted = Object.assign({}, this.data.mounted)
     mounted[key] = true
-    this.setData({activeTab: key, mounted})
-    this.syncNavTitle(key)
+    const title =
+      key === 'watchlist'
+        ? `自选(${this.watchCount || 0})`
+        : TAB_TITLES[key] || 'WZK Fund'
+    this.setData({activeTab: key, mounted, navTitle: title})
+    wx.setNavigationBarTitle({title})
   },
 
   onWatchCount(e) {
@@ -100,7 +104,9 @@ Page({
       key === 'watchlist'
         ? `自选(${this.watchCount || 0})`
         : TAB_TITLES[key] || 'WZK Fund'
-    this.setData({navTitle: title})
+    if (title !== this.data.navTitle) {
+      this.setData({navTitle: title})
+    }
     wx.setNavigationBarTitle({title})
   },
 })

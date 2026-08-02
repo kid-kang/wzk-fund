@@ -24,7 +24,6 @@ async function fetchHoldings() {
   const result = calcHoldings(fundsNow, (data.data && data.data.quotes) || [])
   if (result.persistPatches.length) store.patchFunds(result.persistPatches)
   return {
-    summary: result.summary,
     list: result.list,
     groups: result.groups,
   }
@@ -116,11 +115,6 @@ async function resolveFund(payload) {
   return assertOk(data).data
 }
 
-function sharesFromAmount(amount, netValue) {
-  if (!(amount > 0) || !(netValue != null && netValue > 0)) return 0
-  return sharesFromAmountExact(amount, netValue)
-}
-
 /**
  * 按最新官方公布净值反推份额（不用盘中估值）。
  * 金额口径 = 份额 × 最新披露单位净值。
@@ -136,7 +130,7 @@ function deriveHoldShares(amount, meta) {
   if (!(nav != null && nav > 0)) {
     throw new Error('暂无最新公布净值，无法按金额反推份额，请稍后重试')
   }
-  return sharesFromAmount(amount, nav)
+  return sharesFromAmountExact(amount, nav)
 }
 
 async function createFund(payload) {

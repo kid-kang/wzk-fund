@@ -50,12 +50,23 @@ Page({
         avgPrice: Number(this.data.avgPrice) || 0,
       })
       Toast.success('已保存')
-      setTimeout(() => wx.navigateBack(), 400)
+      this._navTimer = setTimeout(() => {
+        this._navTimer = null
+        wx.navigateBack()
+      }, 400)
     } catch (e) {
       this.setData({
         error: (e && e.message) || '保存失败',
-        saving: false,
       })
+    } finally {
+      this.setData({saving: false})
+    }
+  },
+
+  onUnload() {
+    if (this._navTimer) {
+      clearTimeout(this._navTimer)
+      this._navTimer = null
     }
   },
 })

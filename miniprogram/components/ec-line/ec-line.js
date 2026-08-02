@@ -18,8 +18,6 @@ Component({
     range: {type: String, value: ''},
     /** 迷你图配色：与卡片涨跌幅一致时传入 percent */
     toneDelta: {type: null, value: null},
-    /** 金价等：末端标注用的周期涨跌幅 */
-    periodPercent: {type: null, value: null},
   },
 
   data: {
@@ -40,10 +38,21 @@ Component({
           disableTouch: this.data.mode === 'spark',
         },
       })
-      setTimeout(() => this.renderChart(), 30)
+      this._bootTimer = setTimeout(() => {
+        this._bootTimer = null
+        this.renderChart()
+      }, 30)
     },
     detached() {
       this._disposed = true
+      if (this._bootTimer) {
+        clearTimeout(this._bootTimer)
+        this._bootTimer = null
+      }
+      if (this._retryTimer) {
+        clearTimeout(this._retryTimer)
+        this._retryTimer = null
+      }
       if (this.chart) {
         try {
           this.chart.dispose()
@@ -56,7 +65,7 @@ Component({
   },
 
   observers: {
-    'points, valueKey, mode, theme, valueMode, extraKey, extraLabel, height, showExtremes, range, toneDelta, periodPercent':
+    'points, valueKey, mode, theme, valueMode, extraKey, extraLabel, height, showExtremes, range, toneDelta':
       function () {
         if (this.data.ready) this.renderChart()
       },
@@ -81,7 +90,6 @@ Component({
         extraLabel: this.data.extraLabel || undefined,
         showExtremes: !!this.data.showExtremes,
         range: this.data.range || '',
-        periodPercent: this.data.periodPercent,
       })
     },
 
@@ -103,7 +111,11 @@ Component({
       }
       const comp = this.selectComponent('#chart')
       if (!comp) {
-        setTimeout(() => this.renderChart(), 40)
+        if (this._retryTimer) clearTimeout(this._retryTimer)
+        this._retryTimer = setTimeout(() => {
+          this._retryTimer = null
+          this.renderChart()
+        }, 40)
         return
       }
       if (this._initing) return

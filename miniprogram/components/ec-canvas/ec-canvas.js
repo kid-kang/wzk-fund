@@ -1,7 +1,8 @@
 const WxCanvas = require('./wx-canvas');
 const echarts = require('./echarts');
 
-let ctx;
+let ctx
+let preprocessorRegistered = false
 
 function getSdkVersion() {
   if (wx.getAppBaseInfo) {
@@ -68,20 +69,22 @@ Component({
   },
 
   ready: function () {
-    // Disable prograssive because drawImage doesn't support DOM as parameter
+    // Disable progressive because drawImage doesn't support DOM as parameter
     // See https://developers.weixin.qq.com/miniprogram/dev/api/canvas/CanvasContext.drawImage.html
-    echarts.registerPreprocessor(option => {
-      if (option && option.series) {
-        if (option.series.length > 0) {
-          option.series.forEach(series => {
-            series.progressive = 0;
-          });
+    if (!preprocessorRegistered) {
+      preprocessorRegistered = true
+      echarts.registerPreprocessor((option) => {
+        if (option && option.series) {
+          if (option.series.length > 0) {
+            option.series.forEach((series) => {
+              series.progressive = 0
+            })
+          } else if (typeof option.series === 'object') {
+            option.series.progressive = 0
+          }
         }
-        else if (typeof option.series === 'object') {
-          option.series.progressive = 0;
-        }
-      }
-    });
+      })
+    }
 
     if (!this.data.ec) {
       console.warn('组件需绑定 ec 变量，例：<ec-canvas id="mychart-dom-bar" '
@@ -140,22 +143,21 @@ Component({
       // const canvasDpr = wx.getSystemInfoSync().pixelRatio // 微信旧的canvas不能传入dpr
       const canvasDpr = 1
       var query = wx.createSelectorQuery().in(this);
-      query.select('.ec-canvas').boundingClientRect(res => {
+      query.select('.ec-canvas').boundingClientRect((res) => {
+        if (!res) return
         if (typeof callback === 'function') {
-          this.chart = callback(canvas, res.width, res.height, canvasDpr);
-        }
-        else if (this.data.ec && typeof this.data.ec.onInit === 'function') {
-          this.chart = this.data.ec.onInit(canvas, res.width, res.height, canvasDpr);
-        }
-        else {
+          this.chart = callback(canvas, res.width, res.height, canvasDpr)
+        } else if (this.data.ec && typeof this.data.ec.onInit === 'function') {
+          this.chart = this.data.ec.onInit(canvas, res.width, res.height, canvasDpr)
+        } else {
           this.triggerEvent('init', {
             canvas: canvas,
             width: res.width,
             height: res.height,
-            canvasDpr: canvasDpr // 增加了dpr，可方便外面echarts.init
-          });
+            canvasDpr: canvasDpr,
+          })
         }
-      }).exec();
+      }).exec()
     },
 
     initByNewWay(callback) {
@@ -164,13 +166,15 @@ Component({
       query
         .select('.ec-canvas')
         .fields({ node: true, size: true })
-        .exec(res => {
-          const canvasNode = res[0].node
+        .exec((res) => {
+          const info = res && res[0]
+          const canvasNode = info && info.node
+          if (!canvasNode) return
           this.canvasNode = canvasNode
 
           const canvasDpr = getPixelRatio()
-          const canvasWidth = res[0].width
-          const canvasHeight = res[0].height
+          const canvasWidth = info.width
+          const canvasHeight = info.height
 
           const ctx = canvasNode.getContext('2d')
 

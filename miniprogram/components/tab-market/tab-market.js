@@ -31,6 +31,7 @@ Component({
 
   timer: null,
   _ready: false,
+  _loadEpoch: 0,
 
   lifetimes: {
     ready() {
@@ -73,7 +74,9 @@ Component({
 
     startTimer() {
       this.clearTimer()
-      this.timer = setInterval(() => this.load(), 30000)
+      const app = getApp()
+      const ms = (app && app.globalData && app.globalData.refreshMs) || 30000
+      this.timer = setInterval(() => this.load(), ms)
     },
 
     clearTimer() {
@@ -84,12 +87,14 @@ Component({
     },
 
     async load() {
+      const epoch = (this._loadEpoch = (this._loadEpoch || 0) + 1)
       this.setData({error: ''})
       try {
         const results = await Promise.allSettled([
           api.fetchIndices(),
           api.fetchMarketOverview(),
         ])
+        if (epoch !== this._loadEpoch) return
         const [i, m] = results
         const patch = {loading: false}
         if (i.status === 'fulfilled') {
@@ -127,8 +132,10 @@ Component({
           patch.error =
             (results[0].reason && results[0].reason.message) || '加载失败'
         }
+        if (epoch !== this._loadEpoch) return
         this.setData(patch)
       } catch (e) {
+        if (epoch !== this._loadEpoch) return
         this.setData({
           error: (e && e.message) || '加载失败',
           loading: false,

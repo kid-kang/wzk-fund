@@ -32,10 +32,11 @@ Page({
     chartEpoch: 0,
     loading: false,
     error: '',
-    byRange: {},
   },
 
   onLoad(query) {
+    this._dead = false
+    this._byRange = {}
     const themePatch = getThemeViewState()
     syncNavigationBar(themePatch.theme)
     const code = String(query.code || '')
@@ -58,12 +59,18 @@ Page({
     syncNavigationBar(next.theme)
   },
 
+  onUnload() {
+    this._dead = true
+  },
+
   async bootstrap() {
     try {
       await this.fetchAndStoreRange(this.data.range)
+      if (this._dead) return
       this.applyChart(this.data.range)
       this.setData({loading: false})
     } catch (e) {
+      if (this._dead) return
       this.setData({
         loading: false,
         error: (e && e.message) || '加载失败',
@@ -74,34 +81,35 @@ Page({
   },
 
   mergeByRange(range, data) {
-    this._byRange = Object.assign({}, this._byRange || this.data.byRange, {
+    this._byRange = Object.assign({}, this._byRange || {}, {
       [range]: data,
     })
-    const patch = {byRange: this._byRange}
-    if (data && data.name) patch.name = data.name
-    this.setData(patch)
+    if (data && data.name && data.name !== this.data.name) {
+      this.setData({name: data.name})
+    }
     this.refreshRanges()
     return data
   },
 
   async fetchAndStoreRange(range) {
-    const cached = (this._byRange || this.data.byRange || {})[range]
+    const cached = (this._byRange || {})[range]
     if (cached) {
       this.refreshRanges()
       return cached
     }
     const data = await api.fetchIndexHistory(this.data.code, range)
+    if (this._dead) return data
     return this.mergeByRange(range, data)
   },
 
   prefetchHistory() {
     RANGES.forEach((t) => {
       const r = t.key
-      if ((this._byRange || this.data.byRange || {})[r]) return
+      if ((this._byRange || {})[r]) return
       api
         .fetchIndexHistory(this.data.code, r)
         .then((data) => {
-          if ((this._byRange || this.data.byRange || {})[r]) return
+          if (this._dead || (this._byRange || {})[r]) return
           this.mergeByRange(r, data)
         })
         .catch(() => {})
@@ -109,7 +117,8 @@ Page({
   },
 
   refreshRanges() {
-    const by = this._byRange || this.data.byRange || {}
+    if (this._dead) return
+    const by = this._byRange || {}
     const ranges = RANGES.map((t) => {
       const hist = by[t.key]
       const pct = hist ? hist.periodPercent : null
@@ -122,7 +131,7 @@ Page({
   },
 
   applyChart(range) {
-    const hist = (this._byRange || this.data.byRange || {})[range]
+    const hist = (this._byRange || {})[range]
     if (!hist) {
       this.setData({chartPoints: []})
       return
@@ -147,7 +156,7 @@ Page({
     const key = e.currentTarget.dataset.key
     if (!key || key === this.data.range) return
     const epoch = this.data.chartEpoch + 1
-    const cached = (this._byRange || this.data.byRange || {})[key]
+    const cached = (this._byRange || {})[key]
     this.setData({
       range: key,
       loading: !cached,
@@ -159,9 +168,9 @@ Page({
   },
 
   async loadRange(range, epoch) {
-    if (range !== this.data.range || epoch !== this.data.chartEpoch) return
+    if (this._dead || range !== this.data.range || epoch !== this.data.chartEpoch) return
 
-    if ((this._byRange || this.data.byRange || {})[range]) {
+    if ((this._byRange || {})[range]) {
       this.setData({loading: false})
       this.applyChart(range)
       return
@@ -170,11 +179,11 @@ Page({
     this.setData({loading: true, error: '', chartPoints: []})
     try {
       await this.fetchAndStoreRange(range)
-      if (range !== this.data.range || epoch !== this.data.chartEpoch) return
+      if (this._dead || range !== this.data.range || epoch !== this.data.chartEpoch) return
       this.setData({loading: false})
       this.applyChart(range)
     } catch (e) {
-      if (range !== this.data.range || epoch !== this.data.chartEpoch) return
+      if (this._dead || range !== this.data.range || epoch !== this.data.chartEpoch) return
       this.setData({
         loading: false,
         error: (e && e.message) || '加载失败',

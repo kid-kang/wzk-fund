@@ -26,7 +26,6 @@ function setApiBase(base) {
 }
 
 module.exports = {
-  API_BASE_KEY,
   DEFAULT_API_BASE,
   getApiBase,
   setApiBase,

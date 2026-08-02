@@ -4,12 +4,6 @@ function todayDateStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/** 是否为交易日（仅排除周末，不含法定节假日） */
-function isTradingDay(d = new Date()) {
-  const day = d.getDay()
-  return day !== 0 && day !== 6
-}
-
 function normalizeNetValueDate(raw, now = new Date()) {
   const s = String(raw || '').trim()
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
@@ -88,11 +82,7 @@ function shouldShowConfirmedUpdatedBadge(quote, now = new Date()) {
 }
 
 module.exports = {
-  todayDateStr,
-  isTradingDay,
   normalizeNetValueDate,
-  nextTradingDay,
-  isTradingDayStarted,
   isDelayedNavFund,
   formatOfficialDiscloseTime,
   shouldShowConfirmedUpdatedBadge,

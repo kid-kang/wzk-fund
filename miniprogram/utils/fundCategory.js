@@ -74,9 +74,7 @@ function isRealtimeHolding(row = {}) {
 }
 
 module.exports = {
-  CATEGORY_ORDER,
   classifyFundType,
-  resolveFundCategory,
   groupWatchlistByCategory,
   isRealtimeHolding,
 }

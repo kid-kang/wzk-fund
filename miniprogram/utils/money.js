@@ -17,11 +17,6 @@ function round2(n) {
   return toDecimal(n).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber()
 }
 
-/** 收益取分（历史命名保留，语义同 round2） */
-function truncPnl2(n) {
-  return round2(n)
-}
-
 /** 份额：金额 ÷ 净值，四舍五入到 4 位小数 */
 function sharesFromAmount(amount, netValue) {
   const a = toDecimal(amount)
@@ -47,9 +42,7 @@ function pnlFromShares(shares, currNav, prevNav) {
 
 module.exports = {
   Decimal,
-  toDecimal,
   round2,
-  truncPnl2,
   sharesFromAmount,
   amountFromShares,
   pnlFromShares,

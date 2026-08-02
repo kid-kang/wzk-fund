@@ -202,11 +202,7 @@ function patchFunds(patches) {
 }
 
 module.exports = {
-  STORAGE_KEY,
-  DEFAULT_CONFIG,
-  normalizeConfig,
   loadConfig,
-  saveConfig,
   listFunds,
   upsertFund,
   getFund,

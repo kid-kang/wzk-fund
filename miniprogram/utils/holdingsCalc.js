@@ -9,7 +9,6 @@ const {
   amountFromShares,
   pnlFromShares,
   round2,
-  truncPnl2,
 } = require('./money')
 const {classifyFundType, isRealtimeHolding} = require('./fundCategory')
 
@@ -326,11 +325,6 @@ function mergeWatchlist(localFunds, quotes) {
 }
 
 module.exports = {
-  truncPnl2,
-  resolveNavPair,
   calcHoldings,
   mergeWatchlist,
-  summarizeHoldGroup,
-  splitHoldingsByRealtime,
-  isRealtimeHolding,
 }

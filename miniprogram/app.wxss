@@ -4,9 +4,7 @@
  */
 page {
   --bg: #0b1018;
-  --bg-deep: #070a10;
   --panel: rgba(28, 34, 48, 0.78);
-  --panel-solid: #161b27;
   --ink: #eef2ff;
   --muted: #8b93a7;
   --line: rgba(238, 242, 255, 0.1);
@@ -15,7 +13,6 @@ page {
   --fall: #4bb892;
   --accent: #7b88ff;
   --accent-soft: rgba(123, 136, 255, 0.18);
-  --gold: #e6b84a;
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow:
     0 20rpx 56rpx rgba(0, 0, 0, 0.45),
@@ -47,9 +44,7 @@ page {
 page.theme-dark,
 .theme-dark {
   --bg: #0b1018;
-  --bg-deep: #070a10;
   --panel: rgba(28, 34, 48, 0.78);
-  --panel-solid: #161b27;
   --ink: #eef2ff;
   --muted: #8b93a7;
   --line: rgba(238, 242, 255, 0.1);
@@ -57,7 +52,6 @@ page.theme-dark,
   --fall: #4bb892;
   --accent: #7b88ff;
   --accent-soft: rgba(123, 136, 255, 0.18);
-  --gold: #e6b84a;
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow:
     0 20rpx 56rpx rgba(0, 0, 0, 0.45),
@@ -84,9 +78,7 @@ page.theme-dark,
 page.theme-light,
 .theme-light {
   --bg: #eef1f8;
-  --bg-deep: #e2e7f2;
   --panel: rgba(255, 255, 255, 0.72);
-  --panel-solid: #ffffff;
   --ink: #10141c;
   --muted: #7a8494;
   --line: rgba(16, 20, 28, 0.08);
@@ -94,7 +86,6 @@ page.theme-light,
   --fall: #0b6b4f;
   --accent: #4f5dff;
   --accent-soft: rgba(79, 93, 255, 0.12);
-  --gold: #d4a017;
   --glass-border: rgba(255, 255, 255, 0.72);
   --glass-shadow:
     0 18rpx 50rpx rgba(28, 40, 80, 0.1),
@@ -197,33 +188,6 @@ button {
   -webkit-backdrop-filter: blur(28px);
 }
 
-.crystal {
-  position: relative;
-  transform: perspective(1100rpx) rotateX(7deg) translateZ(0);
-  transform-origin: 50% 0%;
-  overflow: hidden;
-}
-
-.crystal::after {
-  content: "";
-  position: absolute;
-  left: -20%;
-  top: -60%;
-  width: 70%;
-  height: 120%;
-  background: linear-gradient(
-    120deg,
-    rgba(255, 255, 255, 0.45),
-    rgba(255, 255, 255, 0) 55%
-  );
-  pointer-events: none;
-  transform: rotate(18deg);
-}
-
-.muted {
-  color: var(--muted);
-}
-
 .rise {
   color: var(--rise);
 }
@@ -239,45 +203,6 @@ button {
 .mono {
   font-family: "DIN Alternate", "Tabular Numbers", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12rpx;
-  margin-bottom: 14rpx;
-}
-
-.toolbar .title {
-  font-size: 36rpx;
-  font-weight: 760;
-}
-
-.toolbar .sub {
-  display: block;
-  margin-top: 2rpx;
-  font-size: 20rpx;
-  color: var(--muted);
-}
-
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-}
-
-.icon-fab {
-  width: 60rpx;
-  height: 60rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--panel);
-  border: 1rpx solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(20px);
 }
 
 .swipe-actions {
@@ -336,25 +261,6 @@ button {
   color: #243552;
 }
 
-.swipe-btn.set {
-  color: #8a6a32;
-  background:
-    linear-gradient(
-      160deg,
-      rgba(255, 248, 230, 0.95) 0%,
-      rgba(240, 220, 180, 0.9) 100%
-    ),
-    repeating-linear-gradient(
-      -16deg,
-      transparent 0 9rpx,
-      rgba(138, 106, 50, 0.05) 9rpx 10rpx
-    );
-}
-
-.swipe-btn.set .swipe-label {
-  color: #8a6a32;
-}
-
 .swipe-btn.del {
   color: #d7263d;
   background:
@@ -395,25 +301,6 @@ button {
 
 .theme-dark .swipe-btn.edit .swipe-label {
   color: #c5d0e6;
-}
-
-.theme-dark .swipe-btn.set {
-  background:
-    linear-gradient(
-      160deg,
-      rgba(72, 58, 32, 0.95) 0%,
-      rgba(56, 44, 24, 0.94) 100%
-    ),
-    repeating-linear-gradient(
-      -16deg,
-      transparent 0 9rpx,
-      rgba(230, 184, 74, 0.05) 9rpx 10rpx
-    );
-  color: #e0c07a;
-}
-
-.theme-dark .swipe-btn.set .swipe-label {
-  color: #e0c07a;
 }
 
 .theme-dark .swipe-btn.del {
@@ -759,10 +646,6 @@ button {
 .list-gap {
   display: flex;
   flex-direction: column;
-}
-
-.empty-wrap {
-  padding: 48rpx 0;
 }
 
 /* —— 来财水印（黄金设置 / 基金·黄金走势详情共用） —— */

@@ -273,26 +273,6 @@
   margin-top: 28rpx;
 }
 
-.fund-divider.empty-add {
-  margin-top: 8rpx;
-}
-
-.section-actions {
-  position: absolute;
-  right: var(--action-inset, 12rpx);
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  gap: 4rpx;
-  z-index: 1;
-}
-
-.section-actions .section-action {
-  position: static;
-  transform: none;
-}
-
 .err {
   margin-bottom: 12rpx;
   padding: 14rpx 18rpx;
@@ -556,18 +536,6 @@
   font-weight: 720;
   color: inherit;
   line-height: 1.15;
-}
-
-.gm.rise {
-  color: var(--rise);
-}
-
-.gm.fall {
-  color: var(--fall);
-}
-
-.gm.flat {
-  color: var(--muted);
 }
 
 .gm-price {

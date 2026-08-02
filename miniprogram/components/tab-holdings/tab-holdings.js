@@ -70,9 +70,7 @@ Component({
 
   data: {
     loading: true,
-    refreshing: false,
     error: '',
-    updatedAt: '',
     hasPortfolio: false,
     hasRealtime: false,
     hasDelayed: false,
@@ -84,21 +82,15 @@ Component({
     foreignShareText: '--',
     domesticPnlText: '--',
     domesticPnlPctText: '--',
-    domesticPnlClass: 'flat',
-    domesticPnlPctClass: 'flat',
     foreignPnlText: '--',
     foreignPnlPctText: '--',
-    foreignPnlClass: 'flat',
-    foreignPnlPctClass: 'flat',
     showGold: true,
     hideAmounts: false,
     goldPriceText: '--',
     goldValueText: '--',
     goldWeightText: '',
     goldCostText: '--',
-    goldCostClass: 'flat',
     goldCostPctText: '--',
-    goldCostPctClass: 'flat',
     hasGold: false,
   },
 
@@ -133,10 +125,6 @@ Component({
       if (!this._ready) return
       if (active) this.activate()
       else this.deactivate()
-    },
-    theme() {
-      if (!this._ready || !this.data.active) return
-      this.load(true)
     },
   },
 
@@ -177,9 +165,9 @@ Component({
 
     async load(silent) {
       const epoch = (this._loadEpoch = (this._loadEpoch || 0) + 1)
-      if (silent) this.setData({refreshing: true})
-      else this.setData({loading: true})
-      this.setData({error: ''})
+      const boot = {error: ''}
+      if (!silent) boot.loading = true
+      this.setData(boot)
       try {
         const results = await Promise.allSettled([
           api.fetchHoldings(),
@@ -234,9 +222,7 @@ Component({
           patch.goldPriceText = gold.price != null ? formatAmount(gold.price, 2) : '--'
           patch.goldValueText = formatAmount(hasGold ? goldValue : null)
           patch.goldCostText = formatMoney(costPnl)
-          patch.goldCostClass = pctClass(costPnl)
           patch.goldCostPctText = formatPct(costPct)
-          patch.goldCostPctClass = pctClass(costPct)
         }
 
         const goldInPortfolio = showGold && hasGold ? goldValue : 0
@@ -257,15 +243,11 @@ Component({
         const domesticPnlPct =
           domesticAmount > 0 ? (domesticPnl / domesticAmount) * 100 : 0
         patch.domesticPnlPctText = formatPct(domesticPnlPct)
-        patch.domesticPnlClass = pctClass(domesticPnl)
-        patch.domesticPnlPctClass = pctClass(domesticPnlPct)
         patch.foreignPnlText = formatMoney(foreignPnl)
         // QDII「当前日」收益：各品种最新已披露净值跳变加总；收益率分母 = QDII 持仓金额
         const foreignPnlPct =
           foreignAmount > 0 ? (foreignPnl / foreignAmount) * 100 : 0
         patch.foreignPnlPctText = formatPct(foreignPnlPct)
-        patch.foreignPnlClass = pctClass(foreignPnl)
-        patch.foreignPnlPctClass = pctClass(foreignPnlPct)
         patch.goldWeightText =
           goldInPortfolio > 0
             ? `${pctOfTotal(goldInPortfolio, grandTotal).toFixed(1)}%`
@@ -277,9 +259,7 @@ Component({
             (failed.reason && failed.reason.message) || '加载失败，请确认代理服务已启动'
         }
 
-        patch.updatedAt = new Date().toLocaleTimeString('zh-CN', {hour12: false})
         patch.loading = false
-        patch.refreshing = false
         if (epoch !== this._loadEpoch) return
         this.setData(patch)
       } catch (e) {
@@ -287,7 +267,6 @@ Component({
         this.setData({
           error: (e && e.message) || '加载失败',
           loading: false,
-          refreshing: false,
         })
       }
     },

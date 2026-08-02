@@ -158,8 +158,7 @@
   transform: scale(0.96);
 }
 
-.theme-dark .fab-add,
-.fab-add.theme-dark {
+.theme-dark .fab-add {
   color: var(--accent);
   background:
     radial-gradient(120% 100% at 28% 18%, rgba(255, 255, 255, 0.12) 0%, transparent 48%),

@@ -355,7 +355,7 @@
             </view>
             <view class="gold-divider-line"></view>
           </view>
-          <view class="section-action gold-action" catchtap="onEditGold" hover-class="section-action-hover" aria-label="设置黄金">
+          <view class="section-action" catchtap="onEditGold" hover-class="section-action-hover" aria-label="设置黄金">
             <van-icon
               name="setting-o"
               size="15px"

@@ -4,7 +4,7 @@
   "private": true,
   "description": "WZK Fund 微信小程序客户端，行情走同源后端，配置存在 wx.storage",
   "scripts": {
-    "pack:vant": "node -e \"const fs=require('fs');const p=require('path');const src='node_modules/@vant/weapp/lib';const dest='miniprogram_npm/@vant/weapp';fs.mkdirSync(dest,{recursive:true});fs.cpSync(src,dest,{recursive:true});fs.copyFileSync('node_modules/@vant/weapp/package.json',p.join(dest,'package.json'));console.log('vant packed')\"",
+    "pack:vant": "node scripts/pack-vant.js",
     "postinstall": "npm run pack:vant"
   },
   "dependencies": {

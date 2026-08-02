@@ -17,18 +17,6 @@ function formatMoney(v, digits = 2) {
   return `${sign}${Number(v).toFixed(digits)}`
 }
 
-/** 无正负号金额（涨跌靠色块/三角表达） */
-function formatMoneyAbs(v, digits = 2) {
-  if (v == null || Number.isNaN(v)) return '--'
-  return Math.abs(Number(v)).toFixed(digits)
-}
-
-/** 无正负号涨跌幅 */
-function formatPctAbs(v, digits = 2) {
-  if (v == null || Number.isNaN(v)) return '--'
-  return `${Math.abs(Number(v)).toFixed(digits)}%`
-}
-
 function formatAmount(v, digits = 2) {
   if (v == null || Number.isNaN(v)) return '--'
   return Number(v).toFixed(digits)
@@ -53,9 +41,7 @@ function formatTrendAxisDate(date, range) {
 module.exports = {
   pctClass,
   formatPct,
-  formatPctAbs,
   formatMoney,
-  formatMoneyAbs,
   formatAmount,
   formatTrendAxisDate,
 }

@@ -66,8 +66,6 @@ function formatFundAge(establishDate, ageDays) {
 }
 
 module.exports = {
-  RANGE_MIN_AGE_DAYS,
-  ALL_RANGES,
   isRangeAvailable,
   availableFundRanges,
   defaultFundRange,
