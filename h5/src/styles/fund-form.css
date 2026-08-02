@@ -36,6 +36,70 @@
   color: var(--muted);
 }
 
+/* 克制警示条：左侧铜橙竖线 + 浅底，贴合控制台 */
+.guide-link {
+  display: flex;
+  align-items: center;
+  gap: 14rem;
+  margin: 4rem 8rem 16rem;
+  padding: 18rem 18rem 18rem 20rem;
+  border-radius: 14rem;
+  background: rgba(196, 92, 42, 0.08);
+  border: 1rem solid rgba(196, 92, 42, 0.22);
+  border-left: 6rem solid #c45c2a;
+  width: calc(100% - 16rem);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.theme-dark .guide-link {
+  background: rgba(255, 138, 76, 0.1);
+  border-color: rgba(255, 138, 76, 0.24);
+  border-left-color: #ff8a4c;
+}
+
+.guide-link:active {
+  opacity: 0.82;
+}
+
+.guide-link-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.guide-link-title {
+  display: block;
+  font-size: 28rem;
+  font-weight: 740;
+  color: #a34a1f;
+  margin-bottom: 4rem;
+}
+
+.theme-dark .guide-link-title {
+  color: #ff9a62;
+}
+
+.guide-link-desc {
+  display: block;
+  font-size: 22rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.guide-link-arrow {
+  flex-shrink: 0;
+  font-size: 34rem;
+  font-weight: 700;
+  color: #c45c2a;
+  line-height: 1;
+}
+
+.theme-dark .guide-link-arrow {
+  color: #ff8a4c;
+}
+
 .rail {
   padding: 28rem 8rem 8rem;
   border-bottom: 1rem solid var(--line);

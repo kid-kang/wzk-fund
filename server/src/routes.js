@@ -6,8 +6,10 @@ import {
   getFundMatiaria,
   fetchFundNavHistory,
   fetchFundSectorsQueued,
+  fetchFundFtype,
   getFundHistory,
   isConfirmedSessionActive,
+  isDelayedNavFund,
 } from './services/fund.js'
 import {getIndices, getIndexHistory, getMarketOverview} from './services/market.js'
 import {getGoldRealtime, getGoldHistory} from './services/gold.js'
@@ -23,6 +25,8 @@ function normalizeFundInput(raw = {}) {
     type: raw.type === 'hold' ? 'hold' : 'watch',
     shares: Number(raw.shares) || 0,
     sectors: Array.isArray(raw.sectors) ? raw.sectors : [],
+    fundType: raw.fundType || '',
+    ftype: raw.ftype || '',
     createdAt: raw.createdAt || '',
     updatedAt: raw.updatedAt || '',
   }
@@ -85,6 +89,13 @@ router.post('/funds/resolve', async (ctx) => {
       }
     }
 
+    let ftype = ''
+    try {
+      ftype = await fetchFundFtype(meta.code || code)
+    } catch {
+      ftype = ''
+    }
+
     let netValue = null
     let prevNetValue = null
     let prevNetValueDate = ''
@@ -112,14 +123,6 @@ router.post('/funds/resolve', async (ctx) => {
       }
       if (netValue == null && meta.netValue != null) netValue = meta.netValue
 
-      // 「昨日结算」反推份额用的净值：
-      // - 确认会话内：金额是今确认前市值 → 用上一交易日净值 hist[1]
-      // - 盘中估值期：金额是最新确认市值 → 用最新披露净值 hist[0]
-      //   （此时绝不能再用 hist[1]，否则份额系统性偏大）
-      if (netValue != null && netValueDate && !isConfirmedSessionActive(netValueDate)) {
-        prevNetValue = netValue
-        prevNetValueDate = netValueDate
-      }
     }
 
     ctx.body = {
@@ -129,12 +132,20 @@ router.post('/funds/resolve', async (ctx) => {
         name: body.name || meta.name || code,
         fundKey: meta.fundKey || body.fundKey || '',
         sectors: sectors || [],
+        ftype,
         netValue,
         prevNetValue,
         prevNetValueDate,
         netValueDate,
-        /** 是否处于今日净值已确认会话（可选「今日结算」） */
-        confirmedSession: !!(netValueDate && isConfirmedSessionActive(netValueDate)),
+        confirmedSession: !!(
+          netValueDate &&
+          isConfirmedSessionActive(netValueDate, new Date(), {
+            delayedDisclosure: isDelayedNavFund({
+              ftype,
+              name: body.name || meta.name,
+            }),
+          })
+        ),
       },
     }
   } catch (e) {

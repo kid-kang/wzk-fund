@@ -2,6 +2,8 @@ import type {FundQuoteRow, FundRecord, HoldingsPayload} from '@/lib/api'
 import {
   shouldShowConfirmedUpdatedBadge,
   normalizeNetValueDate,
+  isDelayedNavFund,
+  formatOfficialDiscloseTime,
 } from '@/lib/tradingCalendar'
 import {
   Decimal,
@@ -28,6 +30,7 @@ export type QuoteLike = {
   time?: string | null
   trend?: {time: string; growth: number | null; netValue?: number | null}[]
   sectors?: string[]
+  ftype?: string
 }
 
 /** 从估值分时末点取净值（比涨幅更精确） */
@@ -164,10 +167,24 @@ export function calcHoldings(
       shares,
       type: raw.type,
       code: raw.code,
-      confirmedUpdated: shouldShowConfirmedUpdatedBadge({
-        percentSource: q.percentSource || null,
-        netValueDate: navDay || q.netValueDate || '',
-      }),
+      ...(() => {
+        const badgeQuote = {
+          percentSource: q.percentSource || null,
+          netValueDate: navDay || q.netValueDate || '',
+          dayGrowth: q.dayGrowth,
+          percent,
+          ftype: q.ftype,
+          name: q.name || raw.name,
+        }
+        const confirmedUpdated = shouldShowConfirmedUpdatedBadge(badgeQuote)
+        return {
+          confirmedUpdated,
+          discloseTimeText:
+            isDelayedNavFund(badgeQuote) && confirmedUpdated
+              ? formatOfficialDiscloseTime(badgeQuote.netValueDate, q.time)
+              : '',
+        }
+      })(),
     })
   }
 

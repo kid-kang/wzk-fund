@@ -1,6 +1,6 @@
 const api = require('../../utils/api')
 const {getApiBase, setApiBase, DEFAULT_API_BASE} = require('../../utils/config')
-const {applyTheme, syncNavigationBar} = require('../../utils/theme')
+const {applyTheme, syncNavigationBar, navigateTo} = require('../../utils/theme')
 const Dialog = require('@vant/weapp/dialog/dialog').default
 const Toast = require('@vant/weapp/toast/toast').default
 
@@ -26,6 +26,7 @@ Component({
 
   data: {
     showGold: true,
+    hideAmounts: false,
     apiBase: DEFAULT_API_BASE,
     pingState: '',
     pingLabel: 'IDLE',
@@ -79,13 +80,17 @@ Component({
     async refreshLocal() {
       const apiBase = getApiBase()
       let showGold = true
+      let hideAmounts = false
       try {
         const settings = await api.fetchSettings()
         showGold = !settings || settings.showGold !== false
       } catch (e) {
         // ignore
       }
-      this.setData({apiBase, showGold})
+      try {
+        hideAmounts = !!wx.getStorageSync('holdings_hide_amounts')
+      } catch (e) {}
+      this.setData({apiBase, showGold, hideAmounts})
     },
 
     async onToggleGold(e) {
@@ -95,6 +100,16 @@ Component({
         this.setData({showGold})
       } catch (err) {
         Toast.fail((err && err.message) || '保存失败')
+      }
+    },
+
+    onToggleHideAmounts(e) {
+      const hideAmounts = !!e.detail
+      this.setData({hideAmounts})
+      try {
+        wx.setStorageSync('holdings_hide_amounts', hideAmounts)
+      } catch (err) {
+        Toast.fail('保存失败')
       }
     },
 
@@ -171,6 +186,10 @@ Component({
           message: (e && e.message) || '请确认剪贴板是有效配置 JSON',
         })
       }
+    },
+
+    onOpenQa() {
+      navigateTo('/pages/fund-qa/fund-qa')
     },
   },
 })

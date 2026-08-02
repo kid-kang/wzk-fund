@@ -5,7 +5,8 @@
     "pages/gold-edit/gold-edit",
     "pages/gold-trend/gold-trend",
     "pages/fund-trend/fund-trend",
-    "pages/index-trend/index-trend"
+    "pages/index-trend/index-trend",
+    "pages/fund-qa/fund-qa"
   ],
   "window": {
     "navigationBarTitleText": "WZK Fund",

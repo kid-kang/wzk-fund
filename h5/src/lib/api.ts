@@ -44,6 +44,10 @@ export type FundRecord = {
   type: 'hold' | 'watch'
   shares: number
   sectors: string[]
+  /** 归类后的基金类型（QDII / 指数型等） */
+  fundType?: string
+  /** 东财原始 FTYPE */
+  ftype?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -68,6 +72,18 @@ export type FundQuoteRow = FundRecord & {
   weight?: number
   /** 晚间官方确认涨跌后展示，下一交易日开盘清除 */
   confirmedUpdated?: boolean
+  /** QDII 等延迟净值的官方披露日期文案 */
+  discloseTimeText?: string
+}
+
+export type HoldGroupPayload = {
+  list: FundQuoteRow[]
+  summary: {
+    totalAmount: number
+    bodTotal?: number
+    totalPnl: number
+    totalPnlPercent: number
+  }
 }
 
 export type HoldingsPayload = {
@@ -79,6 +95,10 @@ export type HoldingsPayload = {
     totalPnlPercent: number
   }
   list: FundQuoteRow[]
+  groups: {
+    realtime: HoldGroupPayload
+    delayed: HoldGroupPayload
+  }
 }
 
 export type IndexItem = {
@@ -142,11 +162,13 @@ export async function fetchHoldings() {
     data: {quotes: FundQuoteRow[]; funds: FundRecord[]}
   }>('/funds/quotes', {type: 'hold', funds})
   assertOk(data)
-  const result = calcHoldings(funds, data.data.quotes || [])
+  // 请求期间用户可能已删/改持仓：始终按当前本地配置重算
+  const fundsNow = listFunds('hold')
+  const result = calcHoldings(fundsNow, data.data.quotes || [])
   if (result.persistPatches.length) {
     patchFunds(result.persistPatches)
   }
-  return {summary: result.summary, list: result.list}
+  return {summary: result.summary, list: result.list, groups: result.groups}
 }
 
 export async function fetchWatchlist() {
@@ -157,7 +179,8 @@ export async function fetchWatchlist() {
     data: {quotes: FundQuoteRow[]}
   }>('/funds/quotes', {type: 'watch', funds})
   assertOk(data)
-  const {list, persistPatches} = mergeWatchlist(funds, data.data.quotes || [])
+  const fundsNow = listFunds('watch')
+  const {list, persistPatches} = mergeWatchlist(fundsNow, data.data.quotes || [])
   if (persistPatches.length) patchFunds(persistPatches)
   return list
 }

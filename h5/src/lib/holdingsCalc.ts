@@ -1,7 +1,10 @@
 import type {FundQuoteRow, FundRecord, HoldingsPayload} from '@/lib/api'
+import {classifyFundType, isRealtimeHolding} from '@/lib/fundCategory'
 import {
   shouldShowConfirmedUpdatedBadge,
   normalizeNetValueDate,
+  isDelayedNavFund,
+  formatOfficialDiscloseTime,
 } from '@/lib/tradingCalendar'
 import {
   Decimal,
@@ -11,7 +14,7 @@ import {
   truncPnl2,
 } from '@/lib/money'
 
-export {truncPnl2}
+export {truncPnl2, isRealtimeHolding}
 
 export type QuoteLike = {
   code: string
@@ -28,6 +31,32 @@ export type QuoteLike = {
   time?: string | null
   trend?: {time: string; growth: number | null; netValue?: number | null}[]
   sectors?: string[]
+  ftype?: string
+}
+
+export type HoldGroupSummary = HoldingsPayload['summary']
+
+export type HoldGroup = {
+  list: FundQuoteRow[]
+  summary: HoldGroupSummary
+}
+
+export type HoldingsGroups = {
+  realtime: HoldGroup
+  delayed: HoldGroup
+}
+
+function cleanSectors(list: string[] | undefined | null): string[] {
+  return (Array.isArray(list) ? list : []).filter((s) => {
+    const t = String(s || '').trim()
+    return !!t && t !== '--' && t !== '-'
+  })
+}
+
+function pickSectors(local: string[] | undefined, remote: string[] | undefined): string[] {
+  const fromLocal = cleanSectors(local)
+  if (fromLocal.length) return fromLocal
+  return cleanSectors(remote)
 }
 
 /** 从估值分时末点取净值（比涨幅更精确） */
@@ -72,21 +101,22 @@ export function resolveNavPair(quote: QuoteLike): {
   return {prevNav: null, currNav: null}
 }
 
+type PersistPatch = {
+  code: string
+  sectors?: string[]
+  fundType?: string
+  ftype?: string
+}
+
 export function calcHoldings(
   localFunds: FundRecord[],
   quotes: QuoteLike[],
 ): HoldingsPayload & {
-  persistPatches: Array<{
-    code: string
-    sectors?: string[]
-  }>
+  persistPatches: PersistPatch[]
 } {
   const quoteMap = new Map(quotes.map((q) => [q.code, q]))
   const rows: FundQuoteRow[] = []
-  const persistPatches: Array<{
-    code: string
-    sectors?: string[]
-  }> = []
+  const persistPatches: PersistPatch[] = []
   let totalAmount = new Decimal(0)
   let totalPnl = new Decimal(0)
 
@@ -125,27 +155,32 @@ export function calcHoldings(
     totalAmount = totalAmount.plus(displayAmount)
     totalPnl = totalPnl.plus(pnl)
 
-    const sectors = raw.sectors?.length
-      ? raw.sectors
-      : q.sectors?.length
-        ? q.sectors
-        : []
+    const sectors = pickSectors(raw.sectors, q.sectors)
+    const name = q.name || raw.name
+    const ftype = q.ftype || raw.ftype || ''
+    const fundType = raw.fundType || classifyFundType(ftype, name)
 
-    const patch: {
-      code: string
-      sectors?: string[]
-    } = {code: raw.code}
+    const patch: PersistPatch = {code: raw.code}
     let needPersist = false
-
-    if (!raw.sectors?.length && sectors.length) {
+    const localClean = cleanSectors(raw.sectors)
+    const hadJunkSectors = (raw.sectors || []).length > 0 && !localClean.length
+    if (sectors.join() !== localClean.join() || hadJunkSectors) {
       patch.sectors = sectors
+      needPersist = true
+    }
+    if (!raw.fundType && fundType) {
+      patch.fundType = fundType
+      needPersist = true
+    }
+    if (ftype && ftype !== raw.ftype) {
+      patch.ftype = ftype
       needPersist = true
     }
     if (needPersist) persistPatches.push(patch)
 
     rows.push({
       ...raw,
-      name: q.name || raw.name,
+      name,
       fundKey: q.fundKey || raw.fundKey,
       percent,
       percentSource: q.percentSource || null,
@@ -161,13 +196,31 @@ export function calcHoldings(
       liveAmount,
       pnl,
       sectors,
+      fundType,
+      ftype,
       shares,
       type: raw.type,
       code: raw.code,
-      confirmedUpdated: shouldShowConfirmedUpdatedBadge({
-        percentSource: q.percentSource || null,
-        netValueDate: navDay || q.netValueDate || '',
-      }),
+      ...(() => {
+        const badgeQuote = {
+          percentSource: q.percentSource || null,
+          netValueDate: navDay || q.netValueDate || '',
+          dayGrowth: q.dayGrowth,
+          percent,
+          fundType,
+          ftype,
+          name,
+        }
+        const confirmedUpdated = shouldShowConfirmedUpdatedBadge(badgeQuote)
+        const delayed = isDelayedNavFund(badgeQuote)
+        return {
+          confirmedUpdated,
+          discloseTimeText:
+            delayed && confirmedUpdated
+              ? formatOfficialDiscloseTime(badgeQuote.netValueDate, q.time)
+              : '',
+        }
+      })(),
     })
   }
 
@@ -189,6 +242,7 @@ export function calcHoldings(
   const bodTotalNum = round2(bodTotal)
   const totalPnlNum = round2(totalPnl)
 
+  const list = rows.sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0))
   return {
     summary: {
       totalAmount: totalAmountNum,
@@ -198,32 +252,113 @@ export function calcHoldings(
       totalPnlPercent:
         bodTotalNum > 0 ? round2(new Decimal(totalPnlNum).div(bodTotalNum).mul(100)) : 0,
     },
-    list: rows.sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0)),
+    list,
+    groups: splitHoldingsByRealtime(list),
     persistPatches,
+  }
+}
+
+/** 对一组持仓重算组内权重与汇总 */
+export function summarizeHoldGroup(rows: FundQuoteRow[]): HoldGroup {
+  let totalAmount = new Decimal(0)
+  let totalPnl = new Decimal(0)
+  let bodTotal = new Decimal(0)
+  for (const row of rows || []) {
+    totalAmount = totalAmount.plus(row.amount || 0)
+    totalPnl = totalPnl.plus(row.pnl || 0)
+    if (row.shares > 0 && row.prevNetValue != null && row.prevNetValue > 0) {
+      bodTotal = bodTotal.plus(amountFromShares(row.shares, row.prevNetValue))
+    } else {
+      bodTotal = bodTotal.plus(new Decimal(row.amount || 0).minus(row.pnl || 0))
+    }
+  }
+  const totalAmountNum = round2(totalAmount)
+  const totalPnlNum = round2(totalPnl)
+  const bodTotalNum = round2(bodTotal)
+  const list = (rows || [])
+    .map((row) => ({
+      ...row,
+      weight:
+        totalAmountNum > 0
+          ? round2(new Decimal(row.amount || 0).div(totalAmount).mul(100))
+          : 0,
+    }))
+    .sort((a, b) => (b.amount || 0) - (a.amount || 0))
+
+  return {
+    list,
+    summary: {
+      totalAmount: totalAmountNum,
+      bodTotal: bodTotalNum,
+      totalPnl: totalPnlNum,
+      totalPnlPercent:
+        bodTotalNum > 0
+          ? round2(new Decimal(totalPnlNum).div(bodTotalNum).mul(100))
+          : 0,
+    },
+  }
+}
+
+/** 可实时估值 / 非实时（QDII·海外）分组 */
+export function splitHoldingsByRealtime(list: FundQuoteRow[]): HoldingsGroups {
+  const live: FundQuoteRow[] = []
+  const delayed: FundQuoteRow[] = []
+  for (const row of list || []) {
+    if (isRealtimeHolding(row)) live.push(row)
+    else delayed.push(row)
+  }
+  return {
+    realtime: summarizeHoldGroup(live),
+    delayed: summarizeHoldGroup(delayed),
   }
 }
 
 export function mergeWatchlist(
   localFunds: FundRecord[],
   quotes: QuoteLike[],
-): {list: FundQuoteRow[]; persistPatches: Array<{code: string; sectors?: string[]}>} {
+): {list: FundQuoteRow[]; persistPatches: PersistPatch[]} {
   const quoteMap = new Map(quotes.map((q) => [q.code, q]))
-  const persistPatches: Array<{code: string; sectors?: string[]}> = []
+  const persistPatches: PersistPatch[] = []
   const list = localFunds.map((f) => {
     const q = quoteMap.get(f.code) || ({} as QuoteLike)
-    const sectors = f.sectors?.length
-      ? f.sectors
-      : q.sectors?.length
-        ? q.sectors
-        : []
-    if (!f.sectors?.length && sectors.length) {
-      persistPatches.push({code: f.code, sectors})
+    const sectors = pickSectors(f.sectors, q.sectors)
+    const name = q.name || f.name
+    const ftype = q.ftype || f.ftype || ''
+    const fundType = f.fundType || classifyFundType(ftype, name)
+    const patch: PersistPatch = {code: f.code}
+    let needPersist = false
+    const localClean = cleanSectors(f.sectors)
+    const hadJunkSectors = (f.sectors || []).length > 0 && !localClean.length
+    if (sectors.join() !== localClean.join() || hadJunkSectors) {
+      patch.sectors = sectors
+      needPersist = true
     }
+    if (!f.fundType && fundType) {
+      patch.fundType = fundType
+      needPersist = true
+    }
+    if (ftype && ftype !== f.ftype) {
+      patch.ftype = ftype
+      needPersist = true
+    }
+    if (needPersist) persistPatches.push(patch)
     const navDay = normalizeNetValueDate(q.netValueDate)
+    const percent = q.percent ?? q.estimateGrowth ?? q.dayGrowth ?? null
+    const badgeQuote = {
+      percentSource: q.percentSource || null,
+      netValueDate: navDay || q.netValueDate || '',
+      dayGrowth: q.dayGrowth,
+      percent,
+      fundType,
+      ftype,
+      name,
+    }
+    const confirmedUpdated = shouldShowConfirmedUpdatedBadge(badgeQuote)
+    const delayed = isDelayedNavFund(badgeQuote)
     return {
       ...f,
-      name: q.name || f.name,
-      percent: q.percent ?? q.estimateGrowth ?? q.dayGrowth ?? null,
+      name,
+      percent,
       percentSource: q.percentSource || null,
       estimateGrowth: q.estimateGrowth,
       dayGrowth: q.dayGrowth,
@@ -231,10 +366,13 @@ export function mergeWatchlist(
       time: q.time,
       trend: q.trend || [],
       sectors,
-      confirmedUpdated: shouldShowConfirmedUpdatedBadge({
-        percentSource: q.percentSource || null,
-        netValueDate: navDay || q.netValueDate || '',
-      }),
+      fundType,
+      ftype,
+      confirmedUpdated,
+      discloseTimeText:
+        delayed && confirmedUpdated
+          ? formatOfficialDiscloseTime(badgeQuote.netValueDate, q.time)
+          : '',
     } as FundQuoteRow
   })
   return {list, persistPatches}

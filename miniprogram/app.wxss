@@ -512,71 +512,32 @@ button {
   flex-direction: column;
   justify-content: center;
   gap: 8rpx;
+  overflow: visible;
 }
 
-/* 名称区域：仅真实溢出才走马灯；双份等宽单元保证无缝循环 */
+/* 名称区域：单行超出直接铺开显示（可盖住走势图），不省略、不换行、不走马灯 */
 .name-clip {
   position: relative;
   width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.name-clip.is-marquee {
-  mask-image: linear-gradient(90deg, #000 88%, transparent);
-}
-
-.name-track {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  width: max-content;
-}
-
-.name-clip.is-marquee .name-track {
-  animation: name-marquee 10s linear infinite;
-}
-
-.name-unit {
-  flex-shrink: 0;
-  box-sizing: content-box;
-}
-
-.name-clip.is-marquee .name-unit {
-  padding-right: 48rpx;
-}
-
-.name-measure {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  white-space: nowrap;
-  font-size: 24rpx;
-  font-weight: 680;
-  pointer-events: none;
+  max-width: none;
+  min-width: 0;
+  overflow: visible;
+  z-index: 3;
 }
 
 /* 夜票深蓝字：小一号、略收字距，像行情机标签 */
 .dense-name {
-  flex-shrink: 0;
+  display: block;
+  width: max-content;
+  max-width: none;
+  min-width: 0;
   font-size: 24rpx;
   font-weight: 680;
   letter-spacing: 0.03em;
   color: #243552;
   white-space: nowrap;
+  overflow: visible;
   text-shadow: 0 1rpx 0 rgba(255, 255, 255, 0.55);
-}
-
-/* 每段 = 名称 + padding，-50% 正好滚过一段，循环无闪烁 */
-@keyframes name-marquee {
-  0%,
-  15% {
-    transform: translateX(0);
-  }
-  85%,
-  100% {
-    transform: translateX(-50%);
-  }
 }
 
 .meta-row {
@@ -637,23 +598,34 @@ button {
   );
 }
 
+/* 标签单行铺开，超出可盖住走势图 */
 .tag-row {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8rpx;
+  width: max-content;
+  max-width: none;
   min-width: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 3;
 }
 
 .confirmed-badge {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
+  justify-content: center;
   gap: 4rpx;
-  padding: 2rpx 8rpx 2rpx 6rpx;
+  box-sizing: border-box;
+  min-height: 32rpx;
+  padding: 2rpx 8rpx;
   border-radius: 8rpx;
   font-size: 18rpx;
   font-weight: 650;
   line-height: 1.2;
+  white-space: nowrap;
   border: 1rpx solid var(--line);
   background: rgba(16, 20, 28, 0.04);
   color: var(--muted);
@@ -671,17 +643,21 @@ button {
   color: var(--fall);
 }
 
+/* QDII：官方披露日期，无 icon；尺寸与更新标签一致 */
+.confirmed-badge.is-disclose {
+  gap: 0;
+}
+
 .sector-tag {
+  flex-shrink: 0;
   padding: 2rpx 8rpx;
   border-radius: 8rpx;
   font-size: 18rpx;
   color: var(--muted);
   background: rgba(16, 20, 28, 0.05);
   border: 1rpx solid var(--line);
-  max-width: 140rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  overflow: visible;
 }
 
 .theme-dark .confirmed-badge {
@@ -719,6 +695,10 @@ button {
   font-size: 22rpx;
   font-weight: 700;
   line-height: 1.15;
+}
+
+.qa-hit-hover {
+  opacity: 0.72;
 }
 
 .theme-dark .dense-row {

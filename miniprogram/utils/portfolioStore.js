@@ -27,6 +27,8 @@ function normalizeFund(raw, prev) {
         : (prev && prev.type) || 'watch',
     shares: Number(raw.shares != null ? raw.shares : (prev && prev.shares) || 0) || 0,
     sectors: Array.isArray(raw.sectors) ? raw.sectors : (prev && prev.sectors) || [],
+    fundType: raw.fundType || (prev && prev.fundType) || '',
+    ftype: raw.ftype != null ? raw.ftype : (prev && prev.ftype) || '',
     createdAt: (prev && prev.createdAt) || raw.createdAt || now,
     updatedAt: now,
   }
@@ -92,15 +94,8 @@ function listFunds(type) {
     return ordered.filter((f) => f.type === 'hold').map(stripOrder)
   }
   if (type === 'watch') {
-    return ordered
-      .filter((f) => f.type === 'watch')
-      .sort((a, b) => {
-        const ac = a.createdAt || ''
-        const bc = b.createdAt || ''
-        if (ac && bc && ac !== bc) return ac < bc ? -1 : 1
-        return a._order - b._order
-      })
-      .map(stripOrder)
+    // 自选排序改由页面按基金类型分组；此处仅过滤
+    return ordered.filter((f) => f.type === 'watch').map(stripOrder)
   }
   return ordered.map(stripOrder)
 }
@@ -187,6 +182,14 @@ function patchFunds(patches) {
       (!(prev.sectors && prev.sectors.length) || p.sectors.join() !== prev.sectors.join())
     ) {
       next.sectors = p.sectors
+      changed = true
+    }
+    if (p.fundType && p.fundType !== prev.fundType) {
+      next.fundType = p.fundType
+      changed = true
+    }
+    if (p.ftype != null && p.ftype !== prev.ftype) {
+      next.ftype = p.ftype
       changed = true
     }
     if (changed) {

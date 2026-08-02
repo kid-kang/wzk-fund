@@ -20,9 +20,27 @@
     show-scrollbar="{{false}}"
   >
     <view class="page theme-{{theme}} fund-form">
+      <view
+        class="guide-link"
+        wx:if="{{mode === 'hold' && !codeLocked}}"
+        bindtap="onOpenAddGuide"
+        hover-class="guide-link-hover"
+      >
+        <van-icon
+          name="info-o"
+          size="16px"
+          color="{{theme === 'dark' ? '#ff8a4c' : '#c45c2a'}}"
+        />
+        <view class="guide-link-body">
+          <text class="guide-link-title">添加前请知晓</text>
+          <text class="guide-link-desc">份额确认后再录入 · 收益为何不是 0</text>
+        </view>
+        <text class="guide-link-arrow mono">›</text>
+      </view>
+
       <view class="mast">
         <text class="mast-kicker mono">{{mode === 'hold' ? (codeLocked ? 'EDIT HOLDING' : 'ADD HOLDING') : (codeLocked ? 'EDIT WATCH' : 'ADD WATCH')}}</text>
-        <text class="mast-name">{{name || (resolving ? '识别中…' : (codeLocked ? '基金持仓' : '输入代码开始'))}}</text>
+        <text class="mast-name">{{name || (resolving ? '识别中…' : (codeLocked ? '基金持仓' : '输入以下信息'))}}</text>
         <text class="mast-hint" wx:if="{{nameHint}}">{{nameHint}}</text>
       </view>
 
@@ -52,37 +70,18 @@
           <text class="rail-name">金额</text>
         </view>
 
-        <view class="basis" wx:if="{{showAmountBasis}}">
-          <view
-            class="basis-card {{amountBasis === 'prev' ? 'is-on' : ''}}"
-            data-basis="prev"
-            bindtap="onBasisTap"
-          >
-            <text class="basis-title">昨日结算的持仓金额</text>
-            <text class="basis-desc">用昨确认净值算份额；列表金额之后按最新净值实时计算</text>
-          </view>
-          <view
-            class="basis-card {{amountBasis === 'today' ? 'is-on' : ''}}"
-            data-basis="today"
-            bindtap="onBasisTap"
-          >
-            <text class="basis-title">今日结算的持仓金额</text>
-            <text class="basis-desc">输入即今日确认市值（与列表一致）；用今净值算份额</text>
-          </view>
-        </view>
-
         <view class="field-row">
           <text class="field-prefix">¥</text>
           <input
             class="field-input mono"
             type="digit"
             value="{{amount}}"
-            placeholder="{{amountPlaceholder}}"
+            placeholder="填写确认后的持仓金额"
             placeholder-class="field-ph"
             bindinput="onAmountInput"
           />
         </view>
-        <text class="field-tip" wx:if="{{!showAmountBasis}}">{{amountTip}}</text>
+        <text class="field-tip">请用支付宝确认后的当前持仓金额；系统按最新公布净值反算份额</text>
       </view>
 
       <view class="err" wx:if="{{error}}">{{error}}</view>

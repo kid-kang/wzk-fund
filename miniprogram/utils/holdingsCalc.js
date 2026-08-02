@@ -1,6 +1,8 @@
 const {
   shouldShowConfirmedUpdatedBadge,
   normalizeNetValueDate,
+  isDelayedNavFund,
+  formatOfficialDiscloseTime,
 } = require('./tradingCalendar')
 const {
   Decimal,
@@ -9,6 +11,20 @@ const {
   round2,
   truncPnl2,
 } = require('./money')
+const {classifyFundType, isRealtimeHolding} = require('./fundCategory')
+
+function cleanSectors(list) {
+  return (Array.isArray(list) ? list : []).filter((s) => {
+    const t = String(s || '').trim()
+    return !!t && t !== '--' && t !== '-'
+  })
+}
+
+function pickSectors(local, remote) {
+  const fromLocal = cleanSectors(local)
+  if (fromLocal.length) return fromLocal
+  return cleanSectors(remote)
+}
 
 function latestEstimateNav(quote) {
   if (quote.estimateNetValue != null && quote.estimateNetValue > 0) {
@@ -80,23 +96,33 @@ function calcHoldings(localFunds, quotes) {
     totalAmount = totalAmount.plus(displayAmount)
     totalPnl = totalPnl.plus(pnl)
 
-    const sectors = raw.sectors && raw.sectors.length
-      ? raw.sectors
-      : q.sectors && q.sectors.length
-        ? q.sectors
-        : []
+    const sectors = pickSectors(raw.sectors, q.sectors)
+    const name = q.name || raw.name
+    const ftype = q.ftype || raw.ftype || ''
+    const fundType =
+      raw.fundType || classifyFundType(ftype, name)
 
     const patch = {code: raw.code}
     let needPersist = false
-    if (!(raw.sectors && raw.sectors.length) && sectors.length) {
+    const localClean = cleanSectors(raw.sectors)
+    const hadJunkSectors = (raw.sectors || []).length > 0 && !localClean.length
+    if (sectors.join() !== localClean.join() || hadJunkSectors) {
       patch.sectors = sectors
+      needPersist = true
+    }
+    if (!raw.fundType && fundType) {
+      patch.fundType = fundType
+      needPersist = true
+    }
+    if (ftype && ftype !== raw.ftype) {
+      patch.ftype = ftype
       needPersist = true
     }
     if (needPersist) persistPatches.push(patch)
 
     rows.push(
       Object.assign({}, raw, {
-        name: q.name || raw.name,
+        name,
         fundKey: q.fundKey || raw.fundKey,
         percent,
         percentSource: q.percentSource || null,
@@ -112,13 +138,32 @@ function calcHoldings(localFunds, quotes) {
         liveAmount,
         pnl,
         sectors,
+        fundType,
+        ftype,
         shares,
         type: raw.type,
         code: raw.code,
-        confirmedUpdated: shouldShowConfirmedUpdatedBadge({
-          percentSource: q.percentSource || null,
-          netValueDate: navDay || q.netValueDate || '',
-        }),
+        time: q.time || null,
+        ...(() => {
+          const badgeQuote = {
+            percentSource: q.percentSource || null,
+            netValueDate: navDay || q.netValueDate || '',
+            dayGrowth: q.dayGrowth,
+            percent,
+            fundType,
+            ftype,
+            name,
+          }
+          const confirmedUpdated = shouldShowConfirmedUpdatedBadge(badgeQuote)
+          const delayed = isDelayedNavFund(badgeQuote)
+          return {
+            confirmedUpdated,
+            discloseTimeText:
+              delayed && confirmedUpdated
+                ? formatOfficialDiscloseTime(badgeQuote.netValueDate, q.time)
+                : '',
+          }
+        })(),
       }),
     )
   }
@@ -142,6 +187,7 @@ function calcHoldings(localFunds, quotes) {
   const bodTotalNum = round2(bodTotal)
   const totalPnlNum = round2(totalPnl)
 
+  const list = rows.sort((a, b) => (b.amount || 0) - (a.amount || 0))
   return {
     summary: {
       totalAmount: totalAmountNum,
@@ -152,8 +198,65 @@ function calcHoldings(localFunds, quotes) {
           ? round2(new Decimal(totalPnlNum).div(bodTotalNum).mul(100))
           : 0,
     },
-    list: rows.sort((a, b) => (b.amount || 0) - (a.amount || 0)),
+    list,
+    groups: splitHoldingsByRealtime(list),
     persistPatches,
+  }
+}
+
+/** 对一组持仓重算组内权重与汇总 */
+function summarizeHoldGroup(rows) {
+  let totalAmount = new Decimal(0)
+  let totalPnl = new Decimal(0)
+  let bodTotal = new Decimal(0)
+  for (const row of rows || []) {
+    totalAmount = totalAmount.plus(row.amount || 0)
+    totalPnl = totalPnl.plus(row.pnl || 0)
+    if (row.shares > 0 && row.prevNetValue != null && row.prevNetValue > 0) {
+      bodTotal = bodTotal.plus(amountFromShares(row.shares, row.prevNetValue))
+    } else {
+      bodTotal = bodTotal.plus(new Decimal(row.amount || 0).minus(row.pnl || 0))
+    }
+  }
+  const totalAmountNum = round2(totalAmount)
+  const totalPnlNum = round2(totalPnl)
+  const bodTotalNum = round2(bodTotal)
+  const list = (rows || [])
+    .map((row) =>
+      Object.assign({}, row, {
+        weight:
+          totalAmountNum > 0
+            ? round2(new Decimal(row.amount || 0).div(totalAmount).mul(100))
+            : 0,
+      }),
+    )
+    .sort((a, b) => (b.amount || 0) - (a.amount || 0))
+
+  return {
+    list,
+    summary: {
+      totalAmount: totalAmountNum,
+      bodTotal: bodTotalNum,
+      totalPnl: totalPnlNum,
+      totalPnlPercent:
+        bodTotalNum > 0
+          ? round2(new Decimal(totalPnlNum).div(bodTotalNum).mul(100))
+          : 0,
+    },
+  }
+}
+
+/** 可实时估值 / 非实时（QDII·海外）分组 */
+function splitHoldingsByRealtime(list) {
+  const live = []
+  const delayed = []
+  for (const row of list || []) {
+    if (isRealtimeHolding(row)) live.push(row)
+    else delayed.push(row)
+  }
+  return {
+    realtime: summarizeHoldGroup(live),
+    delayed: summarizeHoldGroup(delayed),
   }
 }
 
@@ -162,29 +265,61 @@ function mergeWatchlist(localFunds, quotes) {
   const persistPatches = []
   const list = (localFunds || []).map((f) => {
     const q = quoteMap.get(f.code) || {}
-    const sectors = f.sectors && f.sectors.length
-      ? f.sectors
-      : q.sectors && q.sectors.length
-        ? q.sectors
-        : []
-    if (!(f.sectors && f.sectors.length) && sectors.length) {
-      persistPatches.push({code: f.code, sectors})
+    const sectors = pickSectors(f.sectors, q.sectors)
+    const name = q.name || f.name
+    const ftype = q.ftype || f.ftype || ''
+    const fundType = f.fundType || classifyFundType(ftype, name)
+    const patch = {code: f.code}
+    let needPersist = false
+    const localClean = cleanSectors(f.sectors)
+    const hadJunkSectors = (f.sectors || []).length > 0 && !localClean.length
+    if (sectors.join() !== localClean.join() || hadJunkSectors) {
+      patch.sectors = sectors
+      needPersist = true
     }
+    if (!f.fundType && fundType) {
+      patch.fundType = fundType
+      needPersist = true
+    }
+    if (ftype && ftype !== f.ftype) {
+      patch.ftype = ftype
+      needPersist = true
+    }
+    if (needPersist) persistPatches.push(patch)
     const navDay = normalizeNetValueDate(q.netValueDate)
     return Object.assign({}, f, {
-      name: q.name || f.name,
+      name,
       percent: q.percent ?? q.estimateGrowth ?? q.dayGrowth ?? null,
       estimateGrowth: q.estimateGrowth,
       dayGrowth: q.dayGrowth,
       percentSource: q.percentSource || null,
       netValueDate: navDay || q.netValueDate || '',
-      time: q.time,
       trend: q.trend || [],
       sectors,
-      confirmedUpdated: shouldShowConfirmedUpdatedBadge({
-        percentSource: q.percentSource || null,
-        netValueDate: navDay || q.netValueDate || '',
-      }),
+      fundType,
+      ftype,
+      time: q.time || null,
+      ...(() => {
+        const percent = q.percent ?? q.estimateGrowth ?? q.dayGrowth ?? null
+        const badgeQuote = {
+          percentSource: q.percentSource || null,
+          netValueDate: navDay || q.netValueDate || '',
+          dayGrowth: q.dayGrowth,
+          percent,
+          fundType,
+          ftype,
+          name,
+        }
+        const confirmedUpdated = shouldShowConfirmedUpdatedBadge(badgeQuote)
+        const delayed = isDelayedNavFund(badgeQuote)
+        return {
+          confirmedUpdated,
+          discloseTimeText:
+            delayed && confirmedUpdated
+              ? formatOfficialDiscloseTime(badgeQuote.netValueDate, q.time)
+              : '',
+        }
+      })(),
     })
   })
   return {list, persistPatches}
@@ -195,4 +330,7 @@ module.exports = {
   resolveNavPair,
   calcHoldings,
   mergeWatchlist,
+  summarizeHoldGroup,
+  splitHoldingsByRealtime,
+  isRealtimeHolding,
 }

@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from 'react'
 import {useNavigate, useSearchParams} from 'react-router-dom'
 import '@/styles/fund-form.css'
 import AppNavBar from '@/components/AppNavBar'
+import {IconInfo} from '@/components/icons'
 import {createFund, fetchHoldings, resolveFund, updateFund} from '@/lib/api'
 import {getFund} from '@/lib/portfolioStore'
 import {isTradingDay} from '@/lib/tradingCalendar'
@@ -41,12 +42,9 @@ export default function FundFormPage() {
       ? '添加持仓'
       : '添加自选'
 
-  const amountPlaceholder = showAmountBasis
-    ? '填写与上方口径一致的金额'
-    : '填写今日结算的持仓金额'
-  const amountTip = showAmountBasis
-    ? '填写与上方口径一致的金额'
-    : '非交易日按今日结算市值填写'
+  const amountPlaceholder = '填写确认后的持仓金额'
+  const amountTip = '请用支付宝确认后的当前持仓金额；系统按最新公布净值反算份额'
+  const guideIconColor = theme === 'dark' ? '#ff8a4c' : '#c45c2a'
 
   useEffect(() => {
     let cancelled = false
@@ -180,10 +178,25 @@ export default function FundFormPage() {
       </div>
       <div className="subpage-scroller" style={{overflowY: 'auto'}}>
         <div className={`page theme-${theme} fund-form`}>
+          {mode === 'hold' && !codeLocked ? (
+            <button
+              type="button"
+              className="guide-link"
+              onClick={() => navigate('/fund-qa?q=add-hold')}
+            >
+              <IconInfo size={16} color={guideIconColor} />
+              <span className="guide-link-body">
+                <span className="guide-link-title">添加前请知晓</span>
+                <span className="guide-link-desc">份额确认后再录入 · 收益为何不是 0</span>
+              </span>
+              <span className="guide-link-arrow mono">›</span>
+            </button>
+          ) : null}
+
           <div className="mast">
             <span className="mast-kicker mono">{mastKicker}</span>
             <span className="mast-name">
-              {name || (resolving ? '识别中…' : codeLocked ? '基金持仓' : '输入代码开始')}
+              {name || (resolving ? '识别中…' : codeLocked ? '基金持仓' : '输入以下信息')}
             </span>
             {nameHint ? <span className="mast-hint">{nameHint}</span> : null}
           </div>
@@ -251,7 +264,7 @@ export default function FundFormPage() {
                   onChange={(e) => setAmount(e.target.value)}
                 />
               </div>
-              {!showAmountBasis ? <span className="field-tip">{amountTip}</span> : null}
+              <span className="field-tip">{amountTip}</span>
             </div>
           ) : null}
 

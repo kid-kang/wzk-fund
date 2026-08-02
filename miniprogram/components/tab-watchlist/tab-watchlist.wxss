@@ -6,7 +6,16 @@
 }
 
 .watch-page {
-  padding-bottom: 140rpx;
+  /* 覆盖全局 .page-scroller .page 的 48rpx，避免被吃掉 */
+  padding-bottom: 48rpx !important;
+}
+
+/* 实体占位：保证最后一只基金能滚到添加钮上方 */
+.fab-spacer {
+  width: 100%;
+  height: calc(180rpx + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .watch-page.is-skeleton {
@@ -31,6 +40,58 @@
   background: rgba(255, 59, 69, 0.1);
   color: var(--rise);
   font-size: 22rpx;
+}
+
+/* 分组标题：对齐持仓页 fund-divider */
+.fund-divider {
+  position: relative;
+  margin: 18rpx 8rpx 14rpx;
+  min-height: 40rpx;
+}
+
+.fund-divider.is-first {
+  margin-top: 6rpx;
+}
+
+.fund-divider-main {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  min-height: 40rpx;
+  padding: 0 24rpx;
+}
+
+.fund-divider-line {
+  flex: 1;
+  height: 1rpx;
+}
+
+.fund-divider-line:first-child {
+  background: linear-gradient(90deg, transparent, rgba(36, 53, 82, 0.18));
+}
+
+.fund-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(36, 53, 82, 0.18), transparent);
+}
+
+.fund-divider-text {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #243552;
+  letter-spacing: 0.12em;
+  font-weight: 680;
+}
+
+.theme-dark .fund-divider-line:first-child {
+  background: linear-gradient(90deg, transparent, rgba(197, 208, 230, 0.2));
+}
+
+.theme-dark .fund-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(197, 208, 230, 0.2), transparent);
+}
+
+.theme-dark .fund-divider-text {
+  color: #c5d0e6;
 }
 
 .list-gap {
@@ -66,7 +127,7 @@
   line-height: 1.15;
 }
 
-/* 右下悬浮添加：水晶冷雾圆钮，贴合页面 accent / glass */
+/* 右下悬浮添加：遮挡基金时半透明，滑到底无遮挡时不透明 */
 .fab-add {
   position: fixed;
   right: 36rpx;
@@ -89,10 +150,11 @@
     inset 0 1rpx 0 rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  opacity: 0.58;
 }
 
 .fab-add-hover {
-  opacity: 0.88;
+  opacity: 0.72;
   transform: scale(0.96);
 }
 

@@ -44,6 +44,20 @@
 
         <view class="row">
           <view class="row-text">
+            <text class="row-title">隐藏金额</text>
+            <text class="row-desc">持仓与收益数字以 *** 显示</text>
+          </view>
+          <van-switch
+            size="22px"
+            checked="{{hideAmounts}}"
+            active-color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}"
+            inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}"
+            bind:change="onToggleHideAmounts"
+          />
+        </view>
+
+        <view class="row">
+          <view class="row-text">
             <text class="row-title">深色主题</text>
             <text class="row-desc">夜间行情台配色</text>
           </view>
@@ -105,6 +119,21 @@
             <text class="row-desc">从剪贴板读取 JSON</text>
           </view>
           <text class="xfer-arrow mono">↙</text>
+        </view>
+      </view>
+
+      <view class="rail">
+        <view class="rail-head">
+          <text class="rail-code mono">04</text>
+          <text class="rail-name">使用说明</text>
+        </view>
+
+        <view class="xfer" hover-class="xfer-hover" bindtap="onOpenQa">
+          <view class="xfer-text">
+            <text class="row-title">Q&A</text>
+            <text class="row-desc">以问答的形式讲解该小程序的相关问题</text>
+          </view>
+          <text class="xfer-arrow mono">›</text>
         </view>
       </view>
 

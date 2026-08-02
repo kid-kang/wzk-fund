@@ -193,8 +193,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 20rem;
+  width: 100%;
   padding: 22rem 0;
   border-top: 1rem dashed rgba(122, 132, 148, 0.28);
+}
+
+/* H5 <button> 默认 shrink-wrap，需拉满宽度并左对齐，否则箭头贴标题、虚线变短 */
+button.xfer {
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .theme-dark .row,
@@ -363,6 +371,7 @@
 
 /* —— 导入导出 —— */
 .xfer-arrow {
+  flex-shrink: 0;
   font-size: 34rem;
   font-weight: 700;
   color: var(--accent);

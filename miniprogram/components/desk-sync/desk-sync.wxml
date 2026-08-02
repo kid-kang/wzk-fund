@@ -44,8 +44,8 @@
         </view>
         <view class="bone bone-spark"></view>
         <view class="desk-sync-right">
-          <view class="bone bone-pnl"></view>
           <view class="bone bone-pct"></view>
+          <view class="bone bone-pnl"></view>
         </view>
       </view>
     </view>

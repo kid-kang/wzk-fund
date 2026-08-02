@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useState, type CSSProperties} from 'react'
+import {useNavigate} from 'react-router-dom'
 import '@/styles/tab-mine.css'
 import {
   exportConfig,
@@ -11,6 +12,8 @@ import {
 } from '@/lib/api'
 import {DEFAULT_API_BASE, getApiBase, setApiBase} from '@/lib/config'
 import {applyTheme, type AppTheme} from '@/lib/theme'
+
+const HIDE_KEY = 'holdings_hide_amounts'
 
 type Props = {
   active: boolean
@@ -25,7 +28,9 @@ export default function TabMine({
   contentMinHeight = 0,
   onThemeChange,
 }: Props) {
+  const navigate = useNavigate()
   const [showGold, setShowGold] = useState(true)
+  const [hideAmounts, setHideAmounts] = useState(false)
   const [apiBase, setApiBaseState] = useState(DEFAULT_API_BASE)
   const [pingState, setPingState] = useState('')
   const [pingLabel, setPingLabel] = useState('IDLE')
@@ -44,6 +49,12 @@ export default function TabMine({
     } catch {
       // ignore
     }
+    try {
+      const raw = localStorage.getItem(HIDE_KEY)
+      setHideAmounts(raw === 'true' || raw === '1')
+    } catch {
+      setHideAmounts(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -61,6 +72,16 @@ export default function TabMine({
       setShowGold(next)
     } catch (err) {
       flash(err instanceof Error ? err.message : '保存失败')
+    }
+  }
+
+  const onToggleHideAmounts = () => {
+    const next = !hideAmounts
+    setHideAmounts(next)
+    try {
+      localStorage.setItem(HIDE_KEY, String(next))
+    } catch {
+      flash('保存失败')
     }
   }
 
@@ -171,6 +192,26 @@ export default function TabMine({
 
             <div className="row">
               <div className="row-text">
+                <span className="row-title">隐藏金额</span>
+                <span className="row-desc">持仓与收益数字以 *** 显示</span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={hideAmounts}
+                className={`mine-switch${hideAmounts ? ' is-on' : ''}`}
+                style={
+                  {
+                    '--switch-on': switchColor,
+                    '--switch-off': switchOff,
+                  } as CSSProperties
+                }
+                onClick={onToggleHideAmounts}
+              />
+            </div>
+
+            <div className="row">
+              <div className="row-text">
                 <span className="row-title">深色主题</span>
                 <span className="row-desc">夜间行情台配色</span>
               </div>
@@ -240,6 +281,21 @@ export default function TabMine({
                 <span className="row-desc">从剪贴板读取 JSON</span>
               </div>
               <span className="xfer-arrow mono">↙</span>
+            </button>
+          </div>
+
+          <div className="rail">
+            <div className="rail-head">
+              <span className="rail-code mono">04</span>
+              <span className="rail-name">使用说明</span>
+            </div>
+
+            <button type="button" className="xfer" onClick={() => navigate('/fund-qa')}>
+              <div className="xfer-text">
+                <span className="row-title">Q&A</span>
+                <span className="row-desc">以问答的形式讲解相关问题</span>
+              </div>
+              <span className="xfer-arrow mono">›</span>
             </button>
           </div>
 

@@ -1,6 +1,7 @@
 const {request} = require('./request')
 const {calcHoldings, mergeWatchlist} = require('./holdingsCalc')
 const {sharesFromAmount: sharesFromAmountExact} = require('./money')
+const {classifyFundType} = require('./fundCategory')
 const store = require('./portfolioStore')
 
 function assertOk(data) {
@@ -18,9 +19,15 @@ async function fetchHoldings() {
     data: {type: 'hold', funds},
   })
   assertOk(data)
-  const result = calcHoldings(funds, (data.data && data.data.quotes) || [])
+  // 请求期间用户可能已删/改持仓：始终按当前本地配置重算，避免过期结果把已删基金写回列表
+  const fundsNow = store.listFunds('hold')
+  const result = calcHoldings(fundsNow, (data.data && data.data.quotes) || [])
   if (result.persistPatches.length) store.patchFunds(result.persistPatches)
-  return {summary: result.summary, list: result.list}
+  return {
+    summary: result.summary,
+    list: result.list,
+    groups: result.groups,
+  }
 }
 
 async function fetchWatchlist() {
@@ -31,8 +38,9 @@ async function fetchWatchlist() {
     data: {type: 'watch', funds},
   })
   assertOk(data)
+  const fundsNow = store.listFunds('watch')
   const {list, persistPatches} = mergeWatchlist(
-    funds,
+    fundsNow,
     (data.data && data.data.quotes) || [],
   )
   if (persistPatches.length) store.patchFunds(persistPatches)
@@ -113,23 +121,20 @@ function sharesFromAmount(amount, netValue) {
   return sharesFromAmountExact(amount, netValue)
 }
 
-function deriveHoldShares(amount, basis, meta) {
+/**
+ * 按最新官方公布净值反推份额（不用盘中估值）。
+ * 金额口径 = 份额 × 最新披露单位净值。
+ */
+function deriveHoldShares(amount, meta) {
   if (!(amount > 0)) return 0
-  if (basis === 'today') {
-    if (!meta.confirmedSession) {
-      throw new Error('今日净值尚未确认，请改选「昨日结算」，或等确认净值出来后再试')
-    }
-    if (!(meta.netValue != null && meta.netValue > 0)) {
-      throw new Error('暂无今日确认净值，请稍后重试')
-    }
-    return sharesFromAmount(amount, meta.netValue)
-  }
   const nav =
-    meta.prevNetValue != null && meta.prevNetValue > 0
-      ? meta.prevNetValue
-      : meta.netValue
+    meta.netValue != null && meta.netValue > 0
+      ? meta.netValue
+      : meta.prevNetValue != null && meta.prevNetValue > 0
+        ? meta.prevNetValue
+        : null
   if (!(nav != null && nav > 0)) {
-    throw new Error('暂无确认净值，无法按金额反推份额，请稍后重试')
+    throw new Error('暂无最新公布净值，无法按金额反推份额，请稍后重试')
   }
   return sharesFromAmount(amount, nav)
 }
@@ -142,26 +147,28 @@ async function createFund(payload) {
     sectors: payload.sectors,
   })
   const amount = payload.amount != null ? payload.amount : 0
-  const basis = payload.amountBasis === 'today' ? 'today' : 'prev'
 
   let shares = 0
   if (payload.type === 'hold') {
-    shares = deriveHoldShares(amount, basis, meta)
+    shares = deriveHoldShares(amount, meta)
   }
 
+  const name = payload.name || meta.name
+  const ftype = meta.ftype || ''
   return store.upsertFund({
     code: meta.code,
-    name: payload.name || meta.name,
+    name,
     fundKey: meta.fundKey,
     type: payload.type || 'watch',
     shares,
     sectors: payload.sectors && payload.sectors.length ? payload.sectors : meta.sectors,
+    ftype,
+    fundType: classifyFundType(ftype, name),
   })
 }
 
 async function updateFund(code, payload) {
   const amount = payload.amount
-  const amountBasis = payload.amountBasis
   const rest = Object.assign({}, payload)
   delete rest.amount
   delete rest.amountBasis
@@ -169,8 +176,7 @@ async function updateFund(code, payload) {
 
   if (amount != null) {
     const meta = await resolveFund({code, type: 'hold'})
-    const basis = amountBasis === 'today' ? 'today' : 'prev'
-    patch.shares = deriveHoldShares(Number(amount) || 0, basis, meta)
+    patch.shares = deriveHoldShares(Number(amount) || 0, meta)
   }
 
   return store.updateFund(code, patch)

@@ -7,7 +7,79 @@
 }
 
 .watch-page {
-  padding-bottom: 140rem;
+  padding-bottom: 48rem;
+}
+
+.fab-spacer {
+  width: 100%;
+  height: calc(180rem + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.fund-divider {
+  position: relative;
+  margin: 18rem 8rem 14rem;
+  min-height: 40rem;
+}
+
+.fund-divider.is-first {
+  margin-top: 6rem;
+}
+
+.fund-divider-main {
+  display: flex;
+  align-items: center;
+  gap: 16rem;
+  min-height: 40rem;
+  padding: 0 48rem;
+}
+
+.fund-divider-line {
+  flex: 1;
+  height: 1rem;
+}
+
+.fund-divider-line:first-child {
+  background: linear-gradient(90deg, transparent, rgba(36, 53, 82, 0.18));
+}
+
+.fund-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(36, 53, 82, 0.18), transparent);
+}
+
+.fund-divider-text {
+  flex-shrink: 0;
+  font-size: 22rem;
+  color: #243552;
+  letter-spacing: 0.12em;
+  font-weight: 680;
+}
+
+.theme-dark .fund-divider-line:first-child {
+  background: linear-gradient(90deg, transparent, rgba(197, 208, 230, 0.2));
+}
+
+.theme-dark .fund-divider-line:last-child {
+  background: linear-gradient(90deg, rgba(197, 208, 230, 0.2), transparent);
+}
+
+.theme-dark .fund-divider-text {
+  color: #c5d0e6;
+}
+
+.watch-page .dense-pct {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.watch-page .confirmed-badge {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
 }
 
 .watch-page.is-skeleton {
@@ -90,10 +162,12 @@
     inset 0 1rem 0 rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  opacity: 0.58;
 }
 
+.fab-add:active,
 .fab-add-hover {
-  opacity: 0.88;
+  opacity: 0.72;
   transform: scale(0.96);
 }
 

@@ -18,6 +18,8 @@ function normalizeFund(raw: Partial<FundRecord> & {code: string}, prev?: FundRec
     type: raw.type === 'hold' || raw.type === 'watch' ? raw.type : prev?.type || 'watch',
     shares: Number(raw.shares ?? prev?.shares ?? 0) || 0,
     sectors: Array.isArray(raw.sectors) ? raw.sectors : prev?.sectors || [],
+    fundType: raw.fundType || prev?.fundType || '',
+    ftype: raw.ftype != null ? raw.ftype : prev?.ftype || '',
     createdAt: prev?.createdAt || raw.createdAt || now,
     updatedAt: now,
   }
@@ -153,11 +155,13 @@ export function importLocalConfig(payload: AppConfig): AppConfig {
   return saveConfig(normalizeConfig(payload))
 }
 
-/** 批量补全可从行情识别出的基金板块 */
+/** 批量补全可从行情识别出的基金板块 / 类型 */
 export function patchFunds(
   patches: Array<{
     code: string
     sectors?: string[]
+    fundType?: string
+    ftype?: string
   }>,
 ) {
   if (!patches.length) return
@@ -174,6 +178,14 @@ export function patchFunds(
       (!prev.sectors?.length || p.sectors.join() !== prev.sectors.join())
     ) {
       next.sectors = p.sectors
+      changed = true
+    }
+    if (p.fundType && p.fundType !== prev.fundType) {
+      next.fundType = p.fundType
+      changed = true
+    }
+    if (p.ftype != null && p.ftype !== prev.ftype) {
+      next.ftype = p.ftype
       changed = true
     }
     if (changed) {

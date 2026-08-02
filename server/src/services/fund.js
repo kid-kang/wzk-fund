@@ -100,9 +100,16 @@ const COARSE_SECTORS = new Set([
   '综合',
 ])
 
+/** 无效 / 占位板块标签（东财常对 QDII 返回 "--"） */
+function isUsableSectorTag(s) {
+  const t = String(s || '').trim()
+  return !!t && t !== '--' && t !== '-'
+}
+
 /** 旧版过粗标签：结合基金名判断是否需要重拉一次 */
 function sectorsNeedRefresh(sectors, name = '') {
   if (!Array.isArray(sectors) || !sectors.length) return true
+  if (sectors.some((s) => !isUsableSectorTag(s))) return true
   const n = String(name)
   if (sectors.includes('有色金属')) return true
   if (sectors.includes('医药') || sectors.includes('化学制药')) {
@@ -111,6 +118,13 @@ function sectorsNeedRefresh(sectors, name = '') {
   if (sectors.includes('半导体') && /半导体材料|半导体设备/.test(n)) return true
   if (sectors.includes('电力') && /绿色电力|绿电/.test(n)) return true
   if (sectors.includes('食品饮料') && /白酒/.test(n)) return true
+  // 旧版把过长海外指数名截成难读标签时，允许按名称重拉一次
+  if (
+    /QDII|海外|中概|纳斯达克|纳指|标普|恒生/.test(n) &&
+    sectors.some((s) => /海外中国互联网\d|人民币|美元/.test(s) || String(s).length > 10)
+  ) {
+    return true
+  }
   return false
 }
 
@@ -152,13 +166,46 @@ async function fetchFundBasicInfo(code) {
   })
 }
 
+/** 东财基金类型文案，如「QDII-普通股票」「指数型-海外股票」 */
+export async function fetchFundFtype(code) {
+  try {
+    const basic = await fetchFundBasicInfo(code)
+    const ftype = basic?.FTYPE && basic.FTYPE !== '--' ? String(basic.FTYPE).trim() : ''
+    return ftype
+  } catch {
+    return ''
+  }
+}
+
 /** 跟踪指数名 → 细分主题，如「中证创新药产业指数」→「创新药」 */
 function themeFromIndexName(indexName = '') {
   let s = String(indexName || '').trim()
   if (!s || s === '--') return []
+
+  // 海外 / 常见宽基：优先收成短标签，避免长指数全名被长度限制丢掉
+  const overseasHints = [
+    [/中证海外中国互联网50|海外中国互联网50|中概互联50/, '中概互联'],
+    [/中证海外中国互联网|海外中国互联网|中国互联网/, '中概互联'],
+    [/恒生科技/, '恒生科技'],
+    [/恒生中国企业|恒生国企|H股/, '恒生国企'],
+    [/恒生指数|恒生/, '恒生'],
+    [/纳斯达克100|纳指100|NDX/i, '纳斯达克'],
+    [/纳斯达克|纳指/, '纳斯达克'],
+    [/标准普尔500|标普500|S&P\s*500|SPX/i, '标普500'],
+    [/标准普尔|标普/, '标普'],
+    [/日经225|日经/, '日经'],
+    [/道琼斯|道指/, '道琼斯'],
+  ]
+  for (const [re, label] of overseasHints) {
+    if (re.test(s)) return [label]
+  }
+
   // 反复去掉指数公司/口径前缀
-  for (let i = 0; i < 3; i++) {
-    const next = s.replace(/^(中证|国证|沪深|上证|深证|标普|恒生|MSCI|富时|全指)/i, '')
+  for (let i = 0; i < 4; i++) {
+    const next = s.replace(
+      /^(中证|国证|沪深|上证|深证|标普|标准普尔|恒生|纳斯达克|日经|MSCI|富时|全指)/i,
+      '',
+    )
     if (next === s) break
     s = next
   }
@@ -168,9 +215,12 @@ function themeFromIndexName(indexName = '') {
       '',
     )
     .replace(/(主题|产业)$/g, '')
+    .replace(/(人民币|美元|港币|计价)$/g, '')
     .replace(/[()（）\s]/g, '')
     .trim()
-  if (!s || s.length < 2 || s.length > 10) return []
+  // QDII 指数名常带成分数量等后缀，适当放宽；过长则截短到可读长度
+  if (!s || s.length < 2) return []
+  if (s.length > 12) s = s.slice(0, 12)
   return [s]
 }
 
@@ -232,6 +282,20 @@ function inferSpecificThemesFromText(text = '') {
     [/地产|房地产/, '地产'],
     [/食品饮料|食品/, '食品饮料'],
     [/煤炭|钢铁|有色/, '周期'],
+    // QDII / 海外主题（东财对海外基金常无 TTYPENAME）
+    [/中概互联|海外.*互联|中国互联网|中概/, '中概互联'],
+    [/恒生科技/, '恒生科技'],
+    [/纳斯达克|纳指/, '纳斯达克'],
+    [/标普.?500|标准普尔.?500|S&P.?500/i, '标普500'],
+    [/日经/, '日经'],
+    [/油气|原油|石油/, '油气'],
+    [/美股|美国/, '美股'],
+    [/港股|香港/, '港股'],
+    [/全球/, '全球'],
+    [/越南/, '越南'],
+    [/印度/, '印度'],
+    [/日本/, '日本'],
+    [/德国|欧洲/, '海外'],
   ]
   const out = []
   for (const [re, label] of rules) {
@@ -275,6 +339,10 @@ async function inferThemesFromHoldings(code) {
       [/隆基|通威|阳光电源|晶澳|光伏/, '光伏'],
       [/中芯|韦尔|北方华创|中微|拓荆|半导体|芯片/, '半导体'],
       [/贵州茅台/, '白酒'],
+      // QDII 常见海外重仓
+      [/苹果|微软|英伟达|谷歌|Alphabet|亚马逊|Meta|特斯拉|AMD|NVIDIA|Apple|Microsoft/i, '美股'],
+      [/腾讯|阿里|美团|小米|京东|网易|百度|拼多多|快手/, '中概互联'],
+      [/台积电|TSMC|三星/, '半导体'],
     ]
 
     const hay = `${texts} ${etfName}`
@@ -317,9 +385,10 @@ export async function fetchFundSectors(code, nameHint = '') {
 
   const shortName = nameHint || basic?.SHORTNAME || ''
   const indexName = basic?.INDEXNAME && basic.INDEXNAME !== '--' ? basic.INDEXNAME : ''
+  const ftype = basic?.FTYPE && basic.FTYPE !== '--' ? basic.FTYPE : ''
 
   pushUnique(themeFromIndexName(indexName))
-  pushUnique(inferSpecificThemesFromText(`${shortName} ${indexName}`))
+  pushUnique(inferSpecificThemesFromText(`${shortName} ${indexName} ${ftype}`))
 
   if (!specific.length) {
     pushUnique(await inferThemesFromHoldings(code))
@@ -330,13 +399,13 @@ export async function fetchFundSectors(code, nameHint = '') {
   }
 
   if (!specific.length && basic) {
-    if (basic.TTYPENAME) pushUnique([basic.TTYPENAME])
+    if (isUsableSectorTag(basic.TTYPENAME)) pushUnique([basic.TTYPENAME])
     for (const item of basic.FUNDSUBJECTLIST || []) {
-      if (item?.TTYPENAME) pushUnique([item.TTYPENAME])
+      if (isUsableSectorTag(item?.TTYPENAME)) pushUnique([item.TTYPENAME])
     }
   }
 
-  return finalizeThemes(specific)
+  return finalizeThemes(specific.filter(isUsableSectorTag))
 }
 
 /** 串行化板块请求，降低东财限流概率 */
@@ -595,11 +664,50 @@ export async function getFundQuote(fund) {
     histIdx = -1
   }
 
+  let establishDate = ''
+  let ageDays = null
+  let ftype = fund.ftype || ''
+  try {
+    const basic = await fetchFundBasicInfo(code)
+    ftype =
+      (basic?.FTYPE && basic.FTYPE !== '--'
+        ? String(basic.FTYPE).trim()
+        : '') || ftype
+    const raw = String(basic?.ESTABDATE || basic?.ESTABLISHDATE || '').trim()
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+      establishDate = raw.slice(0, 10)
+    } else if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(raw)) {
+      const [yy, mm, dd] = raw.split(/[^\d]/).filter(Boolean)
+      establishDate = `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`
+    }
+    if (establishDate) {
+      const [y, m, d] = establishDate.split('-').map(Number)
+      const start = new Date(y, m - 1, d)
+      const now = new Date()
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      if (!Number.isNaN(start.getTime())) {
+        ageDays = Math.max(
+          0,
+          Math.floor((end.getTime() - start.getTime()) / 86400000),
+        )
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  const delayedDisclosure = isDelayedNavFund({
+    fundType: fund.fundType,
+    ftype,
+    name: name || fund.name,
+  })
+
   // 晚间净值确认后优先用真实涨跌；盘中无确认日则用估值
   const {percent, percentSource} = resolveDisplayPercent({
     estimateGrowth,
     dayGrowth,
     netValueDate,
+    delayedDisclosure,
   })
 
   const hasEstimate = estimateNetValue != null || estimateGrowth != null
@@ -630,33 +738,6 @@ export async function getFundQuote(fund) {
     }
   }
 
-  let establishDate = ''
-  let ageDays = null
-  try {
-    const basic = await fetchFundBasicInfo(code)
-    const raw = String(basic?.ESTABDATE || basic?.ESTABLISHDATE || '').trim()
-    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-      establishDate = raw.slice(0, 10)
-    } else if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(raw)) {
-      const [yy, mm, dd] = raw.split(/[^\d]/).filter(Boolean)
-      establishDate = `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`
-    }
-    if (establishDate) {
-      const [y, m, d] = establishDate.split('-').map(Number)
-      const start = new Date(y, m - 1, d)
-      const now = new Date()
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      if (!Number.isNaN(start.getTime())) {
-        ageDays = Math.max(
-          0,
-          Math.floor((end.getTime() - start.getTime()) / 86400000),
-        )
-      }
-    }
-  } catch {
-    // ignore
-  }
-
   return {
     code,
     name,
@@ -671,6 +752,7 @@ export async function getFundQuote(fund) {
     netValueDate,
     establishDate,
     ageDays,
+    ftype,
     time: trend.length ? trend[trend.length - 1].time : null,
     trend,
     sectors,
@@ -708,28 +790,53 @@ function nextTradingDay(dateStr) {
   return todayDateStr(d)
 }
 
-/** 净值确认会话是否仍有效：下一交易日 09:15 前 */
-export function isConfirmedSessionActive(navDayRaw, now = new Date()) {
+/** QDII / 海外：净值多为 T+1 披露，不套用 A 股确认会话窗 */
+export function isDelayedNavFund({fundType, ftype, name} = {}) {
+  return /QDII|海外/.test(`${fundType || ''} ${ftype || ''} ${name || ''}`)
+}
+
+/**
+ * 净值确认会话是否仍有效。
+ * 默认：净值日 → 下一交易日 09:15 前（国内基金晚间确认）。
+ * delayedDisclosure（QDII/海外）：有披露净值日即视为确认可用，不套 A 股会话窗。
+ */
+export function isConfirmedSessionActive(
+  navDayRaw,
+  now = new Date(),
+  opts = {},
+) {
   const navDay = normalizeNetValueDate(navDayRaw, now)
   if (!navDay) return false
-  const next = nextTradingDay(navDay)
+  if (opts.delayedDisclosure) return true
+  const end = nextTradingDay(navDay)
   const today = todayDateStr(now)
-  if (today > next) return false
-  if (today < next) return true
+  if (today > end) return false
+  if (today < end) return true
   const minutes = now.getHours() * 60 + now.getMinutes()
   return minutes < 9 * 60 + 15
 }
 
 /**
  * 涨跌幅口径：
- * - 确认会话内（净值日已出 → 下一交易日开盘前）优先官方 dayGrowth
+ * - 确认会话内优先官方 dayGrowth
+ * - QDII/海外：有最新官方披露即标 confirmed（不套 A 股窗口）
  * - 否则盘中用估值 estimateGrowth
  * - 再否则回落上一确认 dayGrowth（不再标为 confirmed）
  */
-function resolveDisplayPercent({estimateGrowth, dayGrowth, netValueDate}) {
+function resolveDisplayPercent({
+  estimateGrowth,
+  dayGrowth,
+  netValueDate,
+  delayedDisclosure = false,
+}) {
   const navDay = normalizeNetValueDate(netValueDate)
+  if (delayedDisclosure && dayGrowth != null && navDay) {
+    return {percent: dayGrowth, percentSource: 'confirmed'}
+  }
   const inConfirmSession =
-    dayGrowth != null && navDay && isConfirmedSessionActive(navDay)
+    dayGrowth != null &&
+    navDay &&
+    isConfirmedSessionActive(navDay, new Date(), {delayedDisclosure})
 
   if (inConfirmSession) {
     return {percent: dayGrowth, percentSource: 'confirmed'}

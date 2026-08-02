@@ -6,165 +6,353 @@
     bounces="{{false}}"
     show-scrollbar="{{false}}"
   >
-    <view class="page theme-{{theme}}" style="min-height: {{contentMinHeight}}px">
-      <view class="summary">
-        <view class="summary-glow" aria-hidden="true"></view>
-        <view class="summary-body">
-          <view class="summary-metrics">
-            <view class="summary-cell summary-cell-amount">
-              <text class="summary-cell-label">基金持仓总金额</text>
-              <view class="summary-amount-row">
-                <text class="summary-currency" wx:if="{{!hideAmounts}}">¥</text>
-                <text class="mono summary-amount">{{hideAmounts ? '***' : totalAmountText}}</text>
-              </view>
-            </view>
-            <view class="summary-divider" aria-hidden="true"></view>
-            <view class="summary-cell">
-              <text class="summary-cell-label">当日收益</text>
-              <text class="mono summary-cell-value">{{hideAmounts ? '***' : totalPnlText}}</text>
-            </view>
-            <view class="summary-divider" aria-hidden="true"></view>
-            <view class="summary-cell">
-              <text class="summary-cell-label">当日收益率</text>
-              <text class="mono summary-cell-value">{{totalPnlPctText}}</text>
-            </view>
-          </view>
-          <view
-            class="icon-btn"
-            catchtap="onToggleAmounts"
-            hover-class="icon-btn-hover"
-            aria-label="{{hideAmounts ? '显示金额' : '隐藏金额'}}"
-          >
-            <van-icon
-              name="{{hideAmounts ? 'closed-eye' : 'eye-o'}}"
-              size="15px"
-              color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}"
-            />
-          </view>
-        </view>
-      </view>
-
+    <view
+      class="page theme-{{theme}} hold-page"
+      style="min-height: {{contentMinHeight}}px"
+    >
       <view class="err" wx:if="{{error}}">{{error}}</view>
 
-      <view class="fund-divider">
-        <view class="fund-divider-main">
-          <view class="fund-divider-line"></view>
-          <text class="fund-divider-text">持仓基金({{list.length}})</text>
-          <view class="fund-divider-line"></view>
-        </view>
-        <view class="section-action" catchtap="onAdd" hover-class="section-action-hover" aria-label="添加基金">
-          <van-icon
-            name="plus"
-            size="15px"
-            color="{{theme === 'dark' ? 'rgba(197,208,230,0.62)' : 'rgba(36,53,82,0.58)'}}"
-          />
-        </view>
-      </view>
-
       <desk-sync
-        wx:if="{{loading && !list.length && !error}}"
+        wx:if="{{loading && !hasPortfolio && !error}}"
         theme="{{theme}}"
         variant="hold"
       />
 
-      <view class="section-empty" wx:elif="{{!loading && !list.length}}">
-        <van-empty image="search" description="暂无持仓，点 + 添加" />
-      </view>
-
-      <view class="list-gap" wx:else>
-        <view class="swipe-row" wx:for="{{list}}" wx:key="code">
-          <van-swipe-cell right-width="{{130}}">
-            <view class="glass dense-row tone-{{item.pnlClass}}">
-              <view class="dense-row-skin" aria-hidden="true">
-                <text class="card-mark mono">{{item.codeMark}}</text>
-              </view>
-              <view class="dense-main">
-                <view class="name-clip {{item.nameMarquee ? 'is-marquee' : ''}}">
-                  <view class="name-track">
-                    <text class="dense-name name-unit">{{item.name}}</text>
-                    <text class="dense-name name-unit" wx:if="{{item.nameMarquee}}">{{item.name}}</text>
-                  </view>
-                  <text class="name-measure">{{item.name}}</text>
-                </view>
-                <view class="meta-row">
-                  <text class="dense-amount mono">{{hideAmounts ? '***' : item.amountText}}</text>
-                  <view class="weight-chip">
-                    <view class="pie-icon" aria-hidden="true"></view>
-                    <text class="dense-weight mono">{{item.weightText}}</text>
-                  </view>
-                </view>
-                <view class="tag-row" wx:if="{{item.hasTags}}">
-                  <view
-                    class="confirmed-badge {{item.confirmPctClass}}"
-                    wx:if="{{item.confirmedUpdated}}"
-                    aria-label="净值已更新"
-                  >
-                    <van-icon name="certificate" size="12px" />
-                    <text class="mono" wx:if="{{item.confirmPctText !== '--'}}">{{item.confirmPctText}}</text>
-                  </view>
-                  <text
-                    class="sector-tag"
-                    wx:for="{{item.sectorTags}}"
-                    wx:for-item="tag"
-                    wx:key="*this"
-                  >{{tag}}</text>
-                </view>
-              </view>
-
-              <view
-                class="spark"
-                data-code="{{item.code}}"
-                data-name="{{item.name}}"
-                catchtap="onOpenTrend"
-              >
-                <ec-line
-                  wx:if="{{item.trend.length}}"
-                  points="{{item.trend}}"
-                  valueKey="growth"
-                  mode="spark"
-                  theme="{{theme}}"
-                  height="{{56}}"
-                  toneDelta="{{item.percent}}"
-                />
-              </view>
-
-              <view class="dense-right">
-                <text class="mono dense-pnl {{hideAmounts ? 'flat' : item.pnlClass}}">{{hideAmounts ? '***' : item.pnlText}}</text>
-                <text class="mono dense-pct {{item.pctClass}}">{{item.pctText}}</text>
-              </view>
-            </view>
-            <view slot="right" class="swipe-actions">
-              <view class="swipe-btn edit" data-code="{{item.code}}" data-name="{{item.name}}" bindtap="onEdit">
-                <van-icon
-                  name="edit"
-                  size="17px"
-                  color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}"
-                />
-                <text class="swipe-label">编辑</text>
-              </view>
-              <view
-                class="swipe-btn del"
-                data-code="{{item.code}}"
-                data-name="{{item.name}}"
-                catchtap="onRemove"
-              >
-                <van-icon
-                  name="delete-o"
-                  size="17px"
-                  color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}"
-                />
-                <text class="swipe-label">删除</text>
-              </view>
-            </view>
-          </van-swipe-cell>
+      <block wx:elif="{{!loading && !hasPortfolio}}">
+        <view class="section-empty">
+          <van-empty image="search" description="暂无持仓，点右下角 + 添加" />
         </view>
-      </view>
+      </block>
+
+      <!-- 境内基金列表 -->
+      <block wx:if="{{hasRealtime}}">
+        <view class="fund-divider">
+          <view class="fund-divider-main">
+            <view class="fund-divider-line"></view>
+            <text class="fund-divider-text">境内基金({{realtimeList.length}})</text>
+            <view class="fund-divider-line"></view>
+          </view>
+        </view>
+        <view class="section-pnl-bar is-quad">
+          <view class="section-pnl-cell">
+            <text class="section-pnl-label">持仓</text>
+            <text class="mono section-pnl-value">{{hideAmounts ? '***' : domesticAmountText}}</text>
+          </view>
+          <view class="section-pnl-gap" aria-hidden="true"></view>
+          <view class="section-pnl-cell">
+            <text class="section-pnl-label">持仓占比</text>
+            <text class="mono section-pnl-value">{{domesticShareText}}</text>
+          </view>
+          <view class="section-pnl-gap" aria-hidden="true"></view>
+          <view class="section-pnl-cell">
+            <text class="section-pnl-label">当日实时收益</text>
+            <text class="mono section-pnl-value">{{hideAmounts ? '***' : domesticPnlText}}</text>
+          </view>
+          <view class="section-pnl-gap" aria-hidden="true"></view>
+          <view class="section-pnl-cell">
+            <text class="section-pnl-label">当日实时收益率</text>
+            <text class="mono section-pnl-value">{{domesticPnlPctText}}</text>
+          </view>
+        </view>
+
+        <view class="list-gap">
+          <view class="swipe-row" wx:for="{{realtimeList}}" wx:key="code">
+            <van-swipe-cell right-width="{{130}}">
+              <view class="glass dense-row tone-{{item.pnlClass}}">
+                <view class="dense-row-skin" aria-hidden="true">
+                  <text class="card-mark mono">{{item.codeMark}}</text>
+                </view>
+                <view class="dense-main">
+                  <view class="name-clip">
+                    <text class="dense-name">{{item.name}}</text>
+                  </view>
+                  <view class="meta-row">
+                    <text class="dense-amount mono">{{hideAmounts ? '***' : item.amountText}}</text>
+                    <view class="weight-chip">
+                      <view class="pie-icon" aria-hidden="true"></view>
+                      <text class="dense-weight mono">{{item.weightText}}</text>
+                    </view>
+                  </view>
+                  <view class="tag-row" wx:if="{{item.hasTags}}">
+                    <view
+                      class="confirmed-badge {{item.confirmPctClass}}"
+                      wx:if="{{item.confirmedUpdated && !item.showDiscloseTime}}"
+                      catchtap="onOpenQaTips"
+                      data-q="badge-cn"
+                      hover-class="qa-hit-hover"
+                      aria-label="净值已更新，查看说明"
+                    >
+                      <van-icon name="certificate" size="12px" />
+                      <text class="mono" wx:if="{{item.confirmPctText !== '--'}}">{{item.confirmPctText}}</text>
+                    </view>
+                    <view
+                      class="confirmed-badge is-disclose {{item.confirmPctClass}}"
+                      wx:if="{{item.showDiscloseTime}}"
+                      catchtap="onOpenQaTips"
+                      data-q="badge-qdii"
+                      hover-class="qa-hit-hover"
+                      aria-label="官方披露日期，查看说明"
+                    >
+                      <text class="mono">{{item.discloseTimeText}}</text>
+                    </view>
+                    <text
+                      class="sector-tag"
+                      wx:for="{{item.sectorTags}}"
+                      wx:for-item="tag"
+                      wx:key="*this"
+                    >{{tag}}</text>
+                  </view>
+                </view>
+
+                <view
+                  class="spark"
+                  data-code="{{item.code}}"
+                  data-name="{{item.name}}"
+                  catchtap="onOpenTrend"
+                >
+                  <ec-line
+                    wx:if="{{item.trend.length}}"
+                    points="{{item.trend}}"
+                    valueKey="growth"
+                    mode="spark"
+                    theme="{{theme}}"
+                    height="{{56}}"
+                    toneDelta="{{item.percent}}"
+                  />
+                </view>
+
+                <view class="dense-right">
+                  <text
+                    class="mono dense-pct {{item.pctClass}}"
+                    catchtap="onOpenQaTips"
+                    data-q="a-share"
+                    hover-class="qa-hit-hover"
+                    aria-label="查看涨跌幅说明"
+                  >{{item.pctText}}</text>
+                  <text class="mono dense-pnl {{hideAmounts ? 'flat' : item.pnlClass}}">{{hideAmounts ? '***' : item.pnlText}}</text>
+                </view>
+              </view>
+              <view slot="right" class="swipe-actions">
+                <view class="swipe-btn edit" data-code="{{item.code}}" data-name="{{item.name}}" bindtap="onEdit">
+                  <van-icon
+                    name="edit"
+                    size="17px"
+                    color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}"
+                  />
+                  <text class="swipe-label">编辑</text>
+                </view>
+                <view
+                  class="swipe-btn del"
+                  data-code="{{item.code}}"
+                  data-name="{{item.name}}"
+                  catchtap="onRemove"
+                >
+                  <van-icon
+                    name="delete-o"
+                    size="17px"
+                    color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}"
+                  />
+                  <text class="swipe-label">删除</text>
+                </view>
+              </view>
+            </van-swipe-cell>
+          </view>
+        </view>
+      </block>
+
+      <!-- QDII · 海外 -->
+      <block wx:if="{{hasDelayed}}">
+        <view class="fund-divider is-follow">
+          <view class="fund-divider-main">
+            <view class="fund-divider-line"></view>
+            <view class="fund-divider-title">
+              <text class="fund-divider-text">QDII · 海外({{delayedList.length}})</text>
+              <view
+                class="fund-divider-tip"
+                catchtap="onOpenQaTips"
+                data-q="add-hold"
+                hover-class="fund-divider-tip-hover"
+                aria-label="查看 QDII 申购与收益说明"
+              >
+                <van-icon
+                  name="question-o"
+                  size="14px"
+                  color="{{theme === 'dark' ? 'rgba(154,168,255,0.9)' : 'rgba(79,93,255,0.75)'}}"
+                />
+              </view>
+            </view>
+            <view class="fund-divider-line"></view>
+          </view>
+        </view>
+
+        <view class="section-pnl-bar is-quad">
+          <view class="section-pnl-cell">
+            <text class="section-pnl-label">持仓</text>
+            <text class="mono section-pnl-value">{{hideAmounts ? '***' : foreignAmountText}}</text>
+          </view>
+          <view class="section-pnl-gap" aria-hidden="true"></view>
+          <view class="section-pnl-cell">
+            <text class="section-pnl-label">持仓占比</text>
+            <text class="mono section-pnl-value">{{foreignShareText}}</text>
+          </view>
+          <view class="section-pnl-gap" aria-hidden="true"></view>
+          <view class="section-pnl-cell">
+            <view class="section-pnl-label-row">
+              <text class="section-pnl-label">当前日收益</text>
+              <view
+                class="section-pnl-tip"
+                catchtap="onOpenQaTips"
+                data-q="qdii-pnl"
+                hover-class="section-pnl-tip-hover"
+                aria-label="查看当前日收益说明"
+              >
+                <van-icon
+                  name="question-o"
+                  size="12px"
+                  color="{{theme === 'dark' ? 'rgba(154,168,255,0.85)' : 'rgba(79,93,255,0.72)'}}"
+                />
+              </view>
+            </view>
+            <text class="mono section-pnl-value">{{hideAmounts ? '***' : foreignPnlText}}</text>
+          </view>
+          <view class="section-pnl-gap" aria-hidden="true"></view>
+          <view class="section-pnl-cell">
+            <view class="section-pnl-label-row">
+              <text class="section-pnl-label">当前日收益率</text>
+              <view
+                class="section-pnl-tip"
+                catchtap="onOpenQaTips"
+                data-q="qdii-pnl"
+                hover-class="section-pnl-tip-hover"
+                aria-label="查看当前日收益率说明"
+              >
+                <van-icon
+                  name="question-o"
+                  size="12px"
+                  color="{{theme === 'dark' ? 'rgba(154,168,255,0.85)' : 'rgba(79,93,255,0.72)'}}"
+                />
+              </view>
+            </view>
+            <text class="mono section-pnl-value">{{foreignPnlPctText}}</text>
+          </view>
+        </view>
+
+        <view class="list-gap">
+          <view class="swipe-row" wx:for="{{delayedList}}" wx:key="code">
+            <van-swipe-cell right-width="{{130}}">
+              <view class="glass dense-row tone-{{item.pnlClass}}">
+                <view class="dense-row-skin" aria-hidden="true">
+                  <text class="card-mark mono">{{item.codeMark}}</text>
+                </view>
+                <view class="dense-main">
+                  <view class="name-clip">
+                    <text class="dense-name">{{item.name}}</text>
+                  </view>
+                  <view class="meta-row">
+                    <text class="dense-amount mono">{{hideAmounts ? '***' : item.amountText}}</text>
+                    <view class="weight-chip">
+                      <view class="pie-icon" aria-hidden="true"></view>
+                      <text class="dense-weight mono">{{item.weightText}}</text>
+                    </view>
+                  </view>
+                  <view class="tag-row" wx:if="{{item.hasTags}}">
+                    <view
+                      class="confirmed-badge {{item.confirmPctClass}}"
+                      wx:if="{{item.confirmedUpdated && !item.showDiscloseTime}}"
+                      catchtap="onOpenQaTips"
+                      data-q="badge-cn"
+                      hover-class="qa-hit-hover"
+                      aria-label="净值已更新，查看说明"
+                    >
+                      <van-icon name="certificate" size="12px" />
+                      <text class="mono" wx:if="{{item.confirmPctText !== '--'}}">{{item.confirmPctText}}</text>
+                    </view>
+                    <view
+                      class="confirmed-badge is-disclose {{item.confirmPctClass}}"
+                      wx:if="{{item.showDiscloseTime}}"
+                      catchtap="onOpenQaTips"
+                      data-q="badge-qdii"
+                      hover-class="qa-hit-hover"
+                      aria-label="官方披露日期，查看说明"
+                    >
+                      <text class="mono">{{item.discloseTimeText}}</text>
+                    </view>
+                    <text
+                      class="sector-tag"
+                      wx:for="{{item.sectorTags}}"
+                      wx:for-item="tag"
+                      wx:key="*this"
+                    >{{tag}}</text>
+                  </view>
+                </view>
+
+                <view
+                  class="spark"
+                  data-code="{{item.code}}"
+                  data-name="{{item.name}}"
+                  catchtap="onOpenTrend"
+                >
+                  <ec-line
+                    wx:if="{{item.trend.length}}"
+                    points="{{item.trend}}"
+                    valueKey="growth"
+                    mode="spark"
+                    theme="{{theme}}"
+                    height="{{56}}"
+                    toneDelta="{{item.percent}}"
+                  />
+                </view>
+
+                <view class="dense-right">
+                  <text
+                    class="mono dense-pct {{item.pctClass}}"
+                    catchtap="onOpenQaTips"
+                    data-q="a-share"
+                    hover-class="qa-hit-hover"
+                    aria-label="查看涨跌幅说明"
+                  >{{item.pctText}}</text>
+                  <text class="mono dense-pnl {{hideAmounts ? 'flat' : item.pnlClass}}">{{hideAmounts ? '***' : item.pnlText}}</text>
+                </view>
+              </view>
+              <view slot="right" class="swipe-actions">
+                <view class="swipe-btn edit" data-code="{{item.code}}" data-name="{{item.name}}" bindtap="onEdit">
+                  <van-icon
+                    name="edit"
+                    size="17px"
+                    color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}"
+                  />
+                  <text class="swipe-label">编辑</text>
+                </view>
+                <view
+                  class="swipe-btn del"
+                  data-code="{{item.code}}"
+                  data-name="{{item.name}}"
+                  catchtap="onRemove"
+                >
+                  <van-icon
+                    name="delete-o"
+                    size="17px"
+                    color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}"
+                  />
+                  <text class="swipe-label">删除</text>
+                </view>
+              </view>
+            </van-swipe-cell>
+          </view>
+        </view>
+      </block>
 
       <block wx:if="{{showGold}}">
         <view class="gold-divider">
           <view class="gold-divider-main">
             <view class="gold-divider-line"></view>
-            <text class="gold-divider-text">持仓黄金</text>
+            <view class="gold-divider-title">
+              <text class="gold-divider-text">持仓黄金</text>
+              <view class="gold-share" wx:if="{{goldWeightText}}">
+                <view class="gold-share-mark" aria-hidden="true"></view>
+                <text class="gold-divider-text gold-share-pct">{{goldWeightText}}</text>
+              </view>
+            </view>
             <view class="gold-divider-line"></view>
           </view>
           <view class="section-action gold-action" catchtap="onEditGold" hover-class="section-action-hover" aria-label="设置黄金">
@@ -189,33 +377,44 @@
         <view class="gold-wrap" wx:else>
           <view class="glass gold-card">
             <view class="gold-metrics">
-              <view class="gm">
+              <view class="gm gold-price">
                 <text class="gm-k">总价值</text>
-                <text class="mono gm-v gold-price">{{hideAmounts ? '***' : goldValueText}}</text>
+                <text class="mono gm-v">{{hideAmounts ? '***' : goldValueText}}</text>
               </view>
-              <view class="gm">
+              <view class="gm gold-price">
                 <text class="gm-k">相对成本</text>
-                <text class="mono gm-v {{hideAmounts ? 'gold-price' : goldCostClass}}">{{hideAmounts ? '***' : goldCostText}}</text>
+                <text class="mono gm-v">{{hideAmounts ? '***' : goldCostText}}</text>
               </view>
-              <view class="gm">
+              <view class="gm gold-price">
                 <text class="gm-k">收益率</text>
-                <text class="mono gm-v {{goldCostPctClass}}">{{goldCostPctText}}</text>
+                <text class="mono gm-v">{{goldCostPctText}}</text>
               </view>
-              <view class="gm gm-price" catchtap="onOpenGoldTrend" hover-class="gm-price-hover">
+              <view class="gm gm-price gold-price" catchtap="onOpenGoldTrend" hover-class="gm-price-hover">
                 <view class="gm-price-head">
                   <text class="gm-k">实时金价</text>
                   <van-icon
                     name="chart-trending-o"
                     size="13px"
-                    color="{{theme === 'dark' ? '#B8A078' : '#B8892D'}}"
+                    color="#B8892D"
                   />
                 </view>
-                <text class="mono gm-v gold-price">{{goldPriceText}}</text>
+                <text class="mono gm-v">{{goldPriceText}}</text>
               </view>
             </view>
           </view>
         </view>
       </block>
+
+      <view class="fab-spacer" wx:if="{{hasPortfolio}}" aria-hidden="true"></view>
     </view>
   </scroll-view>
+
+  <view
+    class="fab-add"
+    catchtap="onAdd"
+    hover-class="fab-add-hover"
+    aria-label="添加持仓"
+  >
+    <van-icon name="plus" size="22px" color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}" />
+  </view>
 </view>

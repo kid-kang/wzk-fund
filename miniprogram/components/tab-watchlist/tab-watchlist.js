@@ -1,5 +1,6 @@
 const api = require('../../utils/api')
 const {formatPct, pctClass} = require('../../utils/format')
+const {groupWatchlistByCategory} = require('../../utils/fundCategory')
 const {navigateTo} = require('../../utils/theme')
 const Toast = require('@vant/weapp/toast/toast').default
 
@@ -26,7 +27,7 @@ Component({
   data: {
     loading: true,
     error: '',
-    list: [],
+    groups: [],
   },
 
   timer: null,
@@ -88,38 +89,43 @@ Component({
     },
 
     async load() {
+      const epoch = (this._loadEpoch = (this._loadEpoch || 0) + 1)
       this.setData({error: ''})
       try {
         const list = await api.fetchWatchlist()
+        if (epoch !== this._loadEpoch) return
         const mapped = (list || []).map((row) => {
           const name = row.name || row.code || ''
           const confirmPct = row.dayGrowth != null ? row.dayGrowth : row.percent
           const sectors = Array.isArray(row.sectors) ? row.sectors : []
           const sectorTags = sectors.slice(0, 2)
           const confirmedUpdated = !!row.confirmedUpdated
+          const discloseTimeText = String(row.discloseTimeText || '').trim()
+          const showDiscloseTime = !!discloseTimeText
           return Object.assign({}, row, {
             name,
             codeMark: String(row.code || '').slice(-6) || '······',
-            nameMarquee: false,
             pctText: formatPct(row.percent),
             pctClass: pctClass(row.percent),
             confirmedUpdated,
             confirmPctText: formatPct(confirmPct),
             confirmPctClass: pctClass(confirmPct),
+            discloseTimeText,
+            showDiscloseTime,
             sectorTags,
-            hasTags: confirmedUpdated || sectorTags.length > 0,
+            hasTags: confirmedUpdated || showDiscloseTime || sectorTags.length > 0,
             trend: row.trend || [],
           })
         })
+        const groups = groupWatchlistByCategory(mapped)
+        if (epoch !== this._loadEpoch) return
         this.emitCount(mapped.length)
-        this.setData(
-          {
-            list: mapped,
-            loading: false,
-          },
-          () => this.measureNameMarquee(),
-        )
+        this.setData({
+          groups,
+          loading: false,
+        })
       } catch (e) {
+        if (epoch !== this._loadEpoch) return
         this.setData({
           error: (e && e.message) || '加载失败',
           loading: false,
@@ -127,34 +133,13 @@ Component({
       }
     },
 
-    measureNameMarquee() {
-      const list = this.data.list || []
-      if (!list.length) return
-      wx.nextTick(() => {
-        const q = this.createSelectorQuery()
-        q.selectAll('.name-clip').boundingClientRect()
-        q.selectAll('.name-measure').boundingClientRect()
-        q.exec((res) => {
-          const clips = (res && res[0]) || []
-          const measures = (res && res[1]) || []
-          if (!clips.length || !measures.length) return
-          let changed = false
-          const next = list.map((item, i) => {
-            const clipW = (clips[i] && clips[i].width) || 0
-            const nameW = (measures[i] && measures[i].width) || 0
-            const nameMarquee = clipW > 0 && nameW > clipW + 1
-            if (!!item.nameMarquee !== nameMarquee) changed = true
-            return nameMarquee === item.nameMarquee
-              ? item
-              : Object.assign({}, item, {nameMarquee})
-          })
-          if (changed) this.setData({list: next})
-        })
-      })
-    },
-
     onAdd() {
       navigateTo('/pages/fund-form/fund-form?mode=watch')
+    },
+
+    onOpenQaTips(e) {
+      const q = (e.currentTarget.dataset && e.currentTarget.dataset.q) || 'a-share'
+      navigateTo(`/pages/fund-qa/fund-qa?q=${encodeURIComponent(q)}`)
     },
 
     onOpenTrend(e) {

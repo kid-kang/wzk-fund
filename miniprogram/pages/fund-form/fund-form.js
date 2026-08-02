@@ -1,21 +1,10 @@
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
-const {isTradingDay} = require('../../utils/tradingCalendar')
-const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
+const {getThemeViewState, syncNavigationBar, navigateTo} = require('../../utils/theme')
 const Toast = require('@vant/weapp/toast/toast').default
 
 const themeView = getThemeViewState()
 syncNavigationBar(themeView.theme)
-
-/** 首屏前就算好，避免非交易日先露出口径单选再隐藏 */
-const initialShowAmountBasis = isTradingDay()
-const initialAmountBasis = initialShowAmountBasis ? 'prev' : 'today'
-const initialAmountPlaceholder = initialShowAmountBasis
-  ? '填写与上方口径一致的金额'
-  : '填写今日结算的持仓金额'
-const initialAmountTip = initialShowAmountBasis
-  ? '填写与上方口径一致的金额'
-  : '非交易日按今日结算市值填写'
 
 Page({
   data: {
@@ -27,10 +16,6 @@ Page({
     nameHint: '',
     codeLocked: false,
     amount: '',
-    amountBasis: initialAmountBasis,
-    showAmountBasis: initialShowAmountBasis,
-    amountPlaceholder: initialAmountPlaceholder,
-    amountTip: initialAmountTip,
     resolving: false,
     saving: false,
     error: '',
@@ -45,7 +30,6 @@ Page({
     const mode = query.mode === 'watch' ? 'watch' : 'hold'
     const code = query.code ? String(query.code).padStart(6, '0') : ''
     const name = query.name ? decodeURIComponent(query.name) : ''
-    const showAmountBasis = isTradingDay()
     const navTitle = code
       ? mode === 'hold'
         ? '编辑持仓'
@@ -61,14 +45,6 @@ Page({
       code,
       name,
       codeLocked: !!code,
-      showAmountBasis,
-      amountBasis: showAmountBasis ? 'prev' : 'today',
-      amountPlaceholder: showAmountBasis
-        ? '填写与上方口径一致的金额'
-        : '填写今日结算的持仓金额',
-      amountTip: showAmountBasis
-        ? '填写与上方口径一致的金额'
-        : '非交易日按今日结算市值填写',
     }
 
     if (code && mode === 'hold') {
@@ -85,6 +61,10 @@ Page({
     syncNavigationBar(next.theme)
   },
 
+  onOpenAddGuide() {
+    navigateTo('/pages/fund-qa/fund-qa?q=add-hold')
+  },
+
   onUnload() {
     if (this._resolveTimer) clearTimeout(this._resolveTimer)
   },
@@ -95,9 +75,7 @@ Page({
       const row = (holdings.list || []).find((f) => f.code === code)
       if (row) {
         patch.amount = row.amount != null ? String(row.amount) : ''
-        patch.amountBasis = row.percentSource === 'confirmed' ? 'today' : 'prev'
         patch.name = row.name || nameFromQuery || ''
-        if (!isTradingDay()) patch.amountBasis = 'today'
       } else {
         const local = store.getFund(code)
         if (local && local.name) patch.name = local.name
@@ -162,12 +140,6 @@ Page({
     this.setData({amount: raw})
   },
 
-  onBasisTap(e) {
-    const basis = e.currentTarget.dataset.basis
-    if (!basis || basis === this.data.amountBasis) return
-    this.setData({amountBasis: basis})
-  },
-
   async onSubmit() {
     if (this.data.saving) return
     const mode = this.data.mode
@@ -179,14 +151,10 @@ Page({
 
     this.setData({saving: true, error: ''})
     try {
-      const amountBasis = this.data.showAmountBasis
-        ? this.data.amountBasis
-        : 'today'
       if (this.data.codeLocked) {
         if (mode === 'hold') {
           await api.updateFund(code, {
             amount: Number(this.data.amount) || 0,
-            amountBasis,
           })
         }
       } else {
@@ -195,7 +163,6 @@ Page({
           type: mode,
           name: this.data.name || undefined,
           amount: mode === 'hold' ? Number(this.data.amount) || 0 : undefined,
-          amountBasis: mode === 'hold' ? amountBasis : undefined,
         })
       }
       Toast.success('已保存')

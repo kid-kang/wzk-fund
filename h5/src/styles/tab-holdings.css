@@ -1,8 +1,63 @@
 ﻿.tab-root,
 .page-scroller {
+  position: relative;
   height: 100%;
   width: 100%;
   background: var(--bg);
+}
+
+.hold-page {
+  padding-bottom: 48rem;
+}
+
+.fab-spacer {
+  width: 100%;
+  height: calc(180rem + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* 右下悬浮添加：贴 tab 内容区右下（非 viewport fixed，避免宽屏跑出 480 壳） */
+.fab-add {
+  position: absolute;
+  right: 36rem;
+  bottom: calc(20rem + env(safe-area-inset-bottom));
+  z-index: 100;
+  width: 104rem;
+  height: 104rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background:
+    radial-gradient(120% 100% at 28% 18%, rgba(255, 255, 255, 0.92) 0%, transparent 46%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.88) 0%, rgba(238, 241, 248, 0.78) 100%);
+  border: 1rem solid rgba(79, 93, 255, 0.22);
+  box-shadow:
+    0 14rem 36rem rgba(28, 40, 80, 0.14),
+    0 0 0 6rem var(--accent-soft),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  opacity: 0.58;
+}
+
+.fab-add:active {
+  opacity: 0.72;
+  transform: scale(0.96);
+}
+
+.theme-dark .fab-add {
+  color: var(--accent);
+  background:
+    radial-gradient(120% 100% at 28% 18%, rgba(255, 255, 255, 0.12) 0%, transparent 48%),
+    linear-gradient(165deg, rgba(40, 48, 68, 0.92) 0%, rgba(22, 27, 39, 0.88) 100%);
+  border: 1rem solid rgba(123, 136, 255, 0.34);
+  box-shadow:
+    0 14rem 36rem rgba(0, 0, 0, 0.42),
+    0 0 0 6rem var(--accent-soft),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.08);
 }
 
 .section-empty {
@@ -13,195 +68,214 @@
   padding-top: 4rem;
 }
 
-/* —— 总览：冷雾水晶台面（与 Crystal Ticker 同系，不用暖金） —— */
-.summary {
-  /* 与分区标题「+」右缘对齐：标题行 margin 8 + action 12 */
-  --action-inset: 20rem;
+/* 分区收益条：冷蓝水晶玻璃 */
+.section-pnl-bar {
   position: relative;
+  display: flex;
+  align-items: center;
+  margin: -4rem 8rem 12rem;
+  padding: 14rem 18rem;
+  border-radius: 16rem;
   overflow: hidden;
-  margin: 12rem 0 18rem;
-  border-radius: var(--radius);
-  border: 1rem solid rgba(120, 140, 180, 0.22);
+  border: 1rem solid rgba(22, 119, 255, 0.14);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 247, 252, 0.9) 100%);
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(232, 241, 255, 0.78) 38%,
+      rgba(244, 247, 252, 0.88) 72%,
+      rgba(255, 255, 255, 0.7) 100%
+    );
   box-shadow:
-    0 14rem 36rem rgba(28, 40, 80, 0.1),
+    0 8rem 22rem rgba(22, 119, 255, 0.06),
     inset 0 1rem 0 rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
 }
 
-/* 顶缘淡靛线：点明「总览台」身份，不抢基金卡 */
-.summary::before {
+.section-pnl-bar::before {
   content: "";
   position: absolute;
-  left: 28rem;
-  right: 28rem;
-  top: 0;
-  height: 3rem;
-  border-radius: 0 0 4rem 4rem;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(79, 93, 255, 0.42) 35%,
-    rgba(79, 93, 255, 0.42) 65%,
-    transparent 100%
-  );
-  z-index: 2;
-}
-
-/* 右上冷光，呼应页面 indigo 氛围光 */
-.summary-glow {
-  position: absolute;
-  right: -48rem;
-  top: -72rem;
-  width: 260rem;
-  height: 260rem;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 93, 255, 0.12) 0%, transparent 68%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.summary-body {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  padding: 20rem 60rem 18rem 22rem;
-}
-
-.summary-metrics {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: stretch;
-  justify-content: flex-start;
-}
-
-.icon-btn {
-  position: absolute;
-  right: var(--action-inset);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40rem;
-  height: 40rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  line-height: 1;
-  z-index: 2;
-}
-
-.icon-btn-hover {
-  opacity: 0.5;
-}
-
-.summary-cell {
-  flex: 0 0 auto;
-  width: auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8rem;
-}
-
-.summary-cell-amount {
-  max-width: 48%;
-  min-width: 0;
-}
-
-.summary-divider {
-  width: 1rem;
-  margin: 4rem 18rem;
-  background: rgba(36, 53, 82, 0.1);
-  align-self: stretch;
-  flex-shrink: 0;
-}
-
-.summary-cell-label {
-  font-size: 18rem;
-  font-weight: 620;
-  letter-spacing: 0.04em;
-  color: #8a93a3;
-  white-space: nowrap;
-}
-
-.summary-amount-row {
-  display: flex;
-  align-items: baseline;
-  gap: 4rem;
-  min-width: 0;
-}
-
-.summary-currency {
-  font-size: 22rem;
-  font-weight: 700;
-  color: rgba(36, 53, 82, 0.5);
-  line-height: 1;
-}
-
-.summary-cell-value,
-.summary-amount {
-  font-size: 36rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  color: #243552;
-}
-
-.summary-amount {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.theme-dark .summary {
-  border-color: rgba(160, 180, 220, 0.14);
+  left: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 4rem;
+  border-radius: 0 4rem 4rem 0;
   background: linear-gradient(
     180deg,
-    rgba(36, 44, 62, 0.96) 0%,
-    rgba(24, 30, 44, 0.92) 100%
+    rgba(22, 119, 255, 0.15) 0%,
+    rgba(22, 119, 255, 0.72) 50%,
+    rgba(123, 136, 255, 0.2) 100%
   );
-  box-shadow:
-    0 14rem 36rem rgba(0, 0, 0, 0.34),
-    inset 0 1rem 0 rgba(255, 255, 255, 0.06);
+  pointer-events: none;
 }
 
-.theme-dark .summary::before {
+.section-pnl-bar::after {
+  content: "";
+  position: absolute;
+  right: -20%;
+  top: -60%;
+  width: 55%;
+  height: 160%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(22, 119, 255, 0.1) 0%,
+    transparent 68%
+  );
+  pointer-events: none;
+}
+
+.section-pnl-cell {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rem;
+  padding: 2rem 0;
+}
+
+.section-pnl-gap {
+  position: relative;
+  z-index: 1;
+  width: 1rem;
+  flex: 0 0 1rem;
+  align-self: stretch;
+  margin: 4rem 14rem;
   background: linear-gradient(
-    90deg,
+    180deg,
     transparent 0%,
-    rgba(123, 136, 255, 0.5) 35%,
-    rgba(123, 136, 255, 0.5) 65%,
+    rgba(22, 119, 255, 0.22) 30%,
+    rgba(123, 136, 255, 0.18) 70%,
     transparent 100%
   );
 }
 
-.theme-dark .summary-glow {
-  background: radial-gradient(circle, rgba(123, 136, 255, 0.14) 0%, transparent 68%);
+.section-pnl-label {
+  font-size: 18rem;
+  color: #7a879c;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
 }
 
-.theme-dark .summary-cell-label {
-  color: #7a8496;
+.section-pnl-label-row {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2rem;
+  max-width: 100%;
+  min-width: 0;
+  height: 28rem;
 }
 
-.theme-dark .summary-currency {
-  color: rgba(197, 208, 230, 0.5);
+.section-pnl-label-row .section-pnl-label {
+  line-height: 28rem;
+  height: 28rem;
+  display: inline-flex;
+  align-items: center;
 }
 
-.theme-dark .summary-cell-value,
-.theme-dark .summary-amount {
+.section-pnl-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28rem;
+  height: 28rem;
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+}
+
+.section-pnl-tip:active {
+  opacity: 0.65;
+}
+
+.section-pnl-value {
+  font-size: 26rem;
+  font-weight: 720;
+  color: #243552;
+  line-height: 1.15;
+}
+
+.section-pnl-bar.is-quad {
+  padding-left: 16rem;
+  padding-right: 12rem;
+}
+
+.section-pnl-bar.is-quad .section-pnl-cell {
+  flex: 1 1 0;
+  width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rem;
+}
+
+.section-pnl-bar.is-quad .section-pnl-gap {
+  margin: 4rem 8rem;
+}
+
+.section-pnl-bar.is-quad .section-pnl-label {
+  white-space: nowrap;
+}
+
+.theme-dark .section-pnl-bar {
+  border-color: rgba(123, 136, 255, 0.18);
+  background:
+    linear-gradient(
+      118deg,
+      rgba(34, 44, 68, 0.92) 0%,
+      rgba(28, 42, 72, 0.78) 40%,
+      rgba(22, 32, 54, 0.9) 74%,
+      rgba(30, 38, 58, 0.72) 100%
+    );
+  box-shadow:
+    0 10rem 28rem rgba(0, 0, 0, 0.28),
+    inset 0 1rem 0 rgba(255, 255, 255, 0.07);
+}
+
+.theme-dark .section-pnl-bar::before {
+  background: linear-gradient(
+    180deg,
+    rgba(123, 136, 255, 0.2) 0%,
+    rgba(22, 119, 255, 0.85) 50%,
+    rgba(123, 136, 255, 0.25) 100%
+  );
+}
+
+.theme-dark .section-pnl-bar::after {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(79, 93, 255, 0.18) 0%,
+    transparent 68%
+  );
+}
+
+.theme-dark .section-pnl-gap {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(123, 136, 255, 0.28) 30%,
+    rgba(22, 119, 255, 0.2) 70%,
+    transparent 100%
+  );
+}
+
+.theme-dark .section-pnl-label {
+  color: #8a93a8;
+}
+
+.theme-dark .section-pnl-value {
   color: #e8eef8;
 }
 
-.theme-dark .summary-divider {
-  background: rgba(197, 208, 230, 0.12);
+.fund-divider.is-follow {
+  margin-top: 28rem;
 }
-
-
 
 .err {
   margin-bottom: 12rem;
@@ -212,7 +286,6 @@
   font-size: 22rem;
 }
 
-/* 基金分区标题：左右等宽留白保证标题居中，右侧线不压加号 */
 .fund-divider {
   --action-inset: 12rem;
   position: relative;
@@ -241,12 +314,42 @@
   background: linear-gradient(90deg, rgba(36, 53, 82, 0.18), transparent);
 }
 
+.fund-divider-title {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6rem;
+  flex-shrink: 0;
+  height: 40rem;
+}
+
 .fund-divider-text {
   flex-shrink: 0;
+  height: 40rem;
   font-size: 22rem;
+  line-height: 40rem;
   color: #243552;
   letter-spacing: 0.12em;
   font-weight: 680;
+}
+
+.fund-divider-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40rem;
+  height: 40rem;
+  flex-shrink: 0;
+  line-height: 1;
+  transform: translateY(2rem);
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.fund-divider-tip:active {
+  opacity: 0.6;
 }
 
 .section-action {
@@ -262,9 +365,11 @@
   z-index: 1;
   background: transparent;
   line-height: 1;
+  border: none;
+  padding: 0;
 }
 
-.section-action-hover {
+.section-action:active {
   opacity: 0.5;
 }
 
@@ -282,6 +387,13 @@
 
 .list-gap {
   margin-top: 4rem;
+}
+
+.hold-page .dense-pct {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 
 .gold-divider {
@@ -305,31 +417,78 @@
 }
 
 .gold-divider-line:first-child {
-  background: linear-gradient(90deg, transparent, rgba(176, 138, 72, 0.4));
+  background: linear-gradient(90deg, transparent, rgba(184, 137, 45, 0.45));
 }
 
 .gold-divider-line:last-child {
-  background: linear-gradient(90deg, rgba(176, 138, 72, 0.4), transparent);
+  background: linear-gradient(90deg, rgba(184, 137, 45, 0.45), transparent);
+}
+
+.gold-divider-title {
+  --gold-title-size: 22rem;
+  --gold-title-track: 32rem;
+  --gold-title-ink: #b8892d;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rem;
+  height: var(--gold-title-track);
 }
 
 .gold-divider-text {
   flex-shrink: 0;
-  font-size: 22rem;
-  color: #6b4e1e;
+  height: var(--gold-title-track);
+  font-size: var(--gold-title-size);
+  line-height: var(--gold-title-track);
+  color: var(--gold-title-ink);
   letter-spacing: 0.12em;
   font-weight: 680;
 }
 
-.theme-dark .gold-divider-text {
-  color: #b8a078;
+.gold-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rem;
+  height: var(--gold-title-track);
+}
+
+.gold-share-mark {
+  width: 22rem;
+  height: 22rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    #b8892d 0 42%,
+    #d4b56a 42% 72%,
+    #e8d5a8 72% 100%
+  );
+  -webkit-mask: radial-gradient(circle at center, transparent 36%, #000 38%);
+  mask: radial-gradient(circle at center, transparent 36%, #000 38%);
+}
+
+.gold-share-pct {
+  letter-spacing: 0.06em;
+}
+
+.theme-dark .gold-divider-title {
+  --gold-title-ink: #b8892d;
+}
+
+.theme-dark .gold-share-mark {
+  background: conic-gradient(
+    #b8892d 0 42%,
+    #d4b56a 42% 72%,
+    #e8d5a8 72% 100%
+  );
 }
 
 .theme-dark .gold-divider-line:first-child {
-  background: linear-gradient(90deg, transparent, rgba(184, 160, 120, 0.28));
+  background: linear-gradient(90deg, transparent, rgba(184, 137, 45, 0.4));
 }
 
 .theme-dark .gold-divider-line:last-child {
-  background: linear-gradient(90deg, rgba(184, 160, 120, 0.28), transparent);
+  background: linear-gradient(90deg, rgba(184, 137, 45, 0.4), transparent);
 }
 
 .gold-wrap {
@@ -411,6 +570,9 @@
   text-align: left;
   appearance: none;
   -webkit-appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
 }
 
 .gm-price-head {
@@ -430,11 +592,12 @@
   text-align: left;
 }
 
-.gm-price-hover {
+.gm-price:active {
   opacity: 0.72;
 }
 
-.gold-price {
+.gold-price .gm-v,
+.gm.gold-price .gm-v {
   color: #7a5418;
   font-weight: 760;
   letter-spacing: -0.02em;
@@ -457,6 +620,14 @@
   color: #9a8a6e;
 }
 
-.theme-dark .gold-price {
+.theme-dark .gold-price .gm-v,
+.theme-dark .gm.gold-price .gm-v {
   color: #c4b496;
+}
+
+.confirmed-badge {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
 }
