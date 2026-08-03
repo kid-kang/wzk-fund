@@ -110,6 +110,8 @@ function isUsableSectorTag(s) {
 function sectorsNeedRefresh(sectors, name = '') {
   if (!Array.isArray(sectors) || !sectors.length) return true
   if (sectors.some((s) => !isUsableSectorTag(s))) return true
+  // 仅有东财一级行业时，按新逻辑（重仓股概念优先）重拉
+  if (sectors.every((s) => COARSE_SECTORS.has(s))) return true
   const n = String(name)
   if (sectors.includes('有色金属')) return true
   if (sectors.includes('医药') || sectors.includes('化学制药')) {
@@ -122,6 +124,63 @@ function sectorsNeedRefresh(sectors, name = '') {
   if (
     /QDII|海外|中概|纳斯达克|纳指|标普|恒生/.test(n) &&
     sectors.some((s) => /海外中国互联网\d|人民币|美元/.test(s) || String(s).length > 10)
+  ) {
+    return true
+  }
+  return false
+}
+
+const PUSH_HOSTS = [
+  'https://push2delay.eastmoney.com',
+  'https://push2.eastmoney.com',
+  'https://82.push2.eastmoney.com',
+]
+
+async function eastmoneyQuoteGet(path, params = {}) {
+  let lastErr
+  for (const host of PUSH_HOSTS) {
+    try {
+      const res = await axios.get(`${host}${path}`, {
+        timeout: 10000,
+        headers: {'User-Agent': ua, Referer: 'https://quote.eastmoney.com/'},
+        params,
+      })
+      return res.data
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw lastErr || new Error('eastmoney quote failed')
+}
+
+/** NEWTEXCH: 0 深 / 1 沪；缺省时按代码前缀兜底 */
+function toAshareSecid(gpdm, newtexch) {
+  const code = String(gpdm || '').trim()
+  if (!/^\d{6}$/.test(code)) return ''
+  const ex = String(newtexch ?? '')
+  if (ex === '1') return `1.${code}`
+  if (ex === '0') return `0.${code}`
+  if (/^[56]/.test(code)) return `1.${code}`
+  if (/^[0348]/.test(code)) return `0.${code}`
+  return ''
+}
+
+/** 去掉东财概念后缀「概念」 */
+function normalizeConceptTag(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/概念$/u, '')
+    .trim()
+}
+
+/** 地域 / 风格 / 事件类噪音，不宜作为基金板块 */
+function isNoisyConceptTag(tag) {
+  const t = String(tag || '').trim()
+  if (!t || t.length > 12) return true
+  if (
+    /板块$|特区$|预增|预减|高市净率|高成长|大盘|小盘|风格|股权分散|密集调研|券商金股|贬值受益|创投|参股|一带一路|西部大开发|长江三角|京津冀|通信技术$/u.test(
+      t,
+    )
   ) {
     return true
   }
@@ -317,55 +376,102 @@ function inferSpecificThemesFromText(text = '') {
   })
 }
 
-/** 主动基金：用重仓股名称投票推断细分主题（如锂矿） */
-async function inferThemesFromHoldings(code) {
+async function fetchFundHoldings(code) {
   try {
     const data = await eastmoneyFundGet('FundMNInverstPosition', {
       FCODE: String(code).padStart(6, '0'),
     })
-    const stocks = data?.fundStocks || []
-    const texts = stocks
-      .slice(0, 10)
-      .map((s) => `${s.GPJC || ''} ${s.GPNAME || ''}`)
-      .join(' ')
-    const etfName = data?.ETFSHORTNAME || ''
-    const votes = new Map()
-
-    const holdingRules = [
-      [/锂|盐湖|赣锋|天齐|雅化|中矿|永兴材料|西藏矿业|西藏珠峰|天华新能|盛新锂能/, '锂矿'],
-      [/创新药|药明|百济|信达|恒瑞|科伦|复星医药|君实|康方/, '创新药'],
-      [/茅台|五粮液|泸州老窖|汾酒|洋河|白酒/, '白酒'],
-      [/宁德时代|比亚迪|理想|小鹏|蔚来|新能源车/, '汽车'],
-      [/隆基|通威|阳光电源|晶澳|光伏/, '光伏'],
-      [/中芯|韦尔|北方华创|中微|拓荆|半导体|芯片/, '半导体'],
-      [/贵州茅台/, '白酒'],
-      // QDII 常见海外重仓
-      [/苹果|微软|英伟达|谷歌|Alphabet|亚马逊|Meta|特斯拉|AMD|NVIDIA|Apple|Microsoft/i, '美股'],
-      [/腾讯|阿里|美团|小米|京东|网易|百度|拼多多|快手/, '中概互联'],
-      [/台积电|TSMC|三星/, '半导体'],
-    ]
-
-    const hay = `${texts} ${etfName}`
-    for (const [re, label] of holdingRules) {
-      if (re.test(hay)) votes.set(label, (votes.get(label) || 0) + 1)
+    return {
+      stocks: Array.isArray(data?.fundStocks) ? data.fundStocks : [],
+      etfName: data?.ETFSHORTNAME || '',
     }
-
-    // 按命中强度排序；至少命中一次
-    return [...votes.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([label]) => label)
-      .slice(0, 2)
   } catch {
-    return []
+    return {stocks: [], etfName: ''}
   }
 }
 
 /**
+ * 东财重仓股概念（f129）按持仓占比加权投票。
+ * 标签去掉「概念」后缀，并过滤地域/风格噪音。
+ */
+async function inferThemesFromHoldingConcepts(stocks = []) {
+  const top = stocks.slice(0, 8)
+  if (!top.length) return []
+
+  const votes = new Map()
+  await Promise.all(
+    top.map(async (s) => {
+      const secid = toAshareSecid(s.GPDM, s.NEWTEXCH)
+      if (!secid) return
+      const weight = Math.max(Number.parseFloat(s.JZBL) || 1, 0.5)
+      try {
+        const data = await eastmoneyQuoteGet('/api/qt/stock/get', {
+          secid,
+          fields: 'f129',
+        })
+        const raw = data?.data?.f129
+        if (raw == null || raw === '' || raw === '-' || raw === '--') return
+        const tags = String(raw)
+          .split(/[,，]/)
+          .map(normalizeConceptTag)
+          .filter(Boolean)
+        for (const tag of tags) {
+          if (!isUsableSectorTag(tag) || isNoisyConceptTag(tag)) continue
+          if (COARSE_SECTORS.has(tag)) continue
+          votes.set(tag, (votes.get(tag) || 0) + weight)
+        }
+      } catch {
+        // 单票失败忽略
+      }
+    }),
+  )
+
+  return [...votes.entries()]
+    .sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'zh'))
+    .map(([label]) => label)
+    .slice(0, 5)
+}
+
+/** 主动基金：用重仓股名称投票推断细分主题（如锂矿） */
+function inferThemesFromHoldingsData(stocks = [], etfName = '') {
+  const texts = stocks
+    .slice(0, 10)
+    .map((s) => `${s.GPJC || ''} ${s.GPNAME || ''}`)
+    .join(' ')
+  const votes = new Map()
+
+  const holdingRules = [
+    [/锂|盐湖|赣锋|天齐|雅化|中矿|永兴材料|西藏矿业|西藏珠峰|天华新能|盛新锂能/, '锂矿'],
+    [/创新药|药明|百济|信达|恒瑞|科伦|复星医药|君实|康方/, '创新药'],
+    [/茅台|五粮液|泸州老窖|汾酒|洋河|白酒/, '白酒'],
+    [/宁德时代|比亚迪|理想|小鹏|蔚来|新能源车/, '汽车'],
+    [/隆基|通威|阳光电源|晶澳|光伏/, '光伏'],
+    [/中芯|韦尔|北方华创|中微|拓荆|半导体|芯片/, '半导体'],
+    [/贵州茅台/, '白酒'],
+    // QDII 常见海外重仓
+    [/苹果|微软|英伟达|谷歌|Alphabet|亚马逊|Meta|特斯拉|AMD|NVIDIA|Apple|Microsoft/i, '美股'],
+    [/腾讯|阿里|美团|小米|京东|网易|百度|拼多多|快手/, '中概互联'],
+    [/台积电|TSMC|三星/, '半导体'],
+  ]
+
+  const hay = `${texts} ${etfName}`
+  for (const [re, label] of holdingRules) {
+    if (re.test(hay)) votes.set(label, (votes.get(label) || 0) + 1)
+  }
+
+  return [...votes.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([label]) => label)
+    .slice(0, 2)
+}
+
+/**
  * 细分板块标签优先级：
- * 1) 跟踪指数名（指数/联接基金最准）
- * 2) 基金名称关键词（创新药 > 医药）
- * 3) 重仓股主题投票（主动基金，如锂矿）
- * 4) 东财 TTYPENAME / FUNDSUBJECTLIST 仅作无细分时的兜底
+ * 1) 东财重仓股概念（去「概念」后缀）
+ * 2) 跟踪指数名（指数/联接基金）
+ * 3) 基金名称关键词（创新药 > 医药）
+ * 4) 重仓股名称投票（主动基金，如锂矿）
+ * 5) 东财 TTYPENAME / FUNDSUBJECTLIST 仅作无细分时的兜底
  */
 export async function fetchFundSectors(code, nameHint = '') {
   const specific = []
@@ -386,15 +492,16 @@ export async function fetchFundSectors(code, nameHint = '') {
   const shortName = nameHint || basic?.SHORTNAME || ''
   const indexName = basic?.INDEXNAME && basic.INDEXNAME !== '--' ? basic.INDEXNAME : ''
   const ftype = basic?.FTYPE && basic.FTYPE !== '--' ? basic.FTYPE : ''
+  const {stocks, etfName} = await fetchFundHoldings(code)
 
+  pushUnique(await inferThemesFromHoldingConcepts(stocks))
   pushUnique(themeFromIndexName(indexName))
   pushUnique(inferSpecificThemesFromText(`${shortName} ${indexName} ${ftype}`))
 
+  const fromHoldings = inferThemesFromHoldingsData(stocks, etfName)
   if (!specific.length) {
-    pushUnique(await inferThemesFromHoldings(code))
+    pushUnique(fromHoldings)
   } else {
-    // 指数/名称已有标签时，仍可用重仓补充更细标签（不覆盖）
-    const fromHoldings = await inferThemesFromHoldings(code)
     pushUnique(fromHoldings.filter((s) => !COARSE_SECTORS.has(s)))
   }
 
