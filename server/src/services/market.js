@@ -88,32 +88,56 @@ export async function getIndices() {
   })
 }
 
+/** 概念榜噪音：短线情绪 / 风格 / 资金口径，不是题材板块 */
+const NOISY_CONCEPT_BOARD =
+  /昨日|连板|涨停|跌停|微盘|举牌|高标|回笼|次新|破发|含一字|龙虎榜|融资融券|沪股通|深股通|同花顺|成交额|换手|高市净|高市盈|低价股|百元股|基金重仓|券商金股|科技风格|大盘成长|小盘成长|大盘股|小盘股/
+
+function normalizeConceptBoardName(name = '') {
+  return String(name || '')
+    .trim()
+    .replace(/概念$/u, '')
+    .trim()
+}
+
+/** 东财概念板块涨跌幅排行（fs=m:90+t:3）；过滤短线噪音后取前 size */
 export async function getSectorBoards({sort = 'desc', size = 10} = {}) {
   const data = await eastmoneyGet(
     '/api/qt/clist/get',
     {
       pn: 1,
-      pz: 80,
+      pz: 120,
       po: sort === 'asc' ? 0 : 1,
       np: 1,
       fltt: 2,
       invt: 2,
       fid: 'f3',
-      fs: 'm:90+t:2',
+      // t:2 行业 / t:3 概念
+      fs: 'm:90+t:3',
       fields: 'f12,f14,f2,f3',
     },
     PUSH_HOSTS,
   )
 
   const list = (data?.data?.diff || [])
-    .map((d) => ({
-      code: d.f12,
-      name: d.f14,
-      percent: typeof d.f3 === 'number' ? d.f3 : null,
-    }))
-    .filter((d) => d.percent != null)
+    .map((d) => {
+      const rawName = String(d.f14 || '').trim()
+      return {
+        code: d.f12,
+        name: normalizeConceptBoardName(rawName),
+        rawName,
+        percent: typeof d.f3 === 'number' ? d.f3 : null,
+      }
+    })
+    .filter(
+      (d) =>
+        d.percent != null &&
+        d.name &&
+        !NOISY_CONCEPT_BOARD.test(d.rawName) &&
+        !NOISY_CONCEPT_BOARD.test(d.name),
+    )
     .sort((a, b) => (sort === 'asc' ? a.percent - b.percent : b.percent - a.percent))
     .slice(0, size)
+    .map(({code, name, percent}) => ({code, name, percent}))
 
   return list
 }

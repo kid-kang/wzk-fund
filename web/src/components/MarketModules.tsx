@@ -63,7 +63,7 @@ export function MarketModule({
 
   return (
     <Panel className="h-full min-w-0">
-      <PanelHeader title="A股大盘" desc="涨跌家数占比 · 板块指数涨跌前十" />
+      <PanelHeader title="A股大盘" desc="涨跌家数占比 · 概念板块涨跌前十" />
       <div className="space-y-3 px-3 py-3 sm:space-y-4 sm:px-5 sm:py-4">
         <div className="rounded-xl border border-line/70 bg-paper/50 p-3 sm:p-4">
           <div className="text-xs text-muted">今日涨跌家数</div>
