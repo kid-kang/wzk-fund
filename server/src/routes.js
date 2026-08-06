@@ -13,6 +13,7 @@ import {
 } from './services/fund.js'
 import {getIndices, getIndexHistory, getMarketOverview} from './services/market.js'
 import {getGoldRealtime, getGoldHistory} from './services/gold.js'
+import {getGoldAlertStatus} from './services/goldAlert.js'
 
 const router = new Router({prefix: '/api'})
 
@@ -262,6 +263,10 @@ router.get('/gold/history', async (ctx) => {
     ctx.status = 500
     ctx.body = {success: false, message: e.message}
   }
+})
+
+router.get('/gold/alert/status', (ctx) => {
+  ctx.body = {success: true, data: getGoldAlertStatus()}
 })
 
 export default router

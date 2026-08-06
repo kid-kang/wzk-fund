@@ -126,6 +126,11 @@ async function fetchQuote() {
   }
 }
 
+/** 仅拉现价，供轮询告警使用（不含分时） */
+export async function getGoldQuote() {
+  return fetchQuote()
+}
+
 async function fetchTrend(prevCloseHint) {
   const hosts = [
     'https://push2his.eastmoney.com',
