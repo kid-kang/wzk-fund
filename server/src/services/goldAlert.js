@@ -62,7 +62,8 @@ export async function checkGoldAlertOnce() {
     return {price, level, sent: false}
   }
 
-  const content = `@所有人 当前金价${formatPrice(price)}`
+  // isAtAll 会由钉钉自动附带 @所有人，文案里不要再写，否则会重复
+  const content = `当前金价${formatPrice(price)}`
   await sendDingTalkText(content, {isAtAll: true})
   activeLevel = level
   console.log(`[gold-alert] 已通知档位 ${level}，现价 ${price}`)
