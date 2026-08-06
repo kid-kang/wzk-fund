@@ -31,17 +31,18 @@ function parseSinaGold(text) {
   const open = parseFloat(parts[8])
   const date = parts[12] || ''
   const name = parts[13] || 'AU9999'
+  const validPrice = Number.isFinite(price) && price > 0 ? price : null
   const percent =
-    Number.isFinite(price) && Number.isFinite(prevClose) && prevClose !== 0
-      ? ((price - prevClose) / prevClose) * 100
+    validPrice != null && Number.isFinite(prevClose) && prevClose !== 0
+      ? ((validPrice - prevClose) / prevClose) * 100
       : null
   const change =
-    Number.isFinite(price) && Number.isFinite(prevClose) ? price - prevClose : null
+    validPrice != null && Number.isFinite(prevClose) ? validPrice - prevClose : null
 
   return {
     code: 'AU9999',
     name: name.includes('金') ? 'AU9999 沪金99' : 'AU9999',
-    price: Number.isFinite(price) ? price : null,
+    price: validPrice,
     prevClose: Number.isFinite(prevClose) ? prevClose : null,
     open: Number.isFinite(open) ? open : null,
     high: Number.isFinite(high) ? high : null,
@@ -84,6 +85,8 @@ async function fetchEastmoneyQuote() {
       const d = res.data?.data
       if (!d || d.f43 == null) continue
       const price = Number(d.f43)
+      // 休市或异常时东财可能给 0，视为无效改试下一源
+      if (!Number.isFinite(price) || price <= 0) continue
       const prevClose = Number(d.f60)
       // 金钱口径优先用现价−昨收，不用接口四舍五入后的涨跌额/涨跌幅
       const change =

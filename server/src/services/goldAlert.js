@@ -4,6 +4,8 @@ import {sendDingTalkText} from './dingtalk.js'
 const INTERVAL_MS = Number(process.env.GOLD_ALERT_INTERVAL_MS) || 30_000
 const BAND = 0.2
 const STEP = 5
+/** 低于此价视为无效行情（休市/接口异常常见返回 0） */
+const MIN_PRICE = 100
 
 /**
  * 最近已通知的档位。
@@ -20,8 +22,9 @@ let ticking = false
  */
 export function matchGoldLevel(price, step = STEP, band = BAND) {
   const p = Number(price)
-  if (!Number.isFinite(p)) return null
+  if (!Number.isFinite(p) || p < MIN_PRICE) return null
   const level = Math.round(p / step) * step
+  if (level < MIN_PRICE) return null
   if (Math.abs(p - level) <= band + 1e-9) return level
   return null
 }
@@ -45,9 +48,9 @@ export function getGoldAlertStatus() {
 export async function checkGoldAlertOnce() {
   const quote = await getGoldQuote()
   const price = quote?.price
-  if (price == null || !Number.isFinite(Number(price))) {
-    console.warn('[gold-alert] 未获取到有效金价')
-    return {price: null, level: null, sent: false}
+  if (price == null || !Number.isFinite(Number(price)) || Number(price) < MIN_PRICE) {
+    console.warn(`[gold-alert] 未获取到有效金价: ${price}`)
+    return {price: price ?? null, level: null, sent: false}
   }
 
   const level = matchGoldLevel(price)
