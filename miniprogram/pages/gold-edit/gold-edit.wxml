@@ -22,6 +22,36 @@
     <view class="page theme-{{theme}} gold-edit-page">
       <view class="glass gold-form">
         <van-field
+          label="买入费率"
+          type="digit"
+          value="{{buyFeeRate}}"
+          placeholder="0"
+          placeholder-style="color: rgba(122, 84, 24, 0.35)"
+          border="{{false}}"
+          custom-class="gold-field"
+          label-class="gold-field-label"
+          input-class="gold-field-input"
+          bind:change="onBuyFeeRate"
+        >
+          <text slot="right-icon" class="gold-field-unit">%</text>
+        </van-field>
+        <view class="gold-field-line"></view>
+        <van-field
+          label="卖出费率"
+          type="digit"
+          value="{{sellFeeRate}}"
+          placeholder="0"
+          placeholder-style="color: rgba(122, 84, 24, 0.35)"
+          border="{{false}}"
+          custom-class="gold-field"
+          label-class="gold-field-label"
+          input-class="gold-field-input"
+          bind:change="onSellFeeRate"
+        >
+          <text slot="right-icon" class="gold-field-unit">%</text>
+        </van-field>
+        <view class="gold-field-line"></view>
+        <van-field
           label="持有克数"
           type="digit"
           value="{{holding}}"

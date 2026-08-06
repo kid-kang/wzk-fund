@@ -12,6 +12,8 @@ Page({
     navTitle: '黄金设置',
     holding: '',
     avgPrice: '',
+    buyFeeRate: '',
+    sellFeeRate: '',
     saving: false,
     error: '',
   },
@@ -24,6 +26,8 @@ Page({
       ...themePatch,
       holding: gold.holding != null ? String(gold.holding) : '',
       avgPrice: gold.avgPrice != null ? String(gold.avgPrice) : '',
+      buyFeeRate: gold.buyFeeRate != null ? String(gold.buyFeeRate) : '0',
+      sellFeeRate: gold.sellFeeRate != null ? String(gold.sellFeeRate) : '0',
     })
   },
 
@@ -41,6 +45,14 @@ Page({
     this.setData({avgPrice: e.detail})
   },
 
+  onBuyFeeRate(e) {
+    this.setData({buyFeeRate: e.detail})
+  },
+
+  onSellFeeRate(e) {
+    this.setData({sellFeeRate: e.detail})
+  },
+
   async onSubmit() {
     if (this.data.saving) return
     this.setData({saving: true, error: ''})
@@ -48,6 +60,8 @@ Page({
       await api.updateGoldConfig({
         holding: Number(this.data.holding) || 0,
         avgPrice: Number(this.data.avgPrice) || 0,
+        buyFeeRate: Number(this.data.buyFeeRate) || 0,
+        sellFeeRate: Number(this.data.sellFeeRate) || 0,
       })
       Toast.success('已保存')
       this._navTimer = setTimeout(() => {

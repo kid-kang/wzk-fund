@@ -3,15 +3,29 @@ const STORAGE_KEY = 'wzk-fund-config'
 const DEFAULT_CONFIG = {
   settings: {showGold: true},
   funds: {},
-  gold: {holding: 0, avgPrice: 0},
+  gold: {holding: 0, avgPrice: 0, buyFeeRate: 0, sellFeeRate: 0},
 }
 
 function cloneDefault() {
   return {
     settings: {showGold: true},
     funds: {},
-    gold: {holding: 0, avgPrice: 0},
+    gold: {holding: 0, avgPrice: 0, buyFeeRate: 0, sellFeeRate: 0},
   }
+}
+
+function normalizeFeeRate(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0) return 0
+  // 买入费率须 < 100%，否则无法反推实付成本
+  if (n >= 100) return 99.99
+  return Math.round(n * 10000) / 10000
+}
+
+function normalizeHolding(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0) return 0
+  return Math.round(n * 10000) / 10000
 }
 
 function normalizeFund(raw, prev) {
@@ -51,8 +65,14 @@ function normalizeConfig(payload) {
     },
     funds,
     gold: {
-      holding: Number((payload && payload.gold && payload.gold.holding) || 0) || 0,
+      holding: normalizeHolding(payload && payload.gold && payload.gold.holding),
       avgPrice: Number((payload && payload.gold && payload.gold.avgPrice) || 0) || 0,
+      buyFeeRate: normalizeFeeRate(
+        payload && payload.gold ? payload.gold.buyFeeRate : 0,
+      ),
+      sellFeeRate: normalizeFeeRate(
+        payload && payload.gold ? payload.gold.sellFeeRate : 0,
+      ),
     },
   }
 }
@@ -140,8 +160,16 @@ function removeFund(code) {
 function updateGold(patch) {
   const config = loadConfig()
   config.gold = {
-    holding: Number(patch.holding != null ? patch.holding : config.gold.holding || 0) || 0,
+    holding: normalizeHolding(
+      patch.holding != null ? patch.holding : config.gold.holding,
+    ),
     avgPrice: Number(patch.avgPrice != null ? patch.avgPrice : config.gold.avgPrice || 0) || 0,
+    buyFeeRate: normalizeFeeRate(
+      patch.buyFeeRate != null ? patch.buyFeeRate : config.gold.buyFeeRate,
+    ),
+    sellFeeRate: normalizeFeeRate(
+      patch.sellFeeRate != null ? patch.sellFeeRate : config.gold.sellFeeRate,
+    ),
   }
   saveConfig(config)
   return config.gold

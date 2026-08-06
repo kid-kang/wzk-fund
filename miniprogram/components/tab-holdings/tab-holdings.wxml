@@ -382,7 +382,7 @@
                 <text class="mono gm-v">{{hideAmounts ? '***' : goldValueText}}</text>
               </view>
               <view class="gm gold-price">
-                <text class="gm-k">相对成本</text>
+                <text class="gm-k">收益</text>
                 <text class="mono gm-v">{{hideAmounts ? '***' : goldCostText}}</text>
               </view>
               <view class="gm gold-price">

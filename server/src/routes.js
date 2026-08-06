@@ -236,7 +236,7 @@ router.get('/market/overview', async (ctx) => {
 
 /**
  * 无状态黄金行情
- * body: { holding?, avgPrice? }
+ * body: { holding?, avgPrice?, buyFeeRate?, sellFeeRate? }
  */
 router.post('/gold/quote', async (ctx) => {
   try {
@@ -244,6 +244,8 @@ router.post('/gold/quote', async (ctx) => {
     const cfg = {
       holding: Number(body.holding) || 0,
       avgPrice: Number(body.avgPrice) || 0,
+      buyFeeRate: Number(body.buyFeeRate) || 0,
+      sellFeeRate: Number(body.sellFeeRate) || 0,
     }
     const data = await getGoldRealtime(cfg)
     ctx.body = {success: true, data}

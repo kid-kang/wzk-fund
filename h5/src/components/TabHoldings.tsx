@@ -608,7 +608,7 @@ export default function TabHoldings({
                         </span>
                       </div>
                       <div className="gm gold-price">
-                        <span className="gm-k">相对成本</span>
+                        <span className="gm-k">收益</span>
                         <span
                           className={`mono gm-v ${
                             hideAmounts ? '' : gold.goldCostClass

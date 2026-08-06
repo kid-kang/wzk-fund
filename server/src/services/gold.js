@@ -371,7 +371,26 @@ export async function getGoldHistory(range = '1m') {
   }
 }
 
-export async function getGoldRealtime({holding = 0, avgPrice = 0} = {}) {
+function clampFeeRatePct(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0) return 0
+  if (n >= 100) return 99.99
+  return n
+}
+
+/**
+ * 积存金收益口径：
+ * - 买入：手续费 = 实付金额 × 买入费率；克数 = round4((实付 − 手续费) / 报价)
+ *   已知持仓克数与成本均价(买入报价)时，反推实付成本 = 克数 × 均价 / (1 − 买入费率)
+ * - 卖出：到账 = round2(报价 × 克数 × (1 − 卖出费率))
+ * - 收益 = 卖出到账 − 买入实付
+ */
+export async function getGoldRealtime({
+  holding = 0,
+  avgPrice = 0,
+  buyFeeRate = 0,
+  sellFeeRate = 0,
+} = {}) {
   const quote = await fetchQuote()
   const trend = await fetchTrend(quote.prevClose)
 
@@ -389,8 +408,10 @@ export async function getGoldRealtime({holding = 0, avgPrice = 0} = {}) {
     }
   }
 
-  const hold = Number(holding) || 0
+  const hold = round4(Number(holding) || 0)
   const avg = Number(avgPrice) || 0
+  const buyRate = clampFeeRatePct(buyFeeRate) / 100
+  const sellRate = clampFeeRatePct(sellFeeRate) / 100
 
   // 当日盈亏只用价格差：克数 × (现价 − 昨收)；涨幅仅展示，不参与金额
   let pnl = null
@@ -403,8 +424,10 @@ export async function getGoldRealtime({holding = 0, avgPrice = 0} = {}) {
   let costPnl = null
   let costPnlPercent = null
   if (hold > 0 && avg > 0 && quote.price != null) {
-    costPnl = round2((quote.price - avg) * hold)
-    costPnlPercent = round2(((quote.price - avg) / avg) * 100)
+    const buyCost = round2(hold * avg / (1 - buyRate))
+    const sellAmount = round2(quote.price * hold * (1 - sellRate))
+    costPnl = round2(sellAmount - buyCost)
+    costPnlPercent = buyCost > 0 ? round2((costPnl / buyCost) * 100) : null
   }
 
   return {
@@ -412,6 +435,8 @@ export async function getGoldRealtime({holding = 0, avgPrice = 0} = {}) {
     trend,
     holding: hold,
     avgPrice: avg,
+    buyFeeRate: clampFeeRatePct(buyFeeRate),
+    sellFeeRate: clampFeeRatePct(sellFeeRate),
     pnl,
     pnlPercent: quote.percent == null ? null : round2(quote.percent),
     costPnl,

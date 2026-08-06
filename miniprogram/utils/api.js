@@ -93,6 +93,8 @@ async function fetchGold() {
   return Object.assign({}, data.data, {
     holding: gold.holding,
     avgPrice: gold.avgPrice,
+    buyFeeRate: gold.buyFeeRate || 0,
+    sellFeeRate: gold.sellFeeRate || 0,
     show: store.getSettings().showGold !== false,
   })
 }

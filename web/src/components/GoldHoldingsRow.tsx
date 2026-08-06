@@ -165,7 +165,7 @@ export function GoldPanel({
               </div>
               {data?.costPnl != null ? (
                 <div className="shrink-0 border-l border-gold/25 pl-5">
-                  <div className="text-[11px] tracking-wide text-muted">相对成本</div>
+                  <div className="text-[11px] tracking-wide text-muted">收益</div>
                   <div className="mt-2 flex flex-wrap items-baseline gap-2">
                     <span
                       className={`font-mono text-lg font-semibold tabular-nums sm:text-xl ${hideAmounts ? 'text-muted' : pctClass(data.costPnl)}`}

@@ -53,6 +53,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.gold-field-unit {
+  color: #6b4e1e;
+  font-size: 28rpx;
+  font-weight: 650;
+  line-height: 1;
+}
+
 .err {
   margin: 8rpx 28rpx 12rpx;
   color: var(--rise);
@@ -104,6 +111,10 @@
 
 .theme-dark .gold-field-input {
   color: #f0d48a !important;
+}
+
+.theme-dark .gold-field-unit {
+  color: #e8c97a;
 }
 
 .theme-dark .gold-save {
