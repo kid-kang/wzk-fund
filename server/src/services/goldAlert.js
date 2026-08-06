@@ -5,8 +5,12 @@ const INTERVAL_MS = Number(process.env.GOLD_ALERT_INTERVAL_MS) || 30_000
 const BAND = 0.2
 const STEP = 5
 
-/** 当前已通知过的档位；离开该档位后再进入可再次通知 */
-let activeLevel = null
+/**
+ * 最近已通知的档位。
+ * 注意：短暂离开 ±0.2 触发带（如 925.5）不清空，避免同档来回刷屏；
+ * 只有触达另一个 5 倍数档位时才切换并可再次通知。
+ */
+let lastNotifiedLevel = null
 let timer = null
 let ticking = false
 
@@ -32,7 +36,7 @@ export function getGoldAlertStatus() {
   return {
     running: !!timer,
     intervalMs: INTERVAL_MS,
-    activeLevel,
+    lastNotifiedLevel,
     band: BAND,
     step: STEP,
   }
@@ -48,24 +52,22 @@ export async function checkGoldAlertOnce() {
 
   const level = matchGoldLevel(price)
   if (level == null) {
-    if (activeLevel != null) {
-      console.log(`[gold-alert] 离开档位 ${activeLevel}，现价 ${price}`)
-      activeLevel = null
-    } else {
-      console.log(`[gold-alert] 现价 ${price}，未触达档位`)
-    }
+    console.log(
+      `[gold-alert] 现价 ${price}，未触达档位` +
+      (lastNotifiedLevel != null ? `（仍记着档位 ${lastNotifiedLevel}）` : ''),
+    )
     return {price, level: null, sent: false}
   }
 
-  if (activeLevel === level) {
-    console.log(`[gold-alert] 现价 ${price}，仍在档位 ${level}，跳过`)
+  if (lastNotifiedLevel === level) {
+    console.log(`[gold-alert] 现价 ${price}，同档位 ${level} 已通知过，跳过`)
     return {price, level, sent: false}
   }
 
   // isAtAll 会由钉钉自动附带 @所有人，文案里不要再写，否则会重复
   const content = `当前金价${formatPrice(price)}`
   await sendDingTalkText(content, {isAtAll: true})
-  activeLevel = level
+  lastNotifiedLevel = level
   console.log(`[gold-alert] 已通知档位 ${level}，现价 ${price}`)
   return {price, level, sent: true, content}
 }
