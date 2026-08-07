@@ -7,12 +7,20 @@ type Props = {
   theme: AppTheme
   onBack?: () => void
   showBack?: boolean
+  /** 可选：覆盖导航底色（如 transparent） */
+  bgColor?: string
 }
 
-export default function AppNavBar({title, theme, onBack, showBack = true}: Props) {
+export default function AppNavBar({
+  title,
+  theme,
+  onBack,
+  showBack = true,
+  bgColor,
+}: Props) {
   const navigate = useNavigate()
   const isDark = theme === 'dark'
-  const navBg = isDark ? '#121722' : '#EEF1F8'
+  const navBg = bgColor || (isDark ? '#121722' : '#EEF1F8')
   const frontColor = isDark ? '#ffffff' : '#000000'
 
   const handleBack = () => {

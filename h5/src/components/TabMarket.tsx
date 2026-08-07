@@ -222,11 +222,27 @@ export default function TabMarket({
                   </div>
                   <div className="rank-list">
                     {boardList.map((item) => (
-                      <div className="rank-row" key={`${boardTab}-${item.code}`}>
+                      <button
+                        type="button"
+                        className="rank-row"
+                        key={`${boardTab}-${item.code}`}
+                        onClick={() => {
+                          if (!item.mappingCode) {
+                            window.alert('该板块暂无基金列表')
+                            return
+                          }
+                          const q = new URLSearchParams({
+                            mappingCode: item.mappingCode,
+                            name: item.name || '',
+                            sectorCode: item.sectorCode || item.code || '',
+                          })
+                          navigate(`/sector-funds?${q.toString()}`)
+                        }}
+                      >
                         <span className={`rank-no ${item.topClass}`}>{item.rankText}</span>
                         <span className="rank-name">{item.name}</span>
                         <span className={`mono rank-pct ${item.pctClass}`}>{item.pctText}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>

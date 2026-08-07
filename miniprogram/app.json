@@ -6,6 +6,7 @@
     "pages/gold-trend/gold-trend",
     "pages/fund-trend/fund-trend",
     "pages/index-trend/index-trend",
+    "pages/sector-funds/sector-funds",
     "pages/fund-qa/fund-qa"
   ],
   "window": {

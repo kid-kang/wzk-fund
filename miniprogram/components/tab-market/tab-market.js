@@ -199,5 +199,19 @@ Component({
         `/pages/index-trend/index-trend?code=${code}&name=${encodeURIComponent(name || '')}`,
       )
     },
+
+    onOpenBoard(e) {
+      const {name, mapping, sector} = e.currentTarget.dataset
+      if (!mapping) {
+        wx.showToast({title: '该板块暂无基金列表', icon: 'none'})
+        return
+      }
+      const q = [
+        `mappingCode=${encodeURIComponent(mapping)}`,
+        `name=${encodeURIComponent(name || '')}`,
+        `sectorCode=${encodeURIComponent(sector || '')}`,
+      ].join('&')
+      navigateTo(`/pages/sector-funds/sector-funds?${q}`)
+    },
   },
 })

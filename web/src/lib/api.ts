@@ -86,6 +86,8 @@ export type SectorItem = {
   name: string
   percent: number | null
   heat?: number | null
+  mappingCode?: string
+  sectorCode?: string
 }
 
 export type MarketOverview = {

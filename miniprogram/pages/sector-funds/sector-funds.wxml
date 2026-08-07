@@ -1,0 +1,79 @@
+<page-meta
+  page-style="background-color: {{pageBg}};"
+  background-color="{{pageBg}}"
+  background-color-top="{{pageBg}}"
+  background-color-bottom="{{pageBg}}"
+  root-background-color="{{pageBg}}"
+  background-text-style="{{bgTextStyle}}"
+/>
+
+<view class="subpage-root sf-shell">
+  <view class="subpage-nav">
+    <app-nav-bar title="{{navTitle}}" theme="light" bgColor="transparent" />
+  </view>
+
+  <scroll-view
+    class="subpage-scroller sf-scroller"
+    scroll-y
+    enhanced
+    bounces="{{false}}"
+    show-scrollbar="{{false}}"
+  >
+    <view class="sf-page">
+      <text class="sf-ghost" aria-hidden="true">{{name || '板块'}}</text>
+
+      <view class="sf-err" wx:if="{{error}}">{{error}}</view>
+
+      <view class="sf-body">
+        <view class="sf-sticky">
+          <view class="sf-toolbar">
+            <text class="sf-eyebrow">{{subtitle}}</text>
+          </view>
+          <view class="sf-head" wx:if="{{!loading && list.length}}">
+            <text class="sf-h-rank">#</text>
+            <text class="sf-h-name">名称</text>
+            <text class="sf-h-pct">估涨跌</text>
+            <text class="sf-h-act"></text>
+          </view>
+        </view>
+
+        <view class="sf-state" wx:if="{{loading}}">
+          <view class="sf-bar"></view>
+          <text class="sf-state-t">正在整理榜单</text>
+        </view>
+
+        <view class="sf-state" wx:elif="{{!list.length && !error}}">
+          <text class="sf-state-t">暂无热搜基金</text>
+          <text class="sf-state-h">稍后再看</text>
+        </view>
+
+        <block wx:elif="{{list.length}}">
+          <view
+            class="sf-row"
+            wx:for="{{list}}"
+            wx:key="code"
+            data-code="{{item.code}}"
+            data-name="{{item.name}}"
+            bindtap="onOpenFund"
+          >
+            <text class="sf-rank">{{item.rankText}}</text>
+            <view class="sf-main">
+              <text class="sf-name">{{item.name}}</text>
+              <text class="sf-code">{{item.code}}</text>
+            </view>
+            <text class="sf-pct {{item.pctClass}}">{{item.pctText}}</text>
+            <view
+              class="sf-add {{item.watched ? 'is-on' : ''}}"
+              data-code="{{item.code}}"
+              data-name="{{item.name}}"
+              data-watched="{{item.watched}}"
+              catchtap="onToggleWatch"
+            >{{item.watched ? '✓' : '+'}}</view>
+          </view>
+        </block>
+      </view>
+    </view>
+  </scroll-view>
+
+  <van-toast id="van-toast" />
+</view>

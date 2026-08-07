@@ -216,8 +216,15 @@
   display: flex;
   align-items: center;
   gap: 14rem;
+  width: 100%;
   padding: 16rem 12rem;
+  border: 0;
   border-radius: 14rem;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
 }
 
 .rank-row:nth-child(odd) {

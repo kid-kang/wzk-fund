@@ -112,6 +112,22 @@ export type SectorItem = {
   name: string
   percent: number | null
   heat?: number | null
+  /** 二级页拉基金列表用（小倍 mapping / extraCode） */
+  mappingCode?: string
+  sectorCode?: string
+}
+
+export type IndustryFundItem = {
+  code: string
+  name: string
+  nav: number | null
+  percent: number | null
+}
+
+export type IndustryFundsPayload = {
+  mappingCode: string
+  themeName: string
+  items: IndustryFundItem[]
 }
 
 export type MarketOverview = {
@@ -316,6 +332,15 @@ export async function fetchFundStageStats(code: string) {
 export async function fetchMarketOverview() {
   const {data} = await api.get<{success: boolean; data: MarketOverview}>('/market/overview')
   return data.data
+}
+
+export async function fetchIndustryFunds(mappingCode: string) {
+  const {data} = await api.get<{
+    success: boolean
+    message?: string
+    data: IndustryFundsPayload
+  }>('/market/boards/funds', {params: {mappingCode}})
+  return assertOk(data).data
 }
 
 export async function fetchGold() {

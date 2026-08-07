@@ -13,7 +13,13 @@ import {
   isConfirmedSessionActive,
   isDelayedNavFund,
 } from './services/fund.js'
-import {getIndices, getIndexHistory, getMarketBoards, getMarketOverview} from './services/market.js'
+import {
+  getIndices,
+  getIndexHistory,
+  getIndustryFunds,
+  getMarketBoards,
+  getMarketOverview,
+} from './services/market.js'
 import {getGoldRealtime, getGoldHistory} from './services/gold.js'
 import {getGoldAlertStatus} from './services/goldAlert.js'
 
@@ -265,6 +271,18 @@ router.get('/market/boards', async (ctx) => {
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 500
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+/** 板块下热搜基金：?mappingCode= */
+router.get('/market/boards/funds', async (ctx) => {
+  try {
+    const mappingCode = String(ctx.query.mappingCode || ctx.query.code || '')
+    const data = await getIndustryFunds({mappingCode})
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = e.message?.includes('缺少') ? 400 : 500
     ctx.body = {success: false, message: e.message}
   }
 })

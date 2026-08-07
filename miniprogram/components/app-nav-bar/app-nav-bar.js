@@ -51,6 +51,11 @@ Component({
       type: String,
       value: bootTheme,
     },
+    /** 可选：覆盖导航底色（如 transparent） */
+    bgColor: {
+      type: String,
+      value: '',
+    },
   },
 
   data: {
@@ -65,20 +70,22 @@ Component({
       const theme = this.properties.theme || resolveTheme()
       const metrics = measureNav()
       const colors = themeColors(theme)
+      const customBg = String(this.properties.bgColor || '').trim()
       this.setData({
         statusBarHeight: metrics.statusBarHeight,
         contentHeight: metrics.contentHeight,
-        navBg: colors.navBg,
+        navBg: customBg || colors.navBg,
         frontColor: colors.frontColor,
       })
     },
   },
 
   observers: {
-    theme: function (theme) {
+    'theme, bgColor': function (theme, bgColor) {
       const colors = themeColors(theme || resolveTheme())
+      const customBg = String(bgColor || '').trim()
       this.setData({
-        navBg: colors.navBg,
+        navBg: customBg || colors.navBg,
         frontColor: colors.frontColor,
       })
     },

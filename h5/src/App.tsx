@@ -6,6 +6,7 @@ import FundTrendPage from '@/pages/FundTrendPage'
 import GoldEditPage from '@/pages/GoldEditPage'
 import GoldTrendPage from '@/pages/GoldTrendPage'
 import IndexTrendPage from '@/pages/IndexTrendPage'
+import SectorFundsPage from '@/pages/SectorFundsPage'
 
 /** 主壳常驻：进二级页只隐藏不卸载，对齐小程序 page stack */
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/gold-edit" element={<GoldEditPage />} />
         <Route path="/gold-trend" element={<GoldTrendPage />} />
         <Route path="/index-trend" element={<IndexTrendPage />} />
+        <Route path="/sector-funds" element={<SectorFundsPage />} />
       </Routes>
     </>
   )

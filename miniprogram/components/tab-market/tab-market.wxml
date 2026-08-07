@@ -70,7 +70,15 @@
             </view>
           </view>
           <view class="rank-list">
-            <view class="rank-row" wx:for="{{boardList}}" wx:key="code">
+            <view
+              class="rank-row"
+              wx:for="{{boardList}}"
+              wx:key="code"
+              data-name="{{item.name}}"
+              data-mapping="{{item.mappingCode}}"
+              data-sector="{{item.sectorCode || item.code}}"
+              bindtap="onOpenBoard"
+            >
               <text class="rank-no {{item.topClass}}">{{item.rankText}}</text>
               <text class="rank-name">{{item.name}}</text>
               <text class="mono rank-pct {{item.pctClass}}">{{item.pctText}}</text>

@@ -170,6 +170,14 @@ function round2(n) {
   return Math.round(Number(n) * 100) / 100
 }
 
+/** 二级页拉基金列表用的 mappingCode：有指数映射用 mapping，否则用 extraCode（如 881270.TI） */
+function resolveBoardMappingCode(row = {}) {
+  const mapping = String(row.mappingCode || '').trim()
+  const extra = String(row.extraCode || '').trim()
+  if (row.isMappingIndex) return mapping || extra
+  return extra || mapping
+}
+
 function mapXiaobeiBoardItem(row = {}) {
   const name = String(row.themeName || '').trim()
   const change = Number(row.change)
@@ -181,6 +189,8 @@ function mapXiaobeiBoardItem(row = {}) {
     // 小倍 change 为小数（0.0676 → 6.76）
     percent: round2(change * 100),
     heat: Number.isFinite(heat) ? heat : null,
+    mappingCode: resolveBoardMappingCode(row),
+    sectorCode: String(row.sectorCode || '').trim(),
   }
 }
 
@@ -230,12 +240,72 @@ function sliceBoards(list, sort, size = 0) {
   })
   // size<=0：返回排序后的全部
   const sliced = size > 0 ? sorted.slice(0, size) : sorted
-  return sliced.map(({code, name, percent, heat}) => ({
+  return sliced.map(({code, name, percent, heat, mappingCode, sectorCode}) => ({
     code,
     name,
     percent,
     heat: heat ?? null,
+    mappingCode: mappingCode || '',
+    sectorCode: sectorCode || '',
   }))
+}
+
+/** 板块下基金列表缓存 */
+const INDUSTRY_FUND_TTL_MS = 45 * 1000
+const industryFundCache = new Map()
+
+/**
+ * 小倍板块热搜基金（isHot=true），最多 100 条。
+ * POST /yangji-api/api/get-industry-fund
+ */
+export async function getIndustryFunds({mappingCode} = {}) {
+  const code = String(mappingCode || '').trim()
+  if (!code) throw new Error('缺少板块映射代码 mappingCode')
+  const cacheKey = `${code}|hot`
+  const hit = industryFundCache.get(cacheKey)
+  if (hit && Date.now() - hit.at < INDUSTRY_FUND_TTL_MS) return hit.data
+
+  const res = await axios.post(
+    'https://api.xiaobeiyangji.com/yangji-api/api/get-industry-fund',
+    {version: '3.8.7.0', clientType: 'APP', mappingCode: code, isHot: true},
+    {
+      httpsAgent: agent,
+      timeout: 15000,
+      headers: {
+        'User-Agent': ua,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      validateStatus: () => true,
+    },
+  )
+  if (res.status !== 200 || res.data?.code !== 200) {
+    throw new Error(res.data?.msg || '板块基金列表加载失败')
+  }
+  const raw = res.data?.data || {}
+  const rawList = Array.isArray(raw.list) ? raw.list : []
+  const items = rawList
+    .map((row) => {
+      const fundCode = String(row.code || '').padStart(6, '0')
+      if (!/^\d{6}$/.test(fundCode)) return null
+      const y = Number(row.valuationY)
+      return {
+        code: fundCode,
+        name: String(row.name || fundCode).trim(),
+        nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
+        percent: Number.isFinite(y) ? round2(y * 100) : null,
+      }
+    })
+    .filter(Boolean)
+    .slice(0, 100)
+
+  const data = {
+    mappingCode: code,
+    themeName: String(raw.themeName || '').trim(),
+    items,
+  }
+  industryFundCache.set(cacheKey, {at: Date.now(), data})
+  return data
 }
 
 /**

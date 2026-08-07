@@ -82,6 +82,15 @@ async function fetchMarketOverview() {
   return data.data
 }
 
+async function fetchIndustryFunds(mappingCode) {
+  const data = await request({
+    url: '/api/market/boards/funds',
+    data: {mappingCode},
+  })
+  assertOk(data)
+  return data.data
+}
+
 async function fetchGold() {
   const gold = store.loadConfig().gold
   const data = await request({
@@ -234,6 +243,7 @@ module.exports = {
   fetchFundHistory,
   fetchFundQuote,
   fetchMarketOverview,
+  fetchIndustryFunds,
   fetchGold,
   fetchGoldHistory,
   resolveFund,
