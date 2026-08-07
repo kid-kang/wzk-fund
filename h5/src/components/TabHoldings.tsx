@@ -231,13 +231,14 @@ export default function TabHoldings({
         const goldData = g.value as GoldPayload
         const holding = Number(goldData.holding) || 0
         hasGold = holding > 0
-        goldValue = goldData.price != null && hasGold ? Number(goldData.price) * holding : 0
+        goldValue =
+          goldData.price != null && holding > 0 ? Number(goldData.price) * holding : 0
         const costPnl = goldData.costPnl != null ? goldData.costPnl : null
         const costPct = goldData.costPnlPercent != null ? goldData.costPnlPercent : null
         setGold({
           hasGold,
           goldPriceText: goldData.price != null ? formatAmount(goldData.price, 2) : '--',
-          goldValueText: formatAmount(hasGold ? goldValue : null),
+          goldValueText: formatAmount(goldValue),
           goldCostText: formatMoney(costPnl),
           goldCostClass: pctClass(costPnl),
           goldCostPctText: formatPct(costPct),
@@ -593,10 +594,8 @@ export default function TabHoldings({
                 </button>
               </div>
 
-              {loading && !gold.hasGold && !error ? (
+              {loading && gold.goldPriceText === '--' && !error ? (
                 <DeskSync theme={theme} variant="gold" />
-              ) : !loading && !gold.hasGold ? (
-                <div className="section-empty gold-empty">暂无黄金持仓，点设置添加</div>
               ) : (
                 <div className="gold-wrap">
                   <div className="glass gold-card">

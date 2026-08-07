@@ -213,14 +213,12 @@ Component({
           const holding = Number(gold.holding) || 0
           hasGold = holding > 0
           goldValue =
-            gold.price != null && hasGold
-              ? Number(gold.price) * holding
-              : 0
+            gold.price != null && holding > 0 ? Number(gold.price) * holding : 0
           const costPnl = gold.costPnl != null ? gold.costPnl : null
           const costPct = gold.costPnlPercent != null ? gold.costPnlPercent : null
           patch.hasGold = hasGold
           patch.goldPriceText = gold.price != null ? formatAmount(gold.price, 2) : '--'
-          patch.goldValueText = formatAmount(hasGold ? goldValue : null)
+          patch.goldValueText = formatAmount(goldValue)
           patch.goldCostText = formatMoney(costPnl)
           patch.goldCostPctText = formatPct(costPct)
         }

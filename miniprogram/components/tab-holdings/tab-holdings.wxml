@@ -365,14 +365,10 @@
         </view>
 
         <desk-sync
-          wx:if="{{loading && !hasGold && !error}}"
+          wx:if="{{loading && goldPriceText === '--' && !error}}"
           theme="{{theme}}"
           variant="gold"
         />
-
-        <view class="section-empty gold-empty" wx:elif="{{!loading && !hasGold}}">
-          <van-empty image="search" description="暂无黄金持仓，点设置添加" />
-        </view>
 
         <view class="gold-wrap" wx:else>
           <view class="glass gold-card">
