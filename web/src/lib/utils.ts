@@ -31,83 +31,91 @@ export function formatAmount(v: number | null | undefined, digits = 2) {
   return v.toFixed(digits);
 }
 
+/** tab 名义跨度（年）；成立来等未知周期用数据首尾推算 */
+const RANGE_YEARS: Record<string, number> = {
+  '1m': 1 / 12,
+  '3m': 3 / 12,
+  '6m': 6 / 12,
+  '1y': 1,
+  '3y': 3,
+}
+
 /**
- * 走势点间距：
- * - 近3月及更短：每个交易日
- * - 近1年/近6月：每 4 个交易日
- * - 近3年：每 7 个交易日
- * - 成立来：按月
+ * 按 tab 时间跨度抽稀：
+ * - 1 年以下：每个交易日
+ * - [1,2)：每 2 日；[2,3)：每 3 日；[3,4)：每 4 日；以此类推
  */
 export type TrendSamplePlan =
-  | {mode: 'day'}
-  | {mode: 'stride'; stride: number}
-  | {mode: 'month'}
+  | {mode: 'day'; years: number}
+  | {mode: 'stride'; stride: number; years: number}
 
-export function resolveTrendSamplePlan(range: string): TrendSamplePlan {
-  if (range === 'since') return {mode: 'month'}
-  if (range === '3y') return {mode: 'stride', stride: 7}
-  if (range === '1y' || range === '6m') return {mode: 'stride', stride: 4}
-  return {mode: 'day'}
+function pointDateKey(p: {date?: string | null; time?: string | null}) {
+  const s = String(p?.date || p?.time || '').trim()
+  return s.length >= 10 ? s.slice(0, 10) : ''
+}
+
+function yearsFromPoints(
+  points: Array<{date?: string | null; time?: string | null}> | undefined,
+): number {
+  const list = points || []
+  let first = ''
+  let last = ''
+  for (const p of list) {
+    const d = pointDateKey(p)
+    if (!d) continue
+    if (!first) first = d
+    last = d
+  }
+  if (!first || !last) return 0
+  const a = new Date(`${first}T00:00:00`)
+  const b = new Date(`${last}T00:00:00`)
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 0
+  return Math.max(0, (b.getTime() - a.getTime()) / (365.25 * 86400000))
+}
+
+function resolveRangeYears(
+  range: string,
+  points?: Array<{date?: string | null; time?: string | null}>,
+): number {
+  if (RANGE_YEARS[range] != null) return RANGE_YEARS[range]
+  return yearsFromPoints(points)
+}
+
+export function resolveTrendSamplePlan(
+  range: string,
+  points?: Array<{date?: string | null; time?: string | null}>,
+): TrendSamplePlan {
+  const years = resolveRangeYears(range, points)
+  if (!(years >= 1)) return {mode: 'day', years: years || 0}
+  const stride = Math.floor(years) + 1
+  return {mode: 'stride', stride, years}
 }
 
 /** @deprecated 使用 resolveTrendSamplePlan */
 export function resolveTrendSampleMode(
   range: string,
-): 'day' | 'stride' | 'month' {
-  return resolveTrendSamplePlan(range).mode
+  points?: Array<{date?: string | null; time?: string | null}>,
+): 'day' | 'stride' {
+  return resolveTrendSamplePlan(range, points).mode
 }
 
 /** 按周期抽稀走势点（保证首尾点） */
-export function sampleTrendPoints<T extends {date?: string | null}>(
+export function sampleTrendPoints<T extends {date?: string | null; time?: string | null}>(
   points: T[],
   range: string,
 ): T[] {
   const list = (points || []).filter(Boolean)
   if (list.length <= 2) return list
-  const plan = resolveTrendSamplePlan(range)
+  const plan = resolveTrendSamplePlan(range, list)
   if (plan.mode === 'day') return list
 
-  const dateKey = (p: T) => {
-    const s = String(p?.date || '').trim()
-    return s.length >= 10 ? s.slice(0, 10) : ''
+  const stride = Math.max(2, plan.stride)
+  const picked: T[] = [list[0]]
+  for (let i = stride; i < list.length - 1; i += stride) {
+    picked.push(list[i])
   }
-
-  if (plan.mode === 'stride') {
-    const stride = Math.max(2, plan.stride)
-    const picked: T[] = [list[0]]
-    for (let i = stride; i < list.length - 1; i += stride) {
-      picked.push(list[i])
-    }
-    if (picked[picked.length - 1] !== list[list.length - 1]) {
-      picked.push(list[list.length - 1])
-    }
-    return picked
-  }
-
-  const picked: T[] = []
-  let bucket = ''
-  for (const p of list) {
-    const d = dateKey(p)
-    if (!d) {
-      picked.push(p)
-      continue
-    }
-    const key = d.slice(0, 7)
-    if (picked.length && bucket === key) {
-      picked[picked.length - 1] = p
-    } else {
-      picked.push(p)
-      bucket = key
-    }
-  }
-
-  const first = list[0]
-  const last = list[list.length - 1]
-  if (picked.length && dateKey(picked[0]) !== dateKey(first)) {
-    picked.unshift(first)
-  }
-  if (picked.length && dateKey(picked[picked.length - 1]) !== dateKey(last)) {
-    picked.push(last)
+  if (picked[picked.length - 1] !== list[list.length - 1]) {
+    picked.push(list[list.length - 1])
   }
   return picked
 }
@@ -131,20 +139,20 @@ export function formatTrendAxisDate(
   return s.slice(5)
 }
 
-/** 抽稀后稀疏横轴：1y 换月标 MM；3y/成立来换年标 YYYY */
+/** 抽稀后稀疏横轴：约 3 年以下标月，更长标年 */
 export function formatSampledTrendAxisLabels(
   dates: Array<string | null | undefined>,
   range: string,
 ): string[] {
-  const plan = resolveTrendSamplePlan(range)
+  const asPoints = dates.map((d) => ({date: d}))
+  const plan = resolveTrendSamplePlan(range, asPoints)
   const full = dates.map((d) => String(d || ''))
   if (plan.mode === 'day') {
     return full.map((d) => formatTrendAxisDate(d, range))
   }
 
-  const unit: 'year' | 'month' =
-    plan.mode === 'month' || range === '3y' ? 'year' : 'month'
-  const maxTicks = unit === 'year' ? (range === 'since' ? 7 : 5) : 8
+  const unit: 'year' | 'month' = plan.years >= 3 ? 'year' : 'month'
+  const maxTicks = unit === 'year' ? (plan.years >= 6 ? 7 : 5) : 8
   const labels = full.map(() => '')
   const idxs: number[] = []
   let lastKey = ''
@@ -177,8 +185,9 @@ export function formatSampledTrendAxisLabels(
 }
 
 /** 基金周期 tab 最短成立天数（自然日） */
-export const FUND_RANGE_MIN_AGE_DAYS: Record<'3m' | '1y' | '3y', number> = {
+export const FUND_RANGE_MIN_AGE_DAYS: Record<'3m' | '6m' | '1y' | '3y', number> = {
   '3m': 90,
+  '6m': 180,
   '1y': 365,
   '3y': 365 * 3,
 }
@@ -197,7 +206,7 @@ export function calendarDaysBetween(
 }
 
 export function isFundRangeAvailable(
-  range: '3m' | '1y' | '3y' | 'since',
+  range: '3m' | '6m' | '1y' | '3y' | 'since',
   ageDays: number | null | undefined,
 ): boolean {
   if (range === 'since') return true

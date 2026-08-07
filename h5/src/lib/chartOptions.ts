@@ -58,18 +58,15 @@ type ChartPoint = Record<string, unknown> & {
 }
 
 function extractSeries(points: ChartPoint[] | undefined, valueKey: string, range = '') {
-  const sampled = sampleTrendPoints(points || [], range)
-  const plan = resolveTrendSamplePlan(range)
+  const list = points || []
+  const sampled = sampleTrendPoints(list, range)
+  const plan = resolveTrendSamplePlan(range, list)
   const labels: string[] = []
   const values: number[] = []
   const full: string[] = []
   const seriesPoints: ChartPoint[] = []
   const axisUnit =
-    plan.mode === 'month' || range === '3y'
-      ? 'year'
-      : plan.mode === 'stride'
-        ? 'month'
-        : ''
+    plan.mode === 'day' ? '' : plan.years >= 3 ? 'year' : 'month'
   const sparseAxis = !!axisUnit
   ;(sampled || []).forEach((p) => {
     if (!p) return
@@ -88,7 +85,7 @@ function extractSeries(points: ChartPoint[] | undefined, valueKey: string, range
     }
   })
   if (axisUnit === 'year') {
-    const yearLabels = buildBoundaryLabels(full, 'year', range === 'since' ? 7 : 5)
+    const yearLabels = buildBoundaryLabels(full, 'year', plan.years >= 6 ? 7 : 5)
     for (let i = 0; i < labels.length; i++) labels[i] = yearLabels[i] || ''
   } else if (axisUnit === 'month') {
     const monthLabels = buildBoundaryLabels(full, 'month', 8)

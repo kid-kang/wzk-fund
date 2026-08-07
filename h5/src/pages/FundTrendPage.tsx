@@ -213,7 +213,7 @@ export default function FundTrendPage() {
               <div className="ticket-rule" aria-hidden />
             </div>
 
-            <div className="range-scroll" style={{overflowX: 'auto', display: 'flex'}}>
+            <div className="range-scroll">
               {ranges.map((item) => (
                 <button
                   type="button"

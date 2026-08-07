@@ -195,7 +195,7 @@ export type IndexHistoryPayload = {
   points: {date: string; close: number; percent: number | null}[]
 }
 
-export type FundHistoryRange = '3m' | '1y' | '3y' | 'since'
+export type FundHistoryRange = '3m' | '6m' | '1y' | '3y' | 'since'
 
 export type FundHistoryPayload = {
   code: string

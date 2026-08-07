@@ -2,6 +2,7 @@
 const RANGE_MIN_AGE_DAYS = {
   '1m': 30,
   '3m': 90,
+  '6m': 180,
   '1y': 365,
   '3y': 365 * 3,
 }
@@ -9,6 +10,7 @@ const RANGE_MIN_AGE_DAYS = {
 const ALL_RANGES = [
   {key: '1m', label: '近1月'},
   {key: '3m', label: '近3月'},
+  {key: '6m', label: '近6月'},
   {key: '1y', label: '近1年'},
   {key: '3y', label: '近3年'},
   {key: 'since', label: '成立来'},
@@ -29,6 +31,7 @@ function availableFundRanges(ageDays) {
 /** 进页默认近1年；成立不足时回退到可用的最长较短周期 */
 function defaultFundRange(ageDays) {
   if (isRangeAvailable('1y', ageDays)) return '1y'
+  if (isRangeAvailable('6m', ageDays)) return '6m'
   if (isRangeAvailable('3m', ageDays)) return '3m'
   if (isRangeAvailable('1m', ageDays)) return '1m'
   const list = availableFundRanges(ageDays)

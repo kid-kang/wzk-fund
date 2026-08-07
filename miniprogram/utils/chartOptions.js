@@ -22,23 +22,52 @@ function hexAlpha(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-/**
- * 走势点间距：
- * - 近1月/近3月及更短：每个交易日
- * - 近1年/近6月：每 4 个交易日（3～5 的中位）
- * - 近3年：每 7 个交易日（6～8 的中位）
- * - 成立来（3 年以上视角）：按月
- */
-function resolveSamplePlan(range) {
-  if (range === 'since') return {mode: 'month'}
-  if (range === '3y') return {mode: 'stride', stride: 7}
-  if (range === '1y' || range === '6m') return {mode: 'stride', stride: 4}
-  return {mode: 'day'}
+/** tab 名义跨度（年）；成立来等未知周期用数据首尾推算 */
+const RANGE_YEARS = {
+  '1m': 1 / 12,
+  '3m': 3 / 12,
+  '6m': 6 / 12,
+  '1y': 1,
+  '3y': 3,
 }
 
 function pointDateKey(p) {
   const s = String((p && (p.date || p.time)) || '').trim()
   return s.length >= 10 ? s.slice(0, 10) : ''
+}
+
+function yearsFromPoints(points) {
+  const list = points || []
+  let first = ''
+  let last = ''
+  for (let i = 0; i < list.length; i++) {
+    const d = pointDateKey(list[i])
+    if (!d) continue
+    if (!first) first = d
+    last = d
+  }
+  if (!first || !last) return 0
+  const a = new Date(`${first}T00:00:00`)
+  const b = new Date(`${last}T00:00:00`)
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 0
+  return Math.max(0, (b.getTime() - a.getTime()) / (365.25 * 86400000))
+}
+
+function resolveRangeYears(range, points) {
+  if (RANGE_YEARS[range] != null) return RANGE_YEARS[range]
+  return yearsFromPoints(points)
+}
+
+/**
+ * 按 tab 时间跨度抽稀：
+ * - 1 年以下：每个交易日
+ * - [1,2)：每 2 日；[2,3)：每 3 日；[3,4)：每 4 日；以此类推
+ */
+function resolveSamplePlan(range, points) {
+  const years = resolveRangeYears(range, points)
+  if (!(years >= 1)) return {mode: 'day', years: years || 0}
+  const stride = Math.floor(years) + 1
+  return {mode: 'stride', stride, years}
 }
 
 /**
@@ -47,50 +76,16 @@ function pointDateKey(p) {
 function sampleTrendPoints(points, range) {
   const list = (points || []).filter(Boolean)
   if (list.length <= 2) return list
-  const plan = resolveSamplePlan(range)
+  const plan = resolveSamplePlan(range, list)
   if (plan.mode === 'day') return list
 
-  if (plan.mode === 'stride') {
-    const stride = Math.max(2, plan.stride || 4)
-    const picked = [list[0]]
-    for (let i = stride; i < list.length - 1; i += stride) {
-      picked.push(list[i])
-    }
-    if (picked[picked.length - 1] !== list[list.length - 1]) {
-      picked.push(list[list.length - 1])
-    }
-    return picked
+  const stride = Math.max(2, plan.stride || 2)
+  const picked = [list[0]]
+  for (let i = stride; i < list.length - 1; i += stride) {
+    picked.push(list[i])
   }
-
-  // month：每月保留最后一个交易日
-  const picked = []
-  let bucket = ''
-  for (let i = 0; i < list.length; i++) {
-    const p = list[i]
-    const d = pointDateKey(p)
-    if (!d) {
-      picked.push(p)
-      continue
-    }
-    const key = d.slice(0, 7)
-    if (picked.length && bucket === key) {
-      picked[picked.length - 1] = p
-    } else {
-      picked.push(p)
-      bucket = key
-    }
-  }
-
-  const first = list[0]
-  const last = list[list.length - 1]
-  if (picked.length && pointDateKey(picked[0]) !== pointDateKey(first)) {
-    picked.unshift(first)
-  }
-  if (
-    picked.length &&
-    pointDateKey(picked[picked.length - 1]) !== pointDateKey(last)
-  ) {
-    picked.push(last)
+  if (picked[picked.length - 1] !== list[list.length - 1]) {
+    picked.push(list[list.length - 1])
   }
   return picked
 }
@@ -135,18 +130,14 @@ function buildBoundaryLabels(fullDates, unit, maxTicks) {
 
 function extractSeries(points, valueKey, range) {
   const sampled = sampleTrendPoints(points, range)
-  const plan = resolveSamplePlan(range)
+  const plan = resolveSamplePlan(range, points)
   const labels = []
   const values = []
   const full = []
   const seriesPoints = []
-  // 抽稀后：1y 标月，3y/成立来标年
+  // 抽稀后：不足约 3 年标月，更长标年
   const axisUnit =
-    plan.mode === 'month' || range === '3y'
-      ? 'year'
-      : plan.mode === 'stride'
-        ? 'month'
-        : ''
+    plan.mode === 'day' ? '' : plan.years >= 3 ? 'year' : 'month'
   const sparseAxis = !!axisUnit
     ; (sampled || []).forEach((p) => {
       if (!p) return
@@ -165,7 +156,7 @@ function extractSeries(points, valueKey, range) {
       }
     })
   if (axisUnit === 'year') {
-    const yearLabels = buildBoundaryLabels(full, 'year', range === 'since' ? 7 : 5)
+    const yearLabels = buildBoundaryLabels(full, 'year', plan.years >= 6 ? 7 : 5)
     for (let i = 0; i < labels.length; i++) labels[i] = yearLabels[i] || ''
   } else if (axisUnit === 'month') {
     const monthLabels = buildBoundaryLabels(full, 'month', 8)

@@ -100,6 +100,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   min-width: 96rpx;
   min-height: 72rpx;
   padding: 10rpx 20rpx;
@@ -107,6 +108,11 @@
   border-radius: 20rpx;
   border: 1rpx solid transparent;
   vertical-align: top;
+  box-sizing: border-box;
+}
+
+.range-chip:last-child {
+  margin-right: 0;
 }
 
 .range-label {

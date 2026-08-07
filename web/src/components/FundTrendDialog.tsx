@@ -29,6 +29,7 @@ type TabKey = 'intraday' | FundHistoryRange
 
 const HISTORY_TAB_DEFS: {key: FundHistoryRange; label: string}[] = [
   {key: '3m', label: '近3月'},
+  {key: '6m', label: '近6月'},
   {key: '1y', label: '近1年'},
   {key: '3y', label: '近3年'},
   {key: 'since', label: '成立以来'},

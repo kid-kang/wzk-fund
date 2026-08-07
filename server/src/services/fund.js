@@ -1338,6 +1338,7 @@ export async function getFundMatiaria(code) {
 const FUND_RANGE_CALENDAR_DAYS = {
   '1m': 40,
   '3m': 100,
+  '6m': 200,
   '1y': 400,
   '3y': 1200,
   since: null,
@@ -1409,7 +1410,7 @@ function filterFundNavByRange(rowsAsc, range) {
 /**
  * 基金历史净值涨幅（相对区间首日单位净值）
  * @param {string} code
- * @param {'1m'|'3m'|'1y'|'3y'|'since'} range
+ * @param {'1m'|'3m'|'6m'|'1y'|'3y'|'since'} range
  */
 export async function getFundHistory(code, range = '3m') {
   const padded = String(code || '').padStart(6, '0')
@@ -1430,6 +1431,8 @@ export async function getFundHistory(code, range = '3m') {
     })
   } else if (key === '1y') {
     desc = await fetchFundNavHistory(padded, 320, 1)
+  } else if (key === '6m') {
+    desc = await fetchFundNavHistory(padded, 200, 1)
   } else if (key === '1m') {
     desc = await fetchFundNavHistory(padded, 40, 1)
   } else {

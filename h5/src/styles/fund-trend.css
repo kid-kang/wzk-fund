@@ -91,8 +91,17 @@
 
 .range-scroll {
   width: 100%;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   white-space: nowrap;
   margin: 4rem 0 8rem;
+  scrollbar-width: none;
+}
+
+.range-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .range-chip {
@@ -100,6 +109,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   min-width: 96rem;
   min-height: 72rem;
   padding: 10rem 20rem;
@@ -107,6 +117,11 @@
   border-radius: 20rem;
   border: 1rem solid transparent;
   vertical-align: top;
+  box-sizing: border-box;
+}
+
+.range-chip:last-child {
+  margin-right: 0;
 }
 
 .range-label {
