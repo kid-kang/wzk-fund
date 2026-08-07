@@ -157,6 +157,27 @@ function removeFund(code) {
   saveConfig(config)
 }
 
+/**
+ * 一键清空本地基金配置。
+ * @param {'hold'|'watch'|'all'} scope
+ */
+function clearFunds(scope) {
+  const config = loadConfig()
+  if (scope === 'all') {
+    config.funds = {}
+  } else if (scope === 'hold' || scope === 'watch') {
+    const next = {}
+    for (const [key, fund] of Object.entries(config.funds)) {
+      if (fund && fund.type !== scope) next[key] = fund
+    }
+    config.funds = next
+  } else {
+    throw new Error('清空范围无效')
+  }
+  saveConfig(config)
+  return config
+}
+
 function updateGold(patch) {
   const config = loadConfig()
   config.gold = {
@@ -236,6 +257,7 @@ module.exports = {
   getFund,
   updateFund,
   removeFund,
+  clearFunds,
   updateGold,
   getSettings,
   updateSettings,

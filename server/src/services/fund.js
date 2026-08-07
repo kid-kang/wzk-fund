@@ -636,6 +636,242 @@ async function fetchFundHoldings(code, {preferEtf = false} = {}) {
   }
 }
 
+function roundWeight(n) {
+  return Math.round(Number(n) * 10000) / 10000
+}
+
+function signedPctText(v, digits = 2) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return '--'
+  const sign = n > 0 ? '+' : ''
+  return `${sign}${n.toFixed(digits)}%`
+}
+
+function pctTone(v) {
+  const n = Number(v)
+  if (!Number.isFinite(n) || n === 0) return 'flat'
+  return n > 0 ? 'rise' : 'fall'
+}
+
+function formatReportText(reportDate, year, quarter) {
+  const y = Number(year)
+  const q = Number(quarter)
+  if (Number.isFinite(y) && Number.isFinite(q) && q >= 1 && q <= 4) {
+    return `${y}年${['', '一', '二', '三', '四'][q]}季报`
+  }
+  const raw = String(reportDate || '').replace(/\D/g, '')
+  if (raw.length === 8) {
+    return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+  }
+  return String(reportDate || '').trim()
+}
+
+/** 重仓简称 → 主题（板块推断用） */
+const HOLDING_NAME_THEME_RULES = [
+  [/锂|盐湖|赣锋|天齐|雅化|中矿|永兴材料|西藏矿业|西藏珠峰|天华新能|盛新锂能/, '锂矿'],
+  [/创新药|药明|百济|信达|恒瑞|科伦|复星医药|君实|康方/, '创新药'],
+  [/茅台|五粮液|泸州老窖|汾酒|洋河|白酒/, '白酒'],
+  [/宁德时代|比亚迪|理想|小鹏|蔚来|新能源车/, '汽车'],
+  [/隆基|通威|阳光电源|晶澳|光伏/, '光伏'],
+  [/三环集团|风华高科|洁美科技|鸿远电子|火炬电子|江海股份|艾华集团|法拉电子|顺络电子|宇阳科技|MLCC/, 'MLCC'],
+  [
+    /中芯|韦尔|北方华创|中微|拓荆|海光|晶合|晶晨|华海清科|华虹|圣邦|华大九天|中科飞测|澜起|寒武纪|半导体|芯片/,
+    '半导体',
+  ],
+  [/立讯|蓝思|京东方|消费电子/, '电子'],
+  [/沪电|深南电路|鹏鼎|生益科技|南亚新材/, 'PCB'],
+  [/中际旭创|新易盛|天孚通信|光模块|CPO/, 'CPO'],
+  [/苹果|微软|英伟达|谷歌|Alphabet|亚马逊|Meta|AMD|NVIDIA|Apple|Microsoft/i, '美股'],
+  [/腾讯|阿里|美团|京东|网易|百度|拼多多|快手|华住/, '中概互联'],
+  [/台积电|TSMC|三星/, '半导体'],
+  [/中国海洋石油|中海油|石油|原油/, '油气'],
+]
+
+async function xiaobeiApiPost(path, code) {
+  const padded = String(code || '').padStart(6, '0')
+  if (!/^\d{6}$/.test(padded)) return null
+  try {
+    const res = await axios.post(
+      `https://api.xiaobeiyangji.com/yangji-api/api/${path}`,
+      {
+        code: padded,
+        version: '3.8.7.0',
+        clientType: 'APP',
+      },
+      {
+        httpsAgent: agent,
+        timeout: 12000,
+        headers: {
+          'User-Agent': ua,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        validateStatus: () => true,
+      },
+    )
+    if (res.status !== 200 || res.data?.code !== 200) return null
+    return res.data?.data ?? null
+  } catch {
+    return null
+  }
+}
+
+function mapXiaobeiAllocation(asset = {}) {
+  const defs = [
+    {key: 'stock', label: '股票', weight: asset.stockNav, change: asset.stockNavChange},
+    {key: 'bond', label: '债券', weight: asset.bondNav, change: asset.bondNavChange},
+    {key: 'cash', label: '现金', weight: asset.cashNav, change: asset.cashNavChange},
+    {key: 'fund', label: '基金', weight: asset.fundNav, change: null},
+    {key: 'mm', label: '货基', weight: asset.mmNav, change: null},
+    {key: 'warrant', label: '权证', weight: asset.warrantNav, change: null},
+    {key: 'other', label: '其他', weight: asset.other, change: asset.otherChange},
+  ]
+  return defs
+    .map((d) => {
+      const weight = Number(d.weight)
+      if (!Number.isFinite(weight) || Math.abs(weight) < 0.005) return null
+      const change = Number(d.change)
+      const hasChange = d.change != null && Number.isFinite(change)
+      return {
+        key: d.key,
+        label: d.label,
+        weight: roundWeight(weight),
+        weightText: `${weight.toFixed(2)}%`,
+        change: hasChange ? roundWeight(change) : null,
+        changeText: hasChange ? signedPctText(change) : '',
+        changeClass: hasChange ? pctTone(change) : 'flat',
+      }
+    })
+    .filter(Boolean)
+}
+
+function mapXiaobeiHeavyRow(row, idx) {
+  const weight = Number(row?.weight)
+  const weightChange = Number(row?.weightChange)
+  const changeRatioY = Number(row?.changeRatioY)
+  const hasY =
+    Number.isFinite(changeRatioY) &&
+    // 小倍偶发返回小数涨跌幅（0.05=5%）
+    true
+  const yPct = hasY
+    ? Math.abs(changeRatioY) <= 2
+      ? changeRatioY * 100
+      : changeRatioY
+    : null
+  const industry =
+    String(row?.levelFourName || row?.levelThreeName || row?.levelTwoName || '').trim() ||
+    '--'
+  const industryL1 = String(row?.levelOneName || row?.industryLev1?.industryName || '').trim()
+  return {
+    rank: idx + 1,
+    code: String(row?.code || '').replace(/\D/g, '').padStart(6, '0').slice(-6),
+    name: String(row?.name || row?.sInfoName || row?.code || '').trim(),
+    industry,
+    industryL1,
+    weight: Number.isFinite(weight) ? roundWeight(weight) : null,
+    weightText: Number.isFinite(weight) ? `${weight.toFixed(2)}%` : '--',
+    weightChange: Number.isFinite(weightChange) ? roundWeight(weightChange) : null,
+    weightChangeText: Number.isFinite(weightChange) ? signedPctText(weightChange) : '',
+    weightChangeClass: Number.isFinite(weightChange) ? pctTone(weightChange) : 'flat',
+    changeRatioY: yPct != null ? roundWeight(yPct) : null,
+    changeRatioYText: yPct != null ? signedPctText(yPct) : '',
+    changeRatioYClass: yPct != null ? pctTone(yPct) : 'flat',
+  }
+}
+
+async function fetchXiaobeiHoldingsBundle(code) {
+  const [heavy, asset] = await Promise.all([
+    xiaobeiApiPost('get-fund-heavy-stock', code),
+    xiaobeiApiPost('get-fund-stock', code),
+  ])
+  const rows = Array.isArray(heavy?.data) ? heavy.data : []
+  const holdings = rows
+    .filter((r) => Number(r?.weight) > 0)
+    .slice(0, 10)
+    .map((r, idx) => mapXiaobeiHeavyRow(r, idx))
+
+  const changeYearHS = Number(heavy?.changeYearHS)
+  const yoyPct = Number.isFinite(changeYearHS)
+    ? Math.abs(changeYearHS) <= 2
+      ? changeYearHS * 100
+      : changeYearHS
+    : null
+
+  return {
+    holdings,
+    allocation: mapXiaobeiAllocation(asset || {}),
+    reportDate: String(asset?.reportDate || '').trim(),
+    reportText: formatReportText(asset?.reportDate, asset?.year, asset?.quarter),
+    year: Number.isFinite(Number(asset?.year)) ? Number(asset.year) : null,
+    quarter: Number.isFinite(Number(asset?.quarter)) ? Number(asset.quarter) : null,
+    stockNum: Number.isFinite(Number(heavy?.stockNum))
+      ? Number(heavy.stockNum)
+      : holdings.length || null,
+    changeYearHS: yoyPct != null ? roundWeight(yoyPct) : null,
+    changeYearHSText: yoyPct != null ? signedPctText(yoyPct) : '',
+    changeYearHSClass: yoyPct != null ? pctTone(yoyPct) : 'flat',
+    source: holdings.length || (asset && Object.keys(asset).length) ? 'xiaobei' : '',
+  }
+}
+
+/** 小倍无数据时回退东财重仓 */
+async function fetchEastmoneyHoldingsFallback(code) {
+  const {stocks, etfName, etfCode} = await fetchFundHoldings(code)
+  const holdings = filterWeightedHoldings(stocks)
+    .slice(0, 10)
+    .map((s, idx) => {
+      const weight = Number.parseFloat(s.JZBL)
+      const industry =
+        s.INDEXNAME && s.INDEXNAME !== '--' ? String(s.INDEXNAME).trim() : '--'
+      return {
+        rank: idx + 1,
+        code: String(s.GPDM || '').trim(),
+        name: String(s.GPJC || s.GPNAME || s.GPDM || '').trim(),
+        industry,
+        industryL1: '',
+        weight: Number.isFinite(weight) ? roundWeight(weight) : null,
+        weightText: Number.isFinite(weight) ? `${weight.toFixed(2)}%` : '--',
+        weightChange: null,
+        weightChangeText: '',
+        weightChangeClass: 'flat',
+        changeRatioY: null,
+        changeRatioYText: '',
+        changeRatioYClass: 'flat',
+      }
+    })
+  return {
+    holdings,
+    allocation: [],
+    reportDate: '',
+    reportText: '',
+    year: null,
+    quarter: null,
+    stockNum: holdings.length || null,
+    changeYearHS: null,
+    changeYearHSText: '',
+    changeYearHSClass: 'flat',
+    etfCode: etfCode || '',
+    etfName: etfName || '',
+    source: holdings.length ? 'eastmoney' : '',
+  }
+}
+
+/**
+ * 前十大持仓：优先小倍 get-fund-heavy-stock + get-fund-stock，
+ * 失败再回退东财 FundMNInverstPosition。
+ */
+export async function getFundTopHoldings(code) {
+  const padded = String(code || '').padStart(6, '0')
+  let bundle = await fetchXiaobeiHoldingsBundle(padded)
+  if (!bundle.holdings.length) {
+    bundle = await fetchEastmoneyHoldingsFallback(padded)
+  }
+  return {
+    code: padded,
+    ...bundle,
+  }
+}
+
 /**
  * 东财重仓股概念（f129）占比加权，并统计支持持仓数。
  * @returns {Map<string, {weight: number, support: number}>}
@@ -685,31 +921,11 @@ async function collectHoldingConceptVotes(stocks = []) {
  */
 function collectHoldingNameThemes(stocks = []) {
   const votes = new Map()
-  const holdingRules = [
-    [/锂|盐湖|赣锋|天齐|雅化|中矿|永兴材料|西藏矿业|西藏珠峰|天华新能|盛新锂能/, '锂矿'],
-    [/创新药|药明|百济|信达|恒瑞|科伦|复星医药|君实|康方/, '创新药'],
-    [/茅台|五粮液|泸州老窖|汾酒|洋河|白酒/, '白酒'],
-    [/宁德时代|比亚迪|理想|小鹏|蔚来|新能源车/, '汽车'],
-    [/隆基|通威|阳光电源|晶澳|光伏/, '光伏'],
-    // MLCC / 被动元件龙头
-    [/三环集团|风华高科|洁美科技|鸿远电子|火炬电子|江海股份|艾华集团|法拉电子|顺络电子|宇阳科技|MLCC/, 'MLCC'],
-    [
-      /中芯|韦尔|北方华创|中微|拓荆|海光|晶合|晶晨|华海清科|华虹|圣邦|华大九天|中科飞测|澜起|寒武纪|半导体|芯片/,
-      '半导体',
-    ],
-    [/立讯|蓝思|京东方|消费电子/, '电子'],
-    [/沪电|深南电路|鹏鼎|生益科技|南亚新材/, 'PCB'],
-    [/中际旭创|新易盛|天孚通信|光模块|CPO/, 'CPO'],
-    [/苹果|微软|英伟达|谷歌|Alphabet|亚马逊|Meta|AMD|NVIDIA|Apple|Microsoft/i, '美股'],
-    [/腾讯|阿里|美团|京东|网易|百度|拼多多|快手|华住/, '中概互联'],
-    [/台积电|TSMC|三星/, '半导体'],
-    [/中国海洋石油|中海油|石油|原油/, '油气'],
-  ]
   for (const s of filterWeightedHoldings(stocks).slice(0, 10)) {
     const text = `${s.GPJC || ''} ${s.GPNAME || ''}`
     const weight = Number.parseFloat(s.JZBL) || 0
     if (!(weight > 0)) continue
-    for (const [re, label] of holdingRules) {
+    for (const [re, label] of HOLDING_NAME_THEME_RULES) {
       if (!re.test(text)) continue
       const tag = canonicalizeTag(label)
       if (!tag) continue
@@ -872,50 +1088,26 @@ function resolveSmartSectors(scoreMap, {fundName = '', balanced = false} = {}) {
  * @returns {string[]} 最多 3 个；失败或无数据返回 []
  */
 async function fetchXiaobeiSectors(code) {
-  const padded = String(code || '').padStart(6, '0')
-  if (!/^\d{6}$/.test(padded)) return []
-  try {
-    const res = await axios.post(
-      'https://api.xiaobeiyangji.com/yangji-api/api/get-fund-detail-v310',
-      {
-        code: padded,
-        version: '3.8.7.0',
-        clientType: 'APP',
-      },
-      {
-        httpsAgent: agent,
-        timeout: 12000,
-        headers: {
-          'User-Agent': ua,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        validateStatus: () => true,
-      },
-    )
-    if (res.status !== 200 || res.data?.code !== 200) return []
-    const data = res.data?.data || {}
-    const rows = Array.isArray(data.relatedIndustryV2)
-      ? data.relatedIndustryV2
-      : Array.isArray(data.relatedIndustry)
-        ? data.relatedIndustry
-        : []
-    if (!rows.length) return []
-    const tags = []
-    const seen = new Set()
-    for (const row of rows) {
-      const tag = String(row?.themeName || '').trim()
-      // 小倍侧已运营精选，只去掉空/占位，保留「通信技术」等其词表
-      if (!tag || tag === '--' || tag === '-' || seen.has(tag)) continue
-      if (tag.length > 16) continue
-      seen.add(tag)
-      tags.push(tag)
-      if (tags.length >= 3) break
-    }
-    return tags
-  } catch {
-    return []
+  const data = await xiaobeiApiPost('get-fund-detail-v310', code)
+  if (!data) return []
+  const rows = Array.isArray(data.relatedIndustryV2)
+    ? data.relatedIndustryV2
+    : Array.isArray(data.relatedIndustry)
+      ? data.relatedIndustry
+      : []
+  if (!rows.length) return []
+  const tags = []
+  const seen = new Set()
+  for (const row of rows) {
+    const tag = String(row?.themeName || '').trim()
+    // 小倍侧已运营精选，只去掉空/占位，保留「通信技术」等其词表
+    if (!tag || tag === '--' || tag === '-' || seen.has(tag)) continue
+    if (tag.length > 16) continue
+    seen.add(tag)
+    tags.push(tag)
+    if (tags.length >= 3) break
   }
+  return tags
 }
 
 /**
@@ -1134,6 +1326,7 @@ export async function getFundMatiaria(code) {
 
 /** 基金历史涨幅区间 → 回溯自然日（成立以来不截断） */
 const FUND_RANGE_CALENDAR_DAYS = {
+  '1m': 40,
   '3m': 100,
   '1y': 400,
   '3y': 1200,
@@ -1206,7 +1399,7 @@ function filterFundNavByRange(rowsAsc, range) {
 /**
  * 基金历史净值涨幅（相对区间首日单位净值）
  * @param {string} code
- * @param {'3m'|'1y'|'3y'|'since'} range
+ * @param {'1m'|'3m'|'1y'|'3y'|'since'} range
  */
 export async function getFundHistory(code, range = '3m') {
   const padded = String(code || '').padStart(6, '0')
@@ -1227,6 +1420,8 @@ export async function getFundHistory(code, range = '3m') {
     })
   } else if (key === '1y') {
     desc = await fetchFundNavHistory(padded, 320, 1)
+  } else if (key === '1m') {
+    desc = await fetchFundNavHistory(padded, 40, 1)
   } else {
     desc = await fetchFundNavHistory(padded, 120, 1)
   }

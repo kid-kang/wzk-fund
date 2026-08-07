@@ -24,7 +24,7 @@ function hexAlpha(hex, alpha) {
 
 /**
  * 走势点间距：
- * - 近3月及更短：每个交易日
+ * - 近1月/近3月及更短：每个交易日
  * - 近1年/近6月：每 4 个交易日（3～5 的中位）
  * - 近3年：每 7 个交易日（6～8 的中位）
  * - 成立来（3 年以上视角）：按月
@@ -148,22 +148,22 @@ function extractSeries(points, valueKey, range) {
         ? 'month'
         : ''
   const sparseAxis = !!axisUnit
-  ;(sampled || []).forEach((p) => {
-    if (!p) return
-    const raw = p[valueKey]
-    if (raw == null || raw === '') return
-    const n = Number(raw)
-    if (!Number.isFinite(n)) return
-    values.push(n)
-    seriesPoints.push(p)
-    const label = p.time || p.date || ''
-    full.push(label)
-    if (typeof label === 'string' && label.length >= 10) {
-      labels.push(sparseAxis ? '' : formatTrendAxisDate(label, range || ''))
-    } else {
-      labels.push(label)
-    }
-  })
+    ; (sampled || []).forEach((p) => {
+      if (!p) return
+      const raw = p[valueKey]
+      if (raw == null || raw === '') return
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return
+      values.push(n)
+      seriesPoints.push(p)
+      const label = p.time || p.date || ''
+      full.push(label)
+      if (typeof label === 'string' && label.length >= 10) {
+        labels.push(sparseAxis ? '' : formatTrendAxisDate(label, range || ''))
+      } else {
+        labels.push(label)
+      }
+    })
   if (axisUnit === 'year') {
     const yearLabels = buildBoundaryLabels(full, 'year', range === 'since' ? 7 : 5)
     for (let i = 0; i < labels.length; i++) labels[i] = yearLabels[i] || ''
@@ -437,68 +437,68 @@ function buildTrendOption({
         endLabel: hideEndLabel
           ? {show: false}
           : {
-              show: true,
-              formatter: lastLabel,
-              color,
-              fontSize: 11,
-              fontWeight: 700,
-              distance: 4,
-            },
+            show: true,
+            formatter: lastLabel,
+            color,
+            fontSize: 11,
+            fontWeight: 700,
+            distance: 4,
+          },
         markLine:
           valueMode === 'percent'
             ? {
-                silent: true,
-                symbol: 'none',
-                lineStyle: {color: muted, type: 'dashed', width: 1},
-                data: [{yAxis: 0}],
-                label: {show: false},
-              }
+              silent: true,
+              symbol: 'none',
+              lineStyle: {color: muted, type: 'dashed', width: 1},
+              data: [{yAxis: 0}],
+              label: {show: false},
+            }
             : undefined,
         markPoint: showExtremes
           ? {
-              symbol: 'circle',
-              symbolSize: 6,
-              data: [
-                {
-                  type: 'max',
-                  name: '高',
-                  itemStyle: {color: extremeColor || fundTitle || ink},
-                  label: {
-                    show: true,
-                    position: maxLabelLayout.position,
-                    distance: maxLabelLayout.distance,
-                    align: maxLabelLayout.align,
-                    offset: maxLabelLayout.offset,
-                    color: extremeColor || fundTitle || ink,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    backgroundColor: 'transparent',
-                    formatter(p) {
-                      return formatExtreme(Number(p.value))
-                    },
+            symbol: 'circle',
+            symbolSize: 6,
+            data: [
+              {
+                type: 'max',
+                name: '高',
+                itemStyle: {color: extremeColor || fundTitle || ink},
+                label: {
+                  show: true,
+                  position: maxLabelLayout.position,
+                  distance: maxLabelLayout.distance,
+                  align: maxLabelLayout.align,
+                  offset: maxLabelLayout.offset,
+                  color: extremeColor || fundTitle || ink,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  backgroundColor: 'transparent',
+                  formatter(p) {
+                    return formatExtreme(Number(p.value))
                   },
                 },
-                {
-                  type: 'min',
-                  name: '低',
-                  itemStyle: {color: extremeColor || fundTitle || ink},
-                  label: {
-                    show: true,
-                    position: minLabelLayout.position,
-                    distance: minLabelLayout.distance,
-                    align: minLabelLayout.align,
-                    offset: minLabelLayout.offset,
-                    color: extremeColor || fundTitle || ink,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    backgroundColor: 'transparent',
-                    formatter(p) {
-                      return formatExtreme(Number(p.value))
-                    },
+              },
+              {
+                type: 'min',
+                name: '低',
+                itemStyle: {color: extremeColor || fundTitle || ink},
+                label: {
+                  show: true,
+                  position: minLabelLayout.position,
+                  distance: minLabelLayout.distance,
+                  align: minLabelLayout.align,
+                  offset: minLabelLayout.offset,
+                  color: extremeColor || fundTitle || ink,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  backgroundColor: 'transparent',
+                  formatter(p) {
+                    return formatExtreme(Number(p.value))
                   },
                 },
-              ],
-            }
+              },
+            ],
+          }
           : undefined,
       },
     ],

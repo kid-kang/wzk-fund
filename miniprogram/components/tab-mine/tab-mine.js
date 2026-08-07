@@ -188,6 +188,45 @@ Component({
       }
     },
 
+    onClearConfig() {
+      wx.showActionSheet({
+        itemList: ['清空持仓', '清空自选', '清空全部'],
+        success: (res) => {
+          const scopes = ['hold', 'watch', 'all']
+          const scope = scopes[res.tapIndex]
+          if (!scope) return
+          this.confirmClear(scope)
+        },
+      })
+    },
+
+    confirmClear(scope) {
+      const labels = {
+        hold: '持仓',
+        watch: '自选',
+        all: '全部基金（持仓+自选）',
+      }
+      const label = labels[scope] || '配置'
+      Dialog.confirm({
+        title: '确认清空',
+        message: `将清空本地${label}配置，此操作不可恢复。是否继续？`,
+        confirmButtonText: '清空',
+        confirmButtonColor: '#d7263d',
+      })
+        .then(() => this.runClear(scope, label))
+        .catch(() => {})
+    },
+
+    async runClear(scope, label) {
+      try {
+        await api.clearFunds(scope)
+        Toast.success(`已清空${label}`)
+        this.triggerEvent('configcleared', {scope})
+      } catch (e) {
+        Toast.fail((e && e.message) || '清空失败')
+      }
+    },
+
     onOpenQa() {
       navigateTo('/pages/fund-qa/fund-qa')
     },

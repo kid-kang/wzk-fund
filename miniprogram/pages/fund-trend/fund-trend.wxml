@@ -1,24 +1,12 @@
-<page-meta
-  page-style="background-color: {{pageBg}};"
-  background-color="{{pageBg}}"
-  background-color-top="{{pageBg}}"
-  background-color-bottom="{{pageBg}}"
-  root-background-color="{{pageBg}}"
-  background-text-style="{{bgTextStyle}}"
-/>
+<page-meta page-style="background-color: {{pageBg}};" background-color="{{pageBg}}" background-color-top="{{pageBg}}"
+  background-color-bottom="{{pageBg}}" root-background-color="{{pageBg}}" background-text-style="{{bgTextStyle}}" />
 
 <view class="subpage-root theme-{{theme}}">
   <view class="subpage-nav">
     <app-nav-bar title="{{navTitle}}" theme="{{theme}}" />
   </view>
 
-  <scroll-view
-    class="subpage-scroller"
-    scroll-y
-    enhanced
-    bounces="{{false}}"
-    show-scrollbar="{{false}}"
-  >
+  <scroll-view class="subpage-scroller" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="page theme-{{theme}} fund-trend">
       <view class="fortune-wm" aria-hidden="true">
         <text class="fortune-mark">来财</text>
@@ -41,13 +29,8 @@
         </view>
 
         <scroll-view class="range-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
-          <view
-            class="range-chip {{range === item.key ? 'is-on' : ''}}"
-            wx:for="{{ranges}}"
-            wx:key="key"
-            data-key="{{item.key}}"
-            bindtap="onRangeTap"
-          >
+          <view class="range-chip {{range === item.key ? 'is-on' : ''}}" wx:for="{{ranges}}" wx:key="key"
+            data-key="{{item.key}}" bindtap="onRangeTap">
             <text class="range-label">{{item.label}}</text>
             <text class="range-pct mono {{item.pctClass}}">{{item.pctText}}</text>
           </view>
@@ -58,18 +41,65 @@
         <van-empty wx:elif="{{!loading && !chartPoints.length}}" description="暂无该周期数据" />
 
         <view class="chart-stage" wx:if="{{!loading && chartPoints.length}}">
-          <ec-line
-            points="{{chartPoints}}"
-            valueKey="value"
-            mode="trend"
-            theme="{{theme}}"
-            valueMode="percent"
-            extraKey="netValue"
-            extraLabel="净值"
-            showExtremes="{{true}}"
-            range="{{range}}"
-            height="{{chartHeight}}"
-          />
+          <ec-line points="{{chartPoints}}" valueKey="value" mode="trend" theme="{{theme}}" valueMode="percent"
+            extraKey="netValue" extraLabel="净值" showExtremes="{{true}}" range="{{range}}" height="{{chartHeight}}" />
+        </view>
+
+        <view class="hold-block">
+          <view class="hold-head">
+            <view class="hold-title-row">
+              <text class="hold-code mono">TOP10</text>
+              <text class="hold-title">前十大持仓</text>
+            </view>
+            <view class="hold-sub" wx:if="{{holdingsHint || showChangeYearHS}}">
+              <text class="hold-hint" wx:if="{{holdingsHint}}">{{holdingsHint}}</text>
+              <text class="hold-yoy mono {{changeYearHSClass}}" wx:if="{{showChangeYearHS}}">
+                重仓股近1年 {{changeYearHSText}}
+              </text>
+            </view>
+          </view>
+
+          <view class="alloc-row" wx:if="{{allocation.length}}">
+            <view class="alloc-item" wx:for="{{allocation}}" wx:key="key">
+              <text class="alloc-label">{{item.label}}</text>
+              <text class="alloc-w mono">{{item.weightText}}</text>
+              <text class="alloc-chg mono {{item.changeClass}}" wx:if="{{item.changeText}}">{{item.changeText}}</text>
+            </view>
+          </view>
+
+          <view class="hold-cols mono" wx:if="{{holdings.length}}">
+            <text class="hold-col-name">名称</text>
+            <text class="hold-col-industry">行业</text>
+            <text class="hold-col-w">占比</text>
+          </view>
+
+          <van-empty wx:if="{{holdingsLoading}}" description="加载重仓…" />
+          <view class="hold-err" wx:elif="{{holdingsError && !holdings.length}}">{{holdingsError}}</view>
+
+          <view class="hold-list" wx:if="{{!holdingsLoading && holdings.length}}">
+            <view class="hold-row" wx:for="{{holdings}}" wx:key="rank">
+              <view class="hold-main">
+                <text class="hold-rank mono">{{item.rank}}</text>
+                <view class="hold-meta">
+                  <text class="hold-name">{{item.name}}</text>
+                  <view class="hold-stock-row">
+                    <text class="hold-stock mono">{{item.code}}</text>
+                    <text class="hold-stock-y mono {{item.changeRatioYClass}}"
+                      wx:if="{{item.changeRatioYText}}">{{item.changeRatioYText}}</text>
+                  </view>
+                </view>
+              </view>
+              <view class="hold-industry-wrap">
+                <text class="hold-industry">{{item.industry || '--'}}</text>
+                <text class="hold-industry-l1" wx:if="{{item.industryL1}}">{{item.industryL1}}</text>
+              </view>
+              <view class="hold-weight-wrap">
+                <text class="hold-weight mono">{{item.weightText}}</text>
+                <text class="hold-wchg mono {{item.weightChangeClass}}"
+                  wx:if="{{item.weightChangeText}}">{{item.weightChangeText}}</text>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
     </view>

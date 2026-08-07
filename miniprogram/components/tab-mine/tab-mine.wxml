@@ -1,11 +1,5 @@
 <view class="tab-root">
-  <scroll-view
-    class="page-scroller"
-    scroll-y
-    enhanced
-    bounces="{{false}}"
-    show-scrollbar="{{false}}"
-  >
+  <scroll-view class="page-scroller" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="page theme-{{theme}} mine-page" style="min-height: {{contentMinHeight}}px">
       <view class="page-wm" aria-hidden="true">
         <text class="page-wm-text {{wmFontReady ? 'is-face' : ''}}">wzk-fund</text>
@@ -33,13 +27,8 @@
             <text class="row-title">黄金持仓</text>
             <text class="row-desc">持仓页是否展示黄金模块</text>
           </view>
-          <van-switch
-            size="22px"
-            checked="{{showGold}}"
-            active-color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}"
-            inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}"
-            bind:change="onToggleGold"
-          />
+          <van-switch size="22px" checked="{{showGold}}" active-color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}"
+            inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}" bind:change="onToggleGold" />
         </view>
 
         <view class="row">
@@ -47,13 +36,8 @@
             <text class="row-title">隐藏金额</text>
             <text class="row-desc">持仓与收益数字以 *** 显示</text>
           </view>
-          <van-switch
-            size="22px"
-            checked="{{hideAmounts}}"
-            active-color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}"
-            inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}"
-            bind:change="onToggleHideAmounts"
-          />
+          <van-switch size="22px" checked="{{hideAmounts}}" active-color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}"
+            inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}" bind:change="onToggleHideAmounts" />
         </view>
 
         <view class="row">
@@ -61,13 +45,9 @@
             <text class="row-title">深色主题</text>
             <text class="row-desc">夜间行情台配色</text>
           </view>
-          <van-switch
-            size="22px"
-            checked="{{theme === 'dark'}}"
+          <van-switch size="22px" checked="{{theme === 'dark'}}"
             active-color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}"
-            inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}"
-            bind:change="onToggleTheme"
-          />
+            inactive-color="{{theme === 'dark' ? '#3a4254' : '#c8ceda'}}" bind:change="onToggleTheme" />
         </view>
       </view>
 
@@ -79,14 +59,8 @@
 
         <view class="endpoint">
           <text class="endpoint-prompt mono">$</text>
-          <input
-            class="endpoint-input mono"
-            value="{{apiBase}}"
-            placeholder="http://127.0.0.1:8787"
-            placeholder-class="endpoint-ph"
-            confirm-type="done"
-            bindinput="onApiInput"
-          />
+          <input class="endpoint-input mono" value="{{apiBase}}" placeholder="http://127.0.0.1:8787"
+            placeholder-class="endpoint-ph" confirm-type="done" bindinput="onApiInput" />
         </view>
 
         <view class="endpoint-actions">
@@ -119,6 +93,14 @@
             <text class="row-desc">从剪贴板读取 JSON</text>
           </view>
           <text class="xfer-arrow mono">↙</text>
+        </view>
+
+        <view class="xfer" hover-class="xfer-hover" bindtap="onClearConfig">
+          <view class="xfer-text">
+            <text class="row-title">一键清空</text>
+            <text class="row-desc">清空持仓、自选或全部基金配置</text>
+          </view>
+          <text class="xfer-arrow mono">⌫</text>
         </view>
       </view>
 

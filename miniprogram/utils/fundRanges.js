@@ -1,11 +1,13 @@
 /** 基金周期 tab：成立不足该天数则不展示（成立来始终展示） */
 const RANGE_MIN_AGE_DAYS = {
+  '1m': 30,
   '3m': 90,
   '1y': 365,
   '3y': 365 * 3,
 }
 
 const ALL_RANGES = [
+  {key: '1m', label: '近1月'},
   {key: '3m', label: '近3月'},
   {key: '1y', label: '近1年'},
   {key: '3y', label: '近3年'},
@@ -24,7 +26,11 @@ function availableFundRanges(ageDays) {
   return ALL_RANGES.filter((t) => isRangeAvailable(t.key, ageDays))
 }
 
+/** 进页默认近1年；成立不足时回退到可用的最长较短周期 */
 function defaultFundRange(ageDays) {
+  if (isRangeAvailable('1y', ageDays)) return '1y'
+  if (isRangeAvailable('3m', ageDays)) return '3m'
+  if (isRangeAvailable('1m', ageDays)) return '1m'
   const list = availableFundRanges(ageDays)
   return (list[0] && list[0].key) || 'since'
 }

@@ -25,13 +25,21 @@ Page({
     name: '',
     ageDays: null,
     ageText: '',
-    range: '3m',
+    range: '1y',
     ranges: emptyRanges(null),
     chartPoints: [],
     chartHeight: 300,
     chartEpoch: 0,
     loading: false,
     error: '',
+    holdings: [],
+    allocation: [],
+    holdingsLoading: false,
+    holdingsError: '',
+    holdingsHint: '',
+    changeYearHSText: '',
+    changeYearHSClass: 'flat',
+    showChangeYearHS: false,
   },
 
   onLoad(query) {
@@ -49,8 +57,10 @@ Page({
       name,
       chartHeight,
       loading: true,
+      holdingsLoading: true,
     })
     this.bootstrap()
+    this.loadHoldings()
   },
 
   onShow() {
@@ -105,6 +115,45 @@ Page({
       if (!this.data.name) {
         this.setData({error: (e && e.message) || '行情加载失败'})
       }
+    }
+  },
+
+  async loadHoldings() {
+    this.setData({holdingsLoading: true, holdingsError: ''})
+    try {
+      const data = await api.fetchFundHoldings(this.data.code)
+      if (this._dead) return
+      const holdings = (data && data.holdings) || []
+      const allocation = (data && data.allocation) || []
+      const hints = []
+      if (data && data.reportText) hints.push(data.reportText)
+      if (data && data.stockNum) hints.push(`重仓${data.stockNum}只`)
+      if (data && data.etfCode && data.etfName) {
+        hints.push(`联接穿透 ${data.etfName}`)
+      }
+      const changeYearHSText = (data && data.changeYearHSText) || ''
+      this.setData({
+        holdings,
+        allocation,
+        holdingsHint: hints.join(' · '),
+        changeYearHSText,
+        changeYearHSClass: (data && data.changeYearHSClass) || 'flat',
+        showChangeYearHS: !!changeYearHSText && changeYearHSText !== '--',
+        holdingsLoading: false,
+        holdingsError: holdings.length ? '' : '暂无重仓数据',
+      })
+    } catch (e) {
+      if (this._dead) return
+      this.setData({
+        holdings: [],
+        allocation: [],
+        holdingsHint: '',
+        changeYearHSText: '',
+        changeYearHSClass: 'flat',
+        showChangeYearHS: false,
+        holdingsLoading: false,
+        holdingsError: (e && e.message) || '重仓加载失败',
+      })
     }
   },
 

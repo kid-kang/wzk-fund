@@ -182,6 +182,18 @@ async function removeFund(code) {
   store.removeFund(code)
 }
 
+async function clearFunds(scope) {
+  return store.clearFunds(scope)
+}
+
+async function fetchFundHoldings(code) {
+  const data = await request({
+    url: `/api/funds/${encodeURIComponent(code)}/holdings`,
+  })
+  assertOk(data)
+  return data.data
+}
+
 async function updateGoldConfig(payload) {
   return store.updateGold(payload)
 }
@@ -220,6 +232,8 @@ module.exports = {
   createFund,
   updateFund,
   removeFund,
+  clearFunds,
+  fetchFundHoldings,
   updateGoldConfig,
   fetchSettings,
   updateSettings,
