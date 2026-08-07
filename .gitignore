@@ -3,6 +3,8 @@ web/node_modules/
 server/node_modules/
 miniprogram/node_modules/
 miniprogram/miniprogram_npm/
+# 微信开发者工具本机私有配置（会覆盖 project.config.json）
+miniprogram/project.private.config.json
 web/dist/
 .DS_Store
 *.log
