@@ -19,6 +19,22 @@ syncNavigationBar(themeView.theme)
 
 /** 停留详情页时重仓行情轮询间隔 */
 const HOLDINGS_POLL_MS = 60 * 1000
+/** 阶段表默认展示行数；「查看更多」每次追加 */
+const STAGE_PAGE_SIZE = 5
+
+const STAGE_TABS = [
+  {key: 'nav', label: '历史净值'},
+  {key: 'return', label: '阶段涨幅'},
+  {key: 'drawdown', label: '阶段回撤'},
+]
+
+const STAGE_GRAINS = [
+  {key: 'stage', label: '阶段'},
+  {key: 'month', label: '月度'},
+  {key: 'quarter', label: '季度'},
+  {key: 'semi', label: '半年度'},
+  {key: 'year', label: '年度'},
+]
 
 Page({
   data: {
@@ -40,6 +56,18 @@ Page({
     holdingsError: '',
     totalWeightText: '',
     reportQuarterText: '',
+    stageTabs: STAGE_TABS,
+    stageGrains: STAGE_GRAINS,
+    stageTab: 'return',
+    stageGrain: 'stage',
+    stageShowGrain: true,
+    stageLabelCol: '周期',
+    stageValueCol: '本基金',
+    stageLoading: false,
+    stageError: '',
+    stageRows: [],
+    stageHasMore: false,
+    stageLimit: STAGE_PAGE_SIZE,
   },
 
   onLoad(query) {
@@ -47,6 +75,7 @@ Page({
     this._byRange = {}
     this._holdingsTimer = null
     this._holdingsFetching = false
+    this._stageStats = null
     const themePatch = getThemeViewState()
     syncNavigationBar(themePatch.theme)
     const code = String(query.code || '').padStart(6, '0')
@@ -60,9 +89,12 @@ Page({
       chartHeight,
       loading: true,
       holdingsLoading: true,
+      stageLoading: true,
     })
     this.bootstrap()
     this.loadHoldings({silent: false})
+    // 阶段统计与图表并行，但不轮询（全量净值重）
+    this.loadStageStats()
   },
 
   onShow() {
@@ -139,6 +171,88 @@ Page({
         this.setData({error: (e && e.message) || '行情加载失败'})
       }
     }
+  },
+
+  stageSourceList() {
+    const stats = this._stageStats
+    if (!stats) return []
+    const tab = this.data.stageTab
+    if (tab === 'nav') return stats.navHistory || []
+    if (tab === 'drawdown') return stats.drawdowns || []
+    const g = this.data.stageGrain
+    if (g === 'month') return stats.monthlyReturns || []
+    if (g === 'quarter') return stats.quarterlyReturns || []
+    if (g === 'semi') return stats.semiAnnualReturns || []
+    if (g === 'year') return stats.annualReturns || []
+    return stats.periodReturns || []
+  },
+
+  refreshStageRows(limit) {
+    const all = this.stageSourceList()
+    const n = limit != null ? limit : this.data.stageLimit
+    const tab = this.data.stageTab
+    const rows = all.slice(0, n).map((item) => {
+      if (tab === 'nav') {
+        return {
+          key: item.date,
+          label: item.dateLabel,
+          valueText: item.dayChangeText,
+          valueClass: item.dayChangeClass,
+        }
+      }
+      return {
+        key: item.key,
+        label: item.label,
+        valueText: item.percentText,
+        valueClass: item.percentClass,
+      }
+    })
+    this.setData({
+      stageRows: rows,
+      stageLimit: n,
+      stageHasMore: all.length > n,
+      stageShowGrain: tab === 'return',
+      stageLabelCol: tab === 'nav' ? '日期' : '周期',
+      stageValueCol: tab === 'nav' ? '日涨跌' : '本基金',
+    })
+  },
+
+  async loadStageStats() {
+    this.setData({stageLoading: true, stageError: ''})
+    try {
+      const data = await api.fetchFundStageStats(this.data.code)
+      if (this._dead) return
+      this._stageStats = data || null
+      this.refreshStageRows(STAGE_PAGE_SIZE)
+      this.setData({stageLoading: false})
+    } catch (e) {
+      if (this._dead) return
+      this._stageStats = null
+      this.setData({
+        stageLoading: false,
+        stageError: (e && e.message) || '阶段数据加载失败',
+        stageRows: [],
+        stageHasMore: false,
+      })
+    }
+  },
+
+  onStageTabTap(e) {
+    const key = e.currentTarget.dataset.key
+    if (!key || key === this.data.stageTab) return
+    this.setData({stageTab: key})
+    this.refreshStageRows(STAGE_PAGE_SIZE)
+  },
+
+  onStageGrainTap(e) {
+    const key = e.currentTarget.dataset.key
+    if (!key || key === this.data.stageGrain) return
+    this.setData({stageGrain: key})
+    this.refreshStageRows(STAGE_PAGE_SIZE)
+  },
+
+  onStageMoreTap() {
+    this.refreshStageRows(this.data.stageLimit + STAGE_PAGE_SIZE)
   },
 
   async loadHoldings({silent = false} = {}) {

@@ -173,22 +173,31 @@
   padding: 4rem 0 0;
 }
 
-/* —— 重仓股票（对齐小倍） —— */
-.hold-block {
-  margin-top: 24rem;
+/* —— 重仓 / 阶段：格局不变，视觉接入详情页 accent 票据语言 —— */
+.hold-block,
+.stage-block {
+  --desk-radius: 20rem;
+  --desk-pad-x: 12rem;
+  margin-top: 20rem;
+}
+
+.stage-block {
   padding: 0 0 40rem;
 }
 
-.hold-card {
-  padding: 22rem 18rem 8rem;
-  border-radius: 24rem;
+.hold-card,
+.stage-card {
+  padding: 18rem 14rem 10rem;
+  border-radius: var(--desk-radius);
   background: var(--panel);
-  border: 1rem solid var(--line);
-  box-shadow: 0 8rem 28rem rgba(20, 28, 40, 0.04);
+  border: 1rem solid var(--glass-border, var(--line));
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px);
 }
 
-.theme-dark .hold-card {
-  box-shadow: none;
+.theme-dark .hold-card,
+.theme-dark .stage-card {
+  border-color: var(--line);
 }
 
 .hold-head {
@@ -196,7 +205,24 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 16rem;
-  padding: 0 4rem 16rem;
+  padding: 0 var(--desk-pad-x) 14rem;
+  position: relative;
+}
+
+.hold-head::after {
+  content: '';
+  position: absolute;
+  left: var(--desk-pad-x);
+  right: 28%;
+  bottom: 0;
+  height: 2rem;
+  background: linear-gradient(
+    90deg,
+    var(--ft-bright) 0%,
+    var(--ft-line) 48%,
+    transparent 100%
+  );
+  opacity: 0.85;
 }
 
 .hold-title-row {
@@ -207,32 +233,39 @@
 }
 
 .hold-title {
-  font-size: 30rem;
+  font-size: 28rem;
   font-weight: 740;
-  color: var(--ink);
+  color: var(--ft-ink);
   letter-spacing: -0.01em;
 }
 
 .hold-total {
-  font-size: 24rem;
+  font-size: 22rem;
   font-weight: 600;
   color: var(--muted);
+  letter-spacing: 0.01em;
 }
 
 .hold-quarter {
   flex-shrink: 0;
-  font-size: 22rem;
-  font-weight: 550;
+  font-size: 20rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   color: var(--muted);
+  opacity: 0.88;
 }
 
-.hold-cols {
+.hold-cols,
+.stage-cols {
   display: flex;
   align-items: center;
   gap: 8rem;
-  padding: 4rem 8rem 12rem;
+  padding: 14rem var(--desk-pad-x) 10rem;
   font-size: 20rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   color: var(--muted);
+  opacity: 0.82;
 }
 
 .hold-col {
@@ -260,9 +293,10 @@
   text-align: right;
 }
 
-.hold-err {
+.hold-err,
+.stage-err {
   margin: 8rem 0 16rem;
-  padding: 14rem 8rem;
+  padding: 14rem var(--desk-pad-x);
   color: var(--muted);
   font-size: 22rem;
 }
@@ -270,33 +304,38 @@
 .hold-list {
   display: flex;
   flex-direction: column;
-  gap: 8rem;
-  padding-bottom: 8rem;
+  gap: 6rem;
+  padding-bottom: 6rem;
 }
 
 .hold-row {
   display: flex;
   align-items: center;
   gap: 8rem;
-  min-height: 88rem;
-  padding: 14rem 8rem;
+  min-height: 84rem;
+  padding: 12rem var(--desk-pad-x);
   border-radius: 16rem;
+  border: 1rem solid transparent;
 }
 
 .hold-row.row-rise {
-  background: rgba(215, 38, 61, 0.06);
+  background: rgba(215, 38, 61, 0.07);
+  border-color: rgba(215, 38, 61, 0.12);
 }
 
 .hold-row.row-fall {
-  background: rgba(11, 107, 79, 0.06);
+  background: rgba(11, 107, 79, 0.07);
+  border-color: rgba(11, 107, 79, 0.12);
 }
 
 .theme-dark .hold-row.row-rise {
   background: rgba(255, 107, 122, 0.1);
+  border-color: rgba(255, 107, 122, 0.16);
 }
 
 .theme-dark .hold-row.row-fall {
   background: rgba(75, 184, 146, 0.1);
+  border-color: rgba(75, 184, 146, 0.16);
 }
 
 .hold-cell {
@@ -316,7 +355,7 @@
 .hold-name {
   font-size: 26rem;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--ft-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -324,12 +363,142 @@
 
 .hold-stock {
   font-size: 20rem;
-  font-weight: 550;
+  font-weight: 600;
   color: var(--muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
 }
 
 .hold-col-w {
-  color: var(--ink);
-  font-weight: 700;
+  color: var(--ft-ink);
+  font-weight: 740;
+}
+
+.stage-card {
+  padding-top: 6rem;
+}
+
+.stage-tabs {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 4rem 0 2rem;
+}
+
+.stage-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14rem 4rem 12rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.stage-tab-label {
+  font-size: 26rem;
+  font-weight: 650;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.stage-tab.is-on .stage-tab-label {
+  font-weight: 780;
+  color: var(--ft-ink);
+}
+
+.stage-tab.is-on::after {
+  content: '';
+  width: 32rem;
+  height: 4rem;
+  margin-top: 10rem;
+  border-radius: 4rem;
+  background: linear-gradient(90deg, var(--ft-bright), var(--ft-line));
+}
+
+.stage-grains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rem;
+  padding: 10rem var(--desk-pad-x) 8rem;
+}
+
+.stage-grain {
+  min-height: 48rem;
+  padding: 8rem 18rem;
+  border: 1rem solid transparent;
+  border-radius: 16rem;
+  background: transparent;
+  font-size: 22rem;
+  font-weight: 650;
+  color: var(--muted);
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.stage-grain.is-on {
+  background: var(--ft-soft);
+  border-color: var(--ft-line);
+  color: var(--ft-ink);
+  font-weight: 740;
+}
+
+.stage-cols {
+  justify-content: space-between;
+  padding-top: 8rem;
+}
+
+.stage-col-value {
+  text-align: right;
+}
+
+.stage-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 68rem;
+  padding: 14rem var(--desk-pad-x);
+  border-top: 1rem dashed rgba(122, 132, 148, 0.28);
+}
+
+.theme-dark .stage-row {
+  border-top-color: rgba(139, 147, 167, 0.22);
+}
+
+.stage-row:first-child {
+  border-top: 0;
+}
+
+.stage-row-label {
+  font-size: 26rem;
+  font-weight: 680;
+  color: var(--ft-ink);
+}
+
+.stage-row-value {
+  font-size: 26rem;
+  font-weight: 740;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-more {
+  display: block;
+  width: 100%;
+  margin-top: 4rem;
+  padding: 16rem 8rem 8rem;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font-size: 22rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: var(--ft-bright);
+  opacity: 0.88;
 }

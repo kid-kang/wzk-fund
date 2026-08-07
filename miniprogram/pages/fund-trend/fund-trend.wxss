@@ -164,23 +164,31 @@
   padding: 4rpx 0 0;
 }
 
-/* —— 重仓股票（对齐小倍） —— */
-.hold-block {
-  margin-top: 24rpx;
+/* —— 重仓 / 阶段：格局不变，视觉接入详情页 accent 票据语言 —— */
+.hold-block,
+.stage-block {
+  --desk-radius: 20rpx;
+  --desk-pad-x: 12rpx;
+  margin-top: 20rpx;
+}
+
+.stage-block {
   padding: 0 0 40rpx;
 }
 
-.hold-card {
-  padding: 22rpx 18rpx 8rpx;
-  border-radius: 24rpx;
+.hold-card,
+.stage-card {
+  padding: 18rpx 14rpx 10rpx;
+  border-radius: var(--desk-radius);
   background: var(--panel);
-  border: 1rpx solid var(--line);
-  box-shadow: 0 8rpx 28rpx rgba(20, 28, 40, 0.04);
+  border: 1rpx solid var(--glass-border, var(--line));
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px);
 }
 
-.theme-dark .hold-card {
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: none;
+.theme-dark .hold-card,
+.theme-dark .stage-card {
+  border-color: var(--line);
 }
 
 .hold-head {
@@ -188,7 +196,24 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 16rpx;
-  padding: 0 4rpx 16rpx;
+  padding: 0 var(--desk-pad-x) 14rpx;
+  position: relative;
+}
+
+.hold-head::after {
+  content: '';
+  position: absolute;
+  left: var(--desk-pad-x);
+  right: 28%;
+  bottom: 0;
+  height: 2rpx;
+  background: linear-gradient(
+    90deg,
+    var(--ft-bright) 0%,
+    var(--ft-line) 48%,
+    transparent 100%
+  );
+  opacity: 0.85;
 }
 
 .hold-title-row {
@@ -199,32 +224,39 @@
 }
 
 .hold-title {
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 740;
-  color: var(--ink);
+  color: var(--ft-ink);
   letter-spacing: -0.01em;
 }
 
 .hold-total {
-  font-size: 24rpx;
+  font-size: 22rpx;
   font-weight: 600;
   color: var(--muted);
+  letter-spacing: 0.01em;
 }
 
 .hold-quarter {
   flex-shrink: 0;
-  font-size: 22rpx;
-  font-weight: 550;
+  font-size: 20rpx;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   color: var(--muted);
+  opacity: 0.88;
 }
 
-.hold-cols {
+.hold-cols,
+.stage-cols {
   display: flex;
   align-items: center;
   gap: 8rpx;
-  padding: 4rpx 8rpx 12rpx;
+  padding: 14rpx var(--desk-pad-x) 10rpx;
   font-size: 20rpx;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   color: var(--muted);
+  opacity: 0.82;
 }
 
 .hold-col {
@@ -252,9 +284,10 @@
   text-align: right;
 }
 
-.hold-err {
+.hold-err,
+.stage-err {
   margin: 8rpx 0 16rpx;
-  padding: 14rpx 8rpx;
+  padding: 14rpx var(--desk-pad-x);
   color: var(--muted);
   font-size: 22rpx;
 }
@@ -262,33 +295,38 @@
 .hold-list {
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
-  padding-bottom: 8rpx;
+  gap: 6rpx;
+  padding-bottom: 6rpx;
 }
 
 .hold-row {
   display: flex;
   align-items: center;
   gap: 8rpx;
-  min-height: 88rpx;
-  padding: 14rpx 8rpx;
+  min-height: 84rpx;
+  padding: 12rpx var(--desk-pad-x);
   border-radius: 16rpx;
+  border: 1rpx solid transparent;
 }
 
 .hold-row.row-rise {
-  background: rgba(215, 38, 61, 0.06);
+  background: rgba(215, 38, 61, 0.07);
+  border-color: rgba(215, 38, 61, 0.12);
 }
 
 .hold-row.row-fall {
-  background: rgba(11, 107, 79, 0.06);
+  background: rgba(11, 107, 79, 0.07);
+  border-color: rgba(11, 107, 79, 0.12);
 }
 
 .theme-dark .hold-row.row-rise {
   background: rgba(255, 107, 122, 0.1);
+  border-color: rgba(255, 107, 122, 0.16);
 }
 
 .theme-dark .hold-row.row-fall {
   background: rgba(75, 184, 146, 0.1);
+  border-color: rgba(75, 184, 146, 0.16);
 }
 
 .hold-cell {
@@ -308,7 +346,7 @@
 .hold-name {
   font-size: 26rpx;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--ft-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -316,9 +354,10 @@
 
 .hold-stock {
   font-size: 20rpx;
-  font-weight: 550;
+  font-weight: 600;
   color: var(--muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
 }
 
 .hold-col-chg,
@@ -328,8 +367,8 @@
 }
 
 .hold-col-w {
-  color: var(--ink);
-  font-weight: 700;
+  color: var(--ft-ink);
+  font-weight: 740;
 }
 
 .rise {
@@ -342,4 +381,125 @@
 
 .flat {
   color: var(--muted);
+}
+
+.stage-card {
+  padding-top: 6rpx;
+}
+
+.stage-tabs {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 4rpx 0 2rpx;
+}
+
+.stage-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14rpx 4rpx 12rpx;
+}
+
+.stage-tab-label {
+  font-size: 26rpx;
+  font-weight: 650;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.stage-tab.is-on .stage-tab-label {
+  font-weight: 780;
+  color: var(--ft-ink);
+}
+
+.stage-tab.is-on::after {
+  content: '';
+  width: 32rpx;
+  height: 4rpx;
+  margin-top: 10rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(90deg, var(--ft-bright), var(--ft-line));
+}
+
+.stage-grains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  padding: 10rpx var(--desk-pad-x) 8rpx;
+}
+
+.stage-grain {
+  min-height: 48rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 16rpx;
+  border: 1rpx solid transparent;
+  font-size: 22rpx;
+  font-weight: 650;
+  color: var(--muted);
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.stage-grain.is-on {
+  background: var(--ft-soft);
+  border-color: var(--ft-line);
+  color: var(--ft-ink);
+  font-weight: 740;
+}
+
+.stage-cols {
+  justify-content: space-between;
+  padding-top: 8rpx;
+}
+
+.stage-col-value {
+  text-align: right;
+}
+
+.stage-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 68rpx;
+  padding: 14rpx var(--desk-pad-x);
+  border-top: 1rpx dashed rgba(122, 132, 148, 0.28);
+}
+
+.theme-dark .stage-row {
+  border-top-color: rgba(139, 147, 167, 0.22);
+}
+
+.stage-row:first-child {
+  border-top: 0;
+}
+
+.stage-row-label {
+  font-size: 26rpx;
+  font-weight: 680;
+  color: var(--ft-ink);
+}
+
+.stage-row-value {
+  font-size: 26rpx;
+  font-weight: 740;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-more {
+  margin-top: 4rpx;
+  padding: 16rpx 8rpx 8rpx;
+  text-align: center;
+  font-size: 22rpx;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: var(--ft-bright);
+  opacity: 0.88;
 }

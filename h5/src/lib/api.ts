@@ -277,6 +277,37 @@ export async function fetchFundHoldings(code: string) {
   return assertOk(data).data
 }
 
+export type FundStageRow = {
+  key?: string
+  label?: string
+  date?: string
+  dateLabel?: string
+  percentText?: string
+  percentClass?: string
+  dayChangeText?: string
+  dayChangeClass?: string
+}
+
+export type FundStageStatsPayload = {
+  code: string
+  navHistory: FundStageRow[]
+  periodReturns: FundStageRow[]
+  monthlyReturns: FundStageRow[]
+  quarterlyReturns: FundStageRow[]
+  semiAnnualReturns: FundStageRow[]
+  annualReturns: FundStageRow[]
+  drawdowns: FundStageRow[]
+}
+
+export async function fetchFundStageStats(code: string) {
+  const {data} = await api.get<{
+    success: boolean
+    message?: string
+    data: FundStageStatsPayload
+  }>(`/funds/${encodeURIComponent(code)}/stage-stats`)
+  return assertOk(data).data
+}
+
 export async function fetchMarketOverview() {
   const {data} = await api.get<{success: boolean; data: MarketOverview}>('/market/overview')
   return data.data

@@ -194,6 +194,14 @@ async function fetchFundHoldings(code) {
   return data.data
 }
 
+async function fetchFundStageStats(code) {
+  const data = await request({
+    url: `/api/funds/${encodeURIComponent(code)}/stage-stats`,
+  })
+  assertOk(data)
+  return data.data
+}
+
 async function updateGoldConfig(payload) {
   return store.updateGold(payload)
 }
@@ -234,6 +242,7 @@ module.exports = {
   removeFund,
   clearFunds,
   fetchFundHoldings,
+  fetchFundStageStats,
   updateGoldConfig,
   fetchSettings,
   updateSettings,

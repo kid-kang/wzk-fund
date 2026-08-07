@@ -8,6 +8,7 @@ import {
   fetchFundSectorsQueued,
   fetchFundFtype,
   getFundHistory,
+  getFundStageStats,
   getFundTopHoldings,
   isConfirmedSessionActive,
   isDelayedNavFund,
@@ -228,6 +229,16 @@ router.get('/funds/:code/history', async (ctx) => {
 router.get('/funds/:code/holdings', async (ctx) => {
   try {
     const data = await getFundTopHoldings(ctx.params.code)
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 400
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+router.get('/funds/:code/stage-stats', async (ctx) => {
+  try {
+    const data = await getFundStageStats(ctx.params.code)
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 400

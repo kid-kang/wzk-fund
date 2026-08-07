@@ -7,10 +7,12 @@ import FortuneWatermark from '@/components/FortuneWatermark'
 import {
   fetchFundHistory,
   fetchFundHoldings,
+  fetchFundStageStats,
   fetchFundQuote,
   type FundHoldingRow,
   type FundHistoryPayload,
   type FundHistoryRange,
+  type FundStageStatsPayload,
 } from '@/lib/api'
 import {
   availableFundRanges,
@@ -39,6 +41,24 @@ function emptyRanges(ageDays: number | null): RangeChip[] {
 
 /** 停留详情页时重仓行情轮询间隔 */
 const HOLDINGS_POLL_MS = 60 * 1000
+const STAGE_PAGE_SIZE = 5
+
+const STAGE_TABS = [
+  {key: 'nav' as const, label: '历史净值'},
+  {key: 'return' as const, label: '阶段涨幅'},
+  {key: 'drawdown' as const, label: '阶段回撤'},
+]
+
+const STAGE_GRAINS = [
+  {key: 'stage' as const, label: '阶段'},
+  {key: 'month' as const, label: '月度'},
+  {key: 'quarter' as const, label: '季度'},
+  {key: 'semi' as const, label: '半年度'},
+  {key: 'year' as const, label: '年度'},
+]
+
+type StageTab = (typeof STAGE_TABS)[number]['key']
+type StageGrain = (typeof STAGE_GRAINS)[number]['key']
 
 export default function FundTrendPage() {
   const [params] = useSearchParams()
@@ -62,6 +82,12 @@ export default function FundTrendPage() {
   const [holdingsError, setHoldingsError] = useState('')
   const [totalWeightText, setTotalWeightText] = useState('')
   const [reportQuarterText, setReportQuarterText] = useState('')
+  const [stageTab, setStageTab] = useState<StageTab>('return')
+  const [stageGrain, setStageGrain] = useState<StageGrain>('stage')
+  const [stageLoading, setStageLoading] = useState(true)
+  const [stageError, setStageError] = useState('')
+  const [stageLimit, setStageLimit] = useState(STAGE_PAGE_SIZE)
+  const [stageStats, setStageStats] = useState<FundStageStatsPayload | null>(null)
   const byRange = useRef<Record<string, FundHistoryPayload>>({})
   const chartEpoch = useRef(0)
   const rangeRef = useRef(range)
@@ -184,6 +210,30 @@ export default function FundTrendPage() {
   useEffect(() => {
     if (!/^\d{6}$/.test(code)) return
     let cancelled = false
+    setStageLoading(true)
+    setStageError('')
+    setStageStats(null)
+    setStageLimit(STAGE_PAGE_SIZE)
+    void fetchFundStageStats(code)
+      .then((data) => {
+        if (cancelled) return
+        setStageStats(data)
+        setStageLoading(false)
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setStageStats(null)
+        setStageLoading(false)
+        setStageError(e instanceof Error ? e.message : '阶段数据加载失败')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [code])
+
+  useEffect(() => {
+    if (!/^\d{6}$/.test(code)) return
+    let cancelled = false
 
     const loadHoldings = async (silent: boolean) => {
       if (holdingsFetchingRef.current) return
@@ -227,6 +277,38 @@ export default function FundTrendPage() {
       window.clearInterval(timer)
     }
   }, [code])
+
+  const stageSource = (() => {
+    if (!stageStats) return []
+    if (stageTab === 'nav') return stageStats.navHistory || []
+    if (stageTab === 'drawdown') return stageStats.drawdowns || []
+    if (stageGrain === 'month') return stageStats.monthlyReturns || []
+    if (stageGrain === 'quarter') return stageStats.quarterlyReturns || []
+    if (stageGrain === 'semi') return stageStats.semiAnnualReturns || []
+    if (stageGrain === 'year') return stageStats.annualReturns || []
+    return stageStats.periodReturns || []
+  })()
+
+  const stageRows = stageSource.slice(0, stageLimit).map((item) => {
+    if (stageTab === 'nav') {
+      return {
+        key: item.date || '',
+        label: item.dateLabel || '',
+        valueText: item.dayChangeText || '--',
+        valueClass: item.dayChangeClass || 'flat',
+      }
+    }
+    return {
+      key: item.key || '',
+      label: item.label || '',
+      valueText: item.percentText || '--',
+      valueClass: item.percentClass || 'flat',
+    }
+  })
+  const stageHasMore = stageSource.length > stageLimit
+  const stageShowGrain = stageTab === 'return'
+  const stageLabelCol = stageTab === 'nav' ? '日期' : '周期'
+  const stageValueCol = stageTab === 'nav' ? '日涨跌' : '本基金'
 
   const onRangeTap = async (key: FundHistoryRange) => {
     if (!key || key === range) return
@@ -366,6 +448,79 @@ export default function FundTrendPage() {
                       </div>
                     ))}
                   </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="stage-block">
+              <div className="stage-card">
+                <div className="stage-tabs">
+                  {STAGE_TABS.map((item) => (
+                    <button
+                      type="button"
+                      key={item.key}
+                      className={`stage-tab${stageTab === item.key ? ' is-on' : ''}`}
+                      onClick={() => {
+                        setStageTab(item.key)
+                        setStageLimit(STAGE_PAGE_SIZE)
+                      }}
+                    >
+                      <span className="stage-tab-label">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {stageShowGrain ? (
+                  <div className="stage-grains">
+                    {STAGE_GRAINS.map((item) => (
+                      <button
+                        type="button"
+                        key={item.key}
+                        className={`stage-grain${stageGrain === item.key ? ' is-on' : ''}`}
+                        onClick={() => {
+                          setStageGrain(item.key)
+                          setStageLimit(STAGE_PAGE_SIZE)
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                {stageRows.length ? (
+                  <div className="stage-cols">
+                    <span className="stage-col-label">{stageLabelCol}</span>
+                    <span className="stage-col-value">{stageValueCol}</span>
+                  </div>
+                ) : null}
+
+                {stageLoading ? <div className="section-empty">加载阶段数据…</div> : null}
+                {!stageLoading && stageError && !stageRows.length ? (
+                  <div className="stage-err">{stageError}</div>
+                ) : null}
+
+                {!stageLoading && stageRows.length ? (
+                  <div className="stage-list">
+                    {stageRows.map((item) => (
+                      <div className="stage-row" key={item.key}>
+                        <span className="stage-row-label">{item.label}</span>
+                        <span className={`stage-row-value mono ${item.valueClass}`}>
+                          {item.valueText}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {stageHasMore ? (
+                  <button
+                    type="button"
+                    className="stage-more"
+                    onClick={() => setStageLimit((n) => n + STAGE_PAGE_SIZE)}
+                  >
+                    查看更多
+                  </button>
                 ) : null}
               </div>
             </div>

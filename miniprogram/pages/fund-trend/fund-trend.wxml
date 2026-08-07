@@ -78,6 +78,49 @@
             </view>
           </view>
         </view>
+
+        <view class="stage-block">
+          <view class="stage-card">
+            <view class="stage-tabs">
+              <view
+                class="stage-tab {{stageTab === item.key ? 'is-on' : ''}}"
+                wx:for="{{stageTabs}}"
+                wx:key="key"
+                data-key="{{item.key}}"
+                bindtap="onStageTabTap"
+              >
+                <text class="stage-tab-label">{{item.label}}</text>
+              </view>
+            </view>
+
+            <view class="stage-grains" wx:if="{{stageShowGrain}}">
+              <view
+                class="stage-grain {{stageGrain === item.key ? 'is-on' : ''}}"
+                wx:for="{{stageGrains}}"
+                wx:key="key"
+                data-key="{{item.key}}"
+                bindtap="onStageGrainTap"
+              >{{item.label}}</view>
+            </view>
+
+            <view class="stage-cols" wx:if="{{stageRows.length}}">
+              <text class="stage-col-label">{{stageLabelCol}}</text>
+              <text class="stage-col-value">{{stageValueCol}}</text>
+            </view>
+
+            <van-empty wx:if="{{stageLoading}}" description="加载阶段数据…" />
+            <view class="stage-err" wx:elif="{{stageError && !stageRows.length}}">{{stageError}}</view>
+
+            <view class="stage-list" wx:if="{{!stageLoading && stageRows.length}}">
+              <view class="stage-row" wx:for="{{stageRows}}" wx:key="key">
+                <text class="stage-row-label">{{item.label}}</text>
+                <text class="stage-row-value mono {{item.valueClass}}">{{item.valueText}}</text>
+              </view>
+            </view>
+
+            <view class="stage-more" wx:if="{{stageHasMore}}" bindtap="onStageMoreTap">查看更多</view>
+          </view>
+        </view>
       </view>
     </view>
   </scroll-view>

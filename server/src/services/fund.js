@@ -1684,6 +1684,232 @@ export async function getFundHistory(code, range = '3m') {
   }
 }
 
+/**
+ * 阶段统计缓存：净值多为日更，无需分钟级刷新。
+ * 12h 覆盖同日多次进详情，隔日会自然过期重算。
+ */
+const STAGE_STATS_TTL_MS = 12 * 60 * 60 * 1000
+const stageStatsCache = new Map()
+
+function pctFromNav(startNav, endNav) {
+  const a = Number(startNav)
+  const b = Number(endNav)
+  if (!(a > 0) || !Number.isFinite(b)) return null
+  return round4(((b - a) / a) * 100)
+}
+
+function formatStatPct(v) {
+  if (v == null || !Number.isFinite(Number(v))) {
+    return {percent: null, percentText: '--', percentClass: 'flat'}
+  }
+  const percent = roundWeight(Number(v))
+  return {
+    percent,
+    percentText: signedPctText(percent),
+    percentClass: pctTone(percent),
+  }
+}
+
+function findNavIndexOnOrAfter(asc, dateStr) {
+  for (let i = 0; i < asc.length; i++) {
+    if (asc[i].date >= dateStr) return i
+  }
+  return -1
+}
+
+function calendarDateOffset(days) {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function yearStartDate() {
+  const d = new Date()
+  return `${d.getFullYear()}-01-01`
+}
+
+function sliceReturn(asc, fromDate) {
+  if (!asc.length) return null
+  const end = asc[asc.length - 1]
+  let i = findNavIndexOnOrAfter(asc, fromDate)
+  if (i < 0) i = 0
+  // 用区间起点前一个点作基准更贴近「近N月」口径
+  const baseIdx = i > 0 ? i - 1 : i
+  return pctFromNav(asc[baseIdx].netValue, end.netValue)
+}
+
+function maxDrawdownPct(asc, fromDate = null) {
+  if (!asc.length) return null
+  let start = 0
+  if (fromDate) {
+    start = findNavIndexOnOrAfter(asc, fromDate)
+    if (start < 0) start = 0
+  }
+  let peak = -Infinity
+  let maxDd = 0
+  let saw = false
+  for (let i = start; i < asc.length; i++) {
+    const v = Number(asc[i].netValue)
+    if (!Number.isFinite(v) || v <= 0) continue
+    saw = true
+    if (v > peak) peak = v
+    if (peak > 0) {
+      const dd = ((v - peak) / peak) * 100
+      if (dd < maxDd) maxDd = dd
+    }
+  }
+  if (!saw) return null
+  return round4(maxDd)
+}
+
+function buildPeriodRows(asc, defs) {
+  return defs.map((d) => {
+    const from =
+      d.days != null
+        ? calendarDateOffset(d.days)
+        : d.from === 'ytd'
+          ? yearStartDate()
+          : d.from === 'since'
+            ? asc[0]?.date
+            : d.from
+    const pct = d.mode === 'drawdown' ? maxDrawdownPct(asc, from) : sliceReturn(asc, from)
+    return {
+      key: d.key,
+      label: d.label,
+      ...formatStatPct(pct),
+    }
+  })
+}
+
+/** 按日历桶切段收益：上期末净值 → 本期末净值（升序算、降序展示） */
+function buildCalendarReturns(asc, kind) {
+  if (!asc.length) return []
+  const buckets = new Map()
+  for (const p of asc) {
+    const [y, m] = p.date.split('-').map(Number)
+    let key
+    let label
+    let order
+    if (kind === 'month') {
+      key = `${y}-${String(m).padStart(2, '0')}`
+      label = key
+      order = y * 100 + m
+    } else if (kind === 'quarter') {
+      const q = Math.ceil(m / 3)
+      key = `${y}-Q${q}`
+      label = `${y}第${q}季度`
+      order = y * 10 + q
+    } else if (kind === 'semi') {
+      const half = m <= 6 ? 1 : 2
+      key = `${y}-H${half}`
+      label = `${y}${half === 1 ? '上半年' : '下半年'}`
+      order = y * 10 + half
+    } else {
+      key = String(y)
+      label = String(y)
+      order = y
+    }
+    let b = buckets.get(key)
+    if (!b) {
+      b = {key, label, order, last: p}
+      buckets.set(key, b)
+    } else {
+      b.last = p
+    }
+  }
+  const chrono = [...buckets.values()].sort((a, b) => a.order - b.order)
+  const rows = []
+  for (let i = 0; i < chrono.length; i++) {
+    const cur = chrono[i]
+    const baseNav = i > 0 ? chrono[i - 1].last.netValue : null
+    // 首个桶：桶内首末；其后：上期末 → 本期末
+    const startNav =
+      baseNav != null
+        ? baseNav
+        : (() => {
+            const firstInBucket = asc.find((p) => {
+              const [y, m] = p.date.split('-').map(Number)
+              if (kind === 'month') return `${y}-${String(m).padStart(2, '0')}` === cur.key
+              if (kind === 'quarter') return `${y}-Q${Math.ceil(m / 3)}` === cur.key
+              if (kind === 'semi') return `${y}-H${m <= 6 ? 1 : 2}` === cur.key
+              return String(y) === cur.key
+            })
+            return firstInBucket?.netValue
+          })()
+    rows.push({
+      key: cur.key,
+      label: cur.label,
+      order: cur.order,
+      ...formatStatPct(pctFromNav(startNav, cur.last.netValue)),
+    })
+  }
+  return rows.sort((a, b) => b.order - a.order).map(({order, ...rest}) => rest)
+}
+
+/**
+ * 详情页「历史净值 / 阶段涨幅 / 阶段回撤」：
+ * 一次拉全量净值，服务端算好各表，前端只做 Tab 切换与分页展示。
+ */
+export async function getFundStageStats(code) {
+  const padded = String(code || '').padStart(6, '0')
+  const hit = stageStatsCache.get(padded)
+  if (hit && Date.now() - hit.at < STAGE_STATS_TTL_MS) {
+    return hit.data
+  }
+
+  const desc = await fetchFundNavHistoryPaged(padded, {
+    pageSize: 10000,
+    maxPages: 2,
+  })
+  if (!desc.length) throw new Error(`暂无基金 ${padded} 历史净值`)
+
+  const asc = [...desc].reverse()
+  const navHistory = desc.map((p) => {
+    const dayChange =
+      p.dayGrowth != null && Number.isFinite(Number(p.dayGrowth))
+        ? roundWeight(Number(p.dayGrowth))
+        : null
+    return {
+      date: p.date,
+      dateLabel: p.date.length >= 10 ? p.date.slice(5, 10) : p.date,
+      dayChange,
+      dayChangeText: dayChange != null ? signedPctText(dayChange) : '--',
+      dayChangeClass: dayChange != null ? pctTone(dayChange) : 'flat',
+    }
+  })
+
+  const periodReturns = buildPeriodRows(asc, [
+    {key: '1m', label: '近1月', days: 30},
+    {key: '3m', label: '近3月', days: 90},
+    {key: '6m', label: '近6月', days: 180},
+    {key: '1y', label: '近1年', days: 365},
+    {key: '3y', label: '近3年', days: 365 * 3},
+  ])
+
+  const drawdowns = buildPeriodRows(asc, [
+    {key: '3m', label: '近3月', days: 90, mode: 'drawdown'},
+    {key: '6m', label: '近6月', days: 180, mode: 'drawdown'},
+    {key: '1y', label: '近1年', days: 365, mode: 'drawdown'},
+    {key: '3y', label: '近3年', days: 365 * 3, mode: 'drawdown'},
+    {key: 'ytd', label: '今年以来', from: 'ytd', mode: 'drawdown'},
+    {key: 'since', label: '成立以来', from: 'since', mode: 'drawdown'},
+  ])
+
+  const data = {
+    code: padded,
+    navHistory,
+    periodReturns,
+    monthlyReturns: buildCalendarReturns(asc, 'month'),
+    quarterlyReturns: buildCalendarReturns(asc, 'quarter'),
+    semiAnnualReturns: buildCalendarReturns(asc, 'semi'),
+    annualReturns: buildCalendarReturns(asc, 'year'),
+    drawdowns,
+  }
+  stageStatsCache.set(padded, {at: Date.now(), data})
+  return data
+}
+
 export async function getFundEstimateIntraday(fundKey) {
   if (!fundKey) return {points: [], latest: null}
   const today = new Date()
