@@ -46,57 +46,34 @@
         </view>
 
         <view class="hold-block">
-          <view class="hold-head">
-            <view class="hold-title-row">
-              <text class="hold-code mono">TOP10</text>
-              <text class="hold-title">前十大持仓</text>
+          <view class="hold-card">
+            <view class="hold-head">
+              <view class="hold-title-row">
+                <text class="hold-title">重仓股票</text>
+                <text class="hold-total mono" wx:if="{{totalWeightText}}">（占比{{totalWeightText}}）</text>
+              </view>
+              <text class="hold-quarter" wx:if="{{reportQuarterText}}">{{reportQuarterText}}</text>
             </view>
-            <view class="hold-sub" wx:if="{{holdingsHint || showChangeYearHS}}">
-              <text class="hold-hint" wx:if="{{holdingsHint}}">{{holdingsHint}}</text>
-              <text class="hold-yoy mono {{changeYearHSClass}}" wx:if="{{showChangeYearHS}}">
-                重仓股近1年 {{changeYearHSText}}
-              </text>
+
+            <view class="hold-cols" wx:if="{{holdings.length}}">
+              <text class="hold-col hold-col-name">重仓股票</text>
+              <text class="hold-col hold-col-chg">涨跌幅</text>
+              <text class="hold-col hold-col-w">持仓占比</text>
+              <text class="hold-col hold-col-qw">较上季度变化</text>
             </view>
-          </view>
 
-          <view class="alloc-row" wx:if="{{allocation.length}}">
-            <view class="alloc-item" wx:for="{{allocation}}" wx:key="key">
-              <text class="alloc-label">{{item.label}}</text>
-              <text class="alloc-w mono">{{item.weightText}}</text>
-              <text class="alloc-chg mono {{item.changeClass}}" wx:if="{{item.changeText}}">{{item.changeText}}</text>
-            </view>
-          </view>
+            <van-empty wx:if="{{holdingsLoading}}" description="加载重仓…" />
+            <view class="hold-err" wx:elif="{{holdingsError && !holdings.length}}">{{holdingsError}}</view>
 
-          <view class="hold-cols mono" wx:if="{{holdings.length}}">
-            <text class="hold-col-name">名称</text>
-            <text class="hold-col-industry">行业</text>
-            <text class="hold-col-w">占比</text>
-          </view>
-
-          <van-empty wx:if="{{holdingsLoading}}" description="加载重仓…" />
-          <view class="hold-err" wx:elif="{{holdingsError && !holdings.length}}">{{holdingsError}}</view>
-
-          <view class="hold-list" wx:if="{{!holdingsLoading && holdings.length}}">
-            <view class="hold-row" wx:for="{{holdings}}" wx:key="rank">
-              <view class="hold-main">
-                <text class="hold-rank mono">{{item.rank}}</text>
-                <view class="hold-meta">
+            <view class="hold-list" wx:if="{{!holdingsLoading && holdings.length}}">
+              <view class="hold-row {{item.rowTone}}" wx:for="{{holdings}}" wx:key="rank">
+                <view class="hold-cell hold-col-name">
                   <text class="hold-name">{{item.name}}</text>
-                  <view class="hold-stock-row">
-                    <text class="hold-stock mono">{{item.code}}</text>
-                    <text class="hold-stock-y mono {{item.changeRatioYClass}}"
-                      wx:if="{{item.changeRatioYText}}">{{item.changeRatioYText}}</text>
-                  </view>
+                  <text class="hold-stock mono">{{item.code}}</text>
                 </view>
-              </view>
-              <view class="hold-industry-wrap">
-                <text class="hold-industry">{{item.industry || '--'}}</text>
-                <text class="hold-industry-l1" wx:if="{{item.industryL1}}">{{item.industryL1}}</text>
-              </view>
-              <view class="hold-weight-wrap">
-                <text class="hold-weight mono">{{item.weightText}}</text>
-                <text class="hold-wchg mono {{item.weightChangeClass}}"
-                  wx:if="{{item.weightChangeText}}">{{item.weightChangeText}}</text>
+                <text class="hold-cell hold-col-chg mono {{item.dayChangeClass}}">{{item.dayChangeText}}</text>
+                <text class="hold-cell hold-col-w mono">{{item.weightText}}</text>
+                <text class="hold-cell hold-col-qw mono {{item.weightChangeClass}}">{{item.weightChangeText || '--'}}</text>
               </view>
             </view>
           </view>

@@ -17,6 +17,9 @@ function emptyRanges(ageDays) {
 const themeView = getThemeViewState()
 syncNavigationBar(themeView.theme)
 
+/** 停留详情页时重仓行情轮询间隔 */
+const HOLDINGS_POLL_MS = 60 * 1000
+
 Page({
   data: {
     ...themeView,
@@ -33,18 +36,17 @@ Page({
     loading: false,
     error: '',
     holdings: [],
-    allocation: [],
     holdingsLoading: false,
     holdingsError: '',
-    holdingsHint: '',
-    changeYearHSText: '',
-    changeYearHSClass: 'flat',
-    showChangeYearHS: false,
+    totalWeightText: '',
+    reportQuarterText: '',
   },
 
   onLoad(query) {
     this._dead = false
     this._byRange = {}
+    this._holdingsTimer = null
+    this._holdingsFetching = false
     const themePatch = getThemeViewState()
     syncNavigationBar(themePatch.theme)
     const code = String(query.code || '').padStart(6, '0')
@@ -60,17 +62,38 @@ Page({
       holdingsLoading: true,
     })
     this.bootstrap()
-    this.loadHoldings()
+    this.loadHoldings({silent: false})
   },
 
   onShow() {
     const next = getThemeViewState()
     if (next.theme !== this.data.theme) this.setData(next)
     syncNavigationBar(next.theme)
+    this.startHoldingsPoll()
+  },
+
+  onHide() {
+    this.stopHoldingsPoll()
   },
 
   onUnload() {
     this._dead = true
+    this.stopHoldingsPoll()
+  },
+
+  startHoldingsPoll() {
+    this.stopHoldingsPoll()
+    if (this._dead || !this.data.code) return
+    this._holdingsTimer = setInterval(() => {
+      this.loadHoldings({silent: true})
+    }, HOLDINGS_POLL_MS)
+  },
+
+  stopHoldingsPoll() {
+    if (this._holdingsTimer) {
+      clearInterval(this._holdingsTimer)
+      this._holdingsTimer = null
+    }
   },
 
   async bootstrap() {
@@ -118,42 +141,37 @@ Page({
     }
   },
 
-  async loadHoldings() {
-    this.setData({holdingsLoading: true, holdingsError: ''})
+  async loadHoldings({silent = false} = {}) {
+    if (this._holdingsFetching) return
+    this._holdingsFetching = true
+    if (!silent) this.setData({holdingsLoading: true, holdingsError: ''})
     try {
       const data = await api.fetchFundHoldings(this.data.code)
       if (this._dead) return
       const holdings = (data && data.holdings) || []
-      const allocation = (data && data.allocation) || []
-      const hints = []
-      if (data && data.reportText) hints.push(data.reportText)
-      if (data && data.stockNum) hints.push(`重仓${data.stockNum}只`)
-      if (data && data.etfCode && data.etfName) {
-        hints.push(`联接穿透 ${data.etfName}`)
-      }
-      const changeYearHSText = (data && data.changeYearHSText) || ''
       this.setData({
         holdings,
-        allocation,
-        holdingsHint: hints.join(' · '),
-        changeYearHSText,
-        changeYearHSClass: (data && data.changeYearHSClass) || 'flat',
-        showChangeYearHS: !!changeYearHSText && changeYearHSText !== '--',
+        totalWeightText: (data && data.totalWeightText) || '',
+        reportQuarterText: (data && data.reportQuarterText) || '',
         holdingsLoading: false,
         holdingsError: holdings.length ? '' : '暂无重仓数据',
       })
     } catch (e) {
       if (this._dead) return
+      // 轮询失败保留旧数据，避免整块闪空
+      if (silent && this.data.holdings.length) {
+        this.setData({holdingsLoading: false})
+        return
+      }
       this.setData({
         holdings: [],
-        allocation: [],
-        holdingsHint: '',
-        changeYearHSText: '',
-        changeYearHSClass: 'flat',
-        showChangeYearHS: false,
+        totalWeightText: '',
+        reportQuarterText: '',
         holdingsLoading: false,
         holdingsError: (e && e.message) || '重仓加载失败',
       })
+    } finally {
+      this._holdingsFetching = false
     }
   },
 

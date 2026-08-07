@@ -197,6 +197,21 @@ function toAshareSecid(gpdm, newtexch) {
   return ''
 }
 
+/**
+ * 重仓行情 secid：
+ * - A 股：0./1.
+ * - 港股：116.
+ * - 美股：105 纳斯达克 / 106 纽交所 / 107 美交所
+ */
+function toHoldingSecid(gpdm, newtexch) {
+  const code = String(gpdm || '').trim()
+  if (!code) return ''
+  const ex = String(newtexch ?? '').trim()
+  if (/^\d{6}$/.test(code)) return toAshareSecid(code, newtexch)
+  if (['105', '106', '107', '116'].includes(ex)) return `${ex}.${code}`
+  return ''
+}
+
 /** 去掉东财概念后缀「概念」 */
 function normalizeConceptTag(raw) {
   return String(raw || '')
@@ -666,6 +681,82 @@ function formatReportText(reportDate, year, quarter) {
   return String(reportDate || '').trim()
 }
 
+/** 小倍风格：2026年第2季度 */
+function formatReportQuarterText(reportDate, year, quarter) {
+  const y = Number(year)
+  const q = Number(quarter)
+  if (Number.isFinite(y) && Number.isFinite(q) && q >= 1 && q <= 4) {
+    return `${y}年第${q}季度`
+  }
+  const raw = String(reportDate || '').replace(/\D/g, '')
+  if (raw.length === 8) {
+    const mm = Number(raw.slice(4, 6))
+    if (mm >= 1 && mm <= 12) {
+      return `${raw.slice(0, 4)}年第${Math.ceil(mm / 3)}季度`
+    }
+  }
+  return formatReportText(reportDate, year, quarter)
+}
+
+/** 600519.SH / 01888.HK / SNDK.O → 展示用代码 */
+function formatHoldingCode(row) {
+  const wind = String(row?.stock || row?.sInfoWindcode || '').trim().toUpperCase()
+  if (wind.includes('.')) {
+    const [sym, ex] = wind.split('.')
+    if (!sym) return '--'
+    if (ex === 'SH' || ex === 'SZ' || ex === 'BJ') {
+      return /^\d+$/.test(sym) ? sym.padStart(6, '0').slice(-6) : sym
+    }
+    if (ex === 'HK') {
+      return /^\d+$/.test(sym) ? sym.padStart(5, '0') : sym
+    }
+    return sym
+  }
+  const code = String(row?.code || '').trim()
+  if (!code) return '--'
+  if (/^\d+$/.test(code)) return code.padStart(6, '0').slice(-6)
+  return code
+}
+
+/** Wind 代码 → 东财 secid（A/港股；美股暂不映射） */
+function toSecidFromWind(stock, code) {
+  const wind = String(stock || '').trim().toUpperCase()
+  if (wind.includes('.')) {
+    const [sym, ex] = wind.split('.')
+    if (!sym) return ''
+    if (ex === 'SH') return `1.${sym.padStart(6, '0').slice(-6)}`
+    if (ex === 'SZ' || ex === 'BJ') return `0.${sym.padStart(6, '0').slice(-6)}`
+    if (ex === 'HK') {
+      const hk = sym.replace(/\D/g, '').padStart(5, '0')
+      return hk ? `116.${hk}` : ''
+    }
+    return ''
+  }
+  return toAshareSecid(code, null)
+}
+
+/** 较上季：新增 / 0.45% ↑ / 3.30% ↓ */
+function formatWeightChangeUi(weight, weightChange) {
+  if (!Number.isFinite(weightChange)) {
+    return {text: '', className: 'flat', isNew: false}
+  }
+  if (
+    Number.isFinite(weight) &&
+    weight > 0.05 &&
+    Math.abs(weightChange - weight) < 0.05
+  ) {
+    return {text: '新增', className: 'flat', isNew: true}
+  }
+  if (Math.abs(weightChange) < 0.005) {
+    return {text: '0.00%', className: 'flat', isNew: false}
+  }
+  const abs = Math.abs(weightChange).toFixed(2)
+  if (weightChange > 0) {
+    return {text: `${abs}% ↑`, className: 'rise', isNew: false}
+  }
+  return {text: `${abs}% ↓`, className: 'fall', isNew: false}
+}
+
 /** 重仓简称 → 主题（板块推断用） */
 const HOLDING_NAME_THEME_RULES = [
   [/锂|盐湖|赣锋|天齐|雅化|中矿|永兴材料|西藏矿业|西藏珠峰|天华新能|盛新锂能/, '锂矿'],
@@ -687,7 +778,7 @@ const HOLDING_NAME_THEME_RULES = [
   [/中国海洋石油|中海油|石油|原油/, '油气'],
 ]
 
-async function xiaobeiApiPost(path, code) {
+async function xiaobeiApiPost(path, code, {allowCodes = [200]} = {}) {
   const padded = String(code || '').padStart(6, '0')
   if (!/^\d{6}$/.test(padded)) return null
   try {
@@ -709,7 +800,8 @@ async function xiaobeiApiPost(path, code) {
         validateStatus: () => true,
       },
     )
-    if (res.status !== 200 || res.data?.code !== 200) return null
+    // 402：资产配置有数据但重仓明细不全（常见于部分 QDII）
+    if (res.status !== 200 || !allowCodes.includes(res.data?.code)) return null
     return res.data?.data ?? null
   } catch {
     return null
@@ -749,11 +841,7 @@ function mapXiaobeiHeavyRow(row, idx) {
   const weight = Number(row?.weight)
   const weightChange = Number(row?.weightChange)
   const changeRatioY = Number(row?.changeRatioY)
-  const hasY =
-    Number.isFinite(changeRatioY) &&
-    // 小倍偶发返回小数涨跌幅（0.05=5%）
-    true
-  const yPct = hasY
+  const yPct = Number.isFinite(changeRatioY)
     ? Math.abs(changeRatioY) <= 2
       ? changeRatioY * 100
       : changeRatioY
@@ -762,33 +850,119 @@ function mapXiaobeiHeavyRow(row, idx) {
     String(row?.levelFourName || row?.levelThreeName || row?.levelTwoName || '').trim() ||
     '--'
   const industryL1 = String(row?.levelOneName || row?.industryLev1?.industryName || '').trim()
+  const wchg = formatWeightChangeUi(weight, weightChange)
+  const wind = String(row?.stock || row?.sInfoWindcode || '').trim()
+  const code = formatHoldingCode(row)
   return {
     rank: idx + 1,
-    code: String(row?.code || '').replace(/\D/g, '').padStart(6, '0').slice(-6),
-    name: String(row?.name || row?.sInfoName || row?.code || '').trim(),
+    code,
+    wind,
+    secid: toSecidFromWind(wind, code),
+    name: String(row?.name || row?.sInfoName || code || '').trim(),
     industry,
     industryL1,
     weight: Number.isFinite(weight) ? roundWeight(weight) : null,
     weightText: Number.isFinite(weight) ? `${weight.toFixed(2)}%` : '--',
     weightChange: Number.isFinite(weightChange) ? roundWeight(weightChange) : null,
-    weightChangeText: Number.isFinite(weightChange) ? signedPctText(weightChange) : '',
-    weightChangeClass: Number.isFinite(weightChange) ? pctTone(weightChange) : 'flat',
+    weightChangeText: wchg.text,
+    weightChangeClass: wchg.className,
+    isNew: wchg.isNew,
+    // 日涨跌优先由行情补齐；先用近1年作占位
+    dayChange: null,
+    dayChangeText: '',
+    dayChangeClass: 'flat',
+    rowTone: '',
     changeRatioY: yPct != null ? roundWeight(yPct) : null,
     changeRatioYText: yPct != null ? signedPctText(yPct) : '',
     changeRatioYClass: yPct != null ? pctTone(yPct) : 'flat',
   }
 }
 
+/** 批量补齐重仓股当日涨跌幅（东财 f3） */
+async function enrichHoldingsDayChange(holdings) {
+  const list = Array.isArray(holdings) ? holdings : []
+  const secids = [...new Set(list.map((h) => h.secid).filter(Boolean))]
+  if (!secids.length) {
+    return list.map((h) => applyDayChangeFallback(h))
+  }
+  const byKey = new Map()
+  try {
+    const data = await eastmoneyQuoteGet('/api/qt/ulist.np/get', {
+      fltt: 2,
+      secids: secids.join(','),
+      fields: 'f2,f3,f12,f13,f14',
+    })
+    const rows = Array.isArray(data?.data?.diff) ? data.data.diff : []
+    for (const r of rows) {
+      const code = String(r?.f12 || '').trim()
+      const pct = Number(r?.f3)
+      if (!code || !Number.isFinite(pct)) continue
+      byKey.set(code, pct)
+      const mkt = Number(r?.f13)
+      if (mkt === 0 || mkt === 1 || mkt === 116) {
+        byKey.set(`${mkt}.${code}`, pct)
+      }
+    }
+  } catch {
+    // 行情失败时留空
+  }
+  return list.map((h) => {
+    const pct = byKey.get(String(h.secid || '')) ?? byKey.get(String(h.code || ''))
+    if (pct == null || !Number.isFinite(Number(pct))) {
+      return applyDayChangeFallback(h)
+    }
+    const dayChange = roundWeight(Number(pct))
+    const tone = pctTone(dayChange)
+    return {
+      ...h,
+      dayChange,
+      dayChangeText: signedPctText(dayChange),
+      dayChangeClass: tone,
+      rowTone: tone === 'rise' ? 'row-rise' : tone === 'fall' ? 'row-fall' : '',
+    }
+  })
+}
+
+function applyDayChangeFallback(h) {
+  // 无当日行情时不展示近1年冒充涨跌幅，避免口径混淆
+  return {
+    ...h,
+    dayChange: null,
+    dayChangeText: '--',
+    dayChangeClass: 'flat',
+    rowTone: '',
+  }
+}
+
+function summarizeHoldingsWeight(holdings) {
+  const total = (holdings || []).reduce((s, h) => {
+    const w = Number(h?.weight)
+    return Number.isFinite(w) ? s + w : s
+  }, 0)
+  if (!(total > 0)) {
+    return {totalWeight: null, totalWeightText: ''}
+  }
+  const totalWeight = roundWeight(total)
+  return {
+    totalWeight,
+    totalWeightText: `${totalWeight.toFixed(2)}%`,
+  }
+}
+
 async function fetchXiaobeiHoldingsBundle(code) {
   const [heavy, asset] = await Promise.all([
     xiaobeiApiPost('get-fund-heavy-stock', code),
-    xiaobeiApiPost('get-fund-stock', code),
+    // 402：仅有资产配置/报告期，无重仓明细
+    xiaobeiApiPost('get-fund-stock', code, {allowCodes: [200, 402]}),
   ])
   const rows = Array.isArray(heavy?.data) ? heavy.data : []
-  const holdings = rows
+  const mapped = rows
     .filter((r) => Number(r?.weight) > 0)
+    .sort((a, b) => Number(b.weight) - Number(a.weight))
     .slice(0, 10)
     .map((r, idx) => mapXiaobeiHeavyRow(r, idx))
+  const holdings = await enrichHoldingsDayChange(mapped)
+  const {totalWeight, totalWeightText} = summarizeHoldingsWeight(holdings)
 
   const changeYearHS = Number(heavy?.changeYearHS)
   const yoyPct = Number.isFinite(changeYearHS)
@@ -797,13 +971,20 @@ async function fetchXiaobeiHoldingsBundle(code) {
       : changeYearHS
     : null
 
+  const reportDate = String(asset?.reportDate || '').trim()
+  const year = Number.isFinite(Number(asset?.year)) ? Number(asset.year) : null
+  const quarter = Number.isFinite(Number(asset?.quarter)) ? Number(asset.quarter) : null
+
   return {
     holdings,
     allocation: mapXiaobeiAllocation(asset || {}),
-    reportDate: String(asset?.reportDate || '').trim(),
-    reportText: formatReportText(asset?.reportDate, asset?.year, asset?.quarter),
-    year: Number.isFinite(Number(asset?.year)) ? Number(asset.year) : null,
-    quarter: Number.isFinite(Number(asset?.quarter)) ? Number(asset.quarter) : null,
+    reportDate,
+    reportText: formatReportText(reportDate, year, quarter),
+    reportQuarterText: formatReportQuarterText(reportDate, year, quarter),
+    year,
+    quarter,
+    totalWeight,
+    totalWeightText,
     stockNum: Number.isFinite(Number(heavy?.stockNum))
       ? Number(heavy.stockNum)
       : holdings.length || null,
@@ -814,38 +995,73 @@ async function fetchXiaobeiHoldingsBundle(code) {
   }
 }
 
-/** 小倍无数据时回退东财重仓 */
-async function fetchEastmoneyHoldingsFallback(code) {
+/** 东财 PCTNVCHGTYPE / PCTNVCHG → 较上季文案 */
+function formatEastmoneyWeightChange(row, weight) {
+  const type = String(row?.PCTNVCHGTYPE || '').trim()
+  if (type === '新增') {
+    const ui = formatWeightChangeUi(weight, weight)
+    return {
+      ...ui,
+      value: Number.isFinite(weight) ? roundWeight(weight) : null,
+    }
+  }
+  const chg = Number.parseFloat(row?.PCTNVCHG)
+  if (!Number.isFinite(chg)) {
+    return {text: '', className: 'flat', isNew: false, value: null}
+  }
+  const ui = formatWeightChangeUi(weight, chg)
+  return {...ui, value: roundWeight(chg)}
+}
+
+/** 小倍无重仓明细时回退东财（含 PCTNVCHG 较上季变化） */
+async function fetchEastmoneyHoldingsFallback(code, meta = {}) {
   const {stocks, etfName, etfCode} = await fetchFundHoldings(code)
-  const holdings = filterWeightedHoldings(stocks)
+  const mapped = filterWeightedHoldings(stocks)
     .slice(0, 10)
     .map((s, idx) => {
       const weight = Number.parseFloat(s.JZBL)
       const industry =
         s.INDEXNAME && s.INDEXNAME !== '--' ? String(s.INDEXNAME).trim() : '--'
+      const stockCode = String(s.GPDM || '').trim()
+      const wchg = formatEastmoneyWeightChange(s, weight)
       return {
         rank: idx + 1,
-        code: String(s.GPDM || '').trim(),
+        code: stockCode,
+        wind: '',
+        secid: toHoldingSecid(stockCode, s.NEWTEXCH),
         name: String(s.GPJC || s.GPNAME || s.GPDM || '').trim(),
         industry,
         industryL1: '',
         weight: Number.isFinite(weight) ? roundWeight(weight) : null,
         weightText: Number.isFinite(weight) ? `${weight.toFixed(2)}%` : '--',
-        weightChange: null,
-        weightChangeText: '',
-        weightChangeClass: 'flat',
+        weightChange: wchg.value,
+        weightChangeText: wchg.text,
+        weightChangeClass: wchg.className,
+        isNew: wchg.isNew,
+        dayChange: null,
+        dayChangeText: '',
+        dayChangeClass: 'flat',
+        rowTone: '',
         changeRatioY: null,
         changeRatioYText: '',
         changeRatioYClass: 'flat',
       }
     })
+  const holdings = await enrichHoldingsDayChange(mapped)
+  const {totalWeight, totalWeightText} = summarizeHoldingsWeight(holdings)
+  const reportDate = String(meta.reportDate || '').trim()
+  const year = Number.isFinite(Number(meta.year)) ? Number(meta.year) : null
+  const quarter = Number.isFinite(Number(meta.quarter)) ? Number(meta.quarter) : null
   return {
     holdings,
-    allocation: [],
-    reportDate: '',
-    reportText: '',
-    year: null,
-    quarter: null,
+    allocation: Array.isArray(meta.allocation) ? meta.allocation : [],
+    reportDate,
+    reportText: formatReportText(reportDate, year, quarter),
+    reportQuarterText: formatReportQuarterText(reportDate, year, quarter),
+    year,
+    quarter,
+    totalWeight,
+    totalWeightText,
     stockNum: holdings.length || null,
     changeYearHS: null,
     changeYearHSText: '',
@@ -858,13 +1074,18 @@ async function fetchEastmoneyHoldingsFallback(code) {
 
 /**
  * 前十大持仓：优先小倍 get-fund-heavy-stock + get-fund-stock，
- * 失败再回退东财 FundMNInverstPosition。
+ * 失败再回退东财 FundMNInverstPosition（QDII/美股常见）。
  */
 export async function getFundTopHoldings(code) {
   const padded = String(code || '').padStart(6, '0')
   let bundle = await fetchXiaobeiHoldingsBundle(padded)
   if (!bundle.holdings.length) {
-    bundle = await fetchEastmoneyHoldingsFallback(padded)
+    bundle = await fetchEastmoneyHoldingsFallback(padded, {
+      reportDate: bundle.reportDate,
+      year: bundle.year,
+      quarter: bundle.quarter,
+      allocation: bundle.allocation,
+    })
   }
   return {
     code: padded,

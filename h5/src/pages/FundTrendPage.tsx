@@ -6,7 +6,9 @@ import EcLine from '@/components/EcLine'
 import FortuneWatermark from '@/components/FortuneWatermark'
 import {
   fetchFundHistory,
+  fetchFundHoldings,
   fetchFundQuote,
+  type FundHoldingRow,
   type FundHistoryPayload,
   type FundHistoryRange,
 } from '@/lib/api'
@@ -35,6 +37,9 @@ function emptyRanges(ageDays: number | null): RangeChip[] {
   }))
 }
 
+/** 停留详情页时重仓行情轮询间隔 */
+const HOLDINGS_POLL_MS = 60 * 1000
+
 export default function FundTrendPage() {
   const [params] = useSearchParams()
   const theme: AppTheme = getStoredTheme()
@@ -52,10 +57,17 @@ export default function FundTrendPage() {
   )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [holdings, setHoldings] = useState<FundHoldingRow[]>([])
+  const [holdingsLoading, setHoldingsLoading] = useState(true)
+  const [holdingsError, setHoldingsError] = useState('')
+  const [totalWeightText, setTotalWeightText] = useState('')
+  const [reportQuarterText, setReportQuarterText] = useState('')
   const byRange = useRef<Record<string, FundHistoryPayload>>({})
   const chartEpoch = useRef(0)
   const rangeRef = useRef(range)
   const ageDaysRef = useRef(ageDays)
+  const holdingsRef = useRef<FundHoldingRow[]>([])
+  const holdingsFetchingRef = useRef(false)
 
   useEffect(() => {
     rangeRef.current = range
@@ -64,6 +76,10 @@ export default function FundTrendPage() {
   useEffect(() => {
     ageDaysRef.current = ageDays
   }, [ageDays])
+
+  useEffect(() => {
+    holdingsRef.current = holdings
+  }, [holdings])
 
   const refreshRanges = (days: number | null = ageDaysRef.current) => {
     setRanges(
@@ -165,6 +181,53 @@ export default function FundTrendPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])
 
+  useEffect(() => {
+    if (!/^\d{6}$/.test(code)) return
+    let cancelled = false
+
+    const loadHoldings = async (silent: boolean) => {
+      if (holdingsFetchingRef.current) return
+      holdingsFetchingRef.current = true
+      if (!silent) {
+        setHoldingsLoading(true)
+        setHoldingsError('')
+      }
+      try {
+        const hold = await fetchFundHoldings(code)
+        if (cancelled) return
+        const list = hold.holdings || []
+        setHoldings(list)
+        setTotalWeightText(hold.totalWeightText || '')
+        setReportQuarterText(hold.reportQuarterText || '')
+        setHoldingsLoading(false)
+        setHoldingsError(list.length ? '' : '暂无重仓数据')
+      } catch (e) {
+        if (cancelled) return
+        if (silent && holdingsRef.current.length) {
+          setHoldingsLoading(false)
+          return
+        }
+        setHoldings([])
+        setTotalWeightText('')
+        setReportQuarterText('')
+        setHoldingsLoading(false)
+        setHoldingsError(e instanceof Error ? e.message : '重仓加载失败')
+      } finally {
+        holdingsFetchingRef.current = false
+      }
+    }
+
+    void loadHoldings(false)
+    const timer = window.setInterval(() => {
+      void loadHoldings(true)
+    }, HOLDINGS_POLL_MS)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [code])
+
   const onRangeTap = async (key: FundHistoryRange) => {
     if (!key || key === range) return
     if (!isFundRangeAvailable(key, ageDays)) return
@@ -249,6 +312,63 @@ export default function FundTrendPage() {
                 />
               </div>
             ) : null}
+
+            <div className="hold-block">
+              <div className="hold-card">
+                <div className="hold-head">
+                  <div className="hold-title-row">
+                    <span className="hold-title">重仓股票</span>
+                    {totalWeightText ? (
+                      <span className="hold-total mono">（占比{totalWeightText}）</span>
+                    ) : null}
+                  </div>
+                  {reportQuarterText ? (
+                    <span className="hold-quarter">{reportQuarterText}</span>
+                  ) : null}
+                </div>
+
+                {holdings.length ? (
+                  <div className="hold-cols">
+                    <span className="hold-col hold-col-name">重仓股票</span>
+                    <span className="hold-col hold-col-chg">涨跌幅</span>
+                    <span className="hold-col hold-col-w">持仓占比</span>
+                    <span className="hold-col hold-col-qw">较上季度变化</span>
+                  </div>
+                ) : null}
+
+                {holdingsLoading ? <div className="section-empty">加载重仓…</div> : null}
+                {!holdingsLoading && holdingsError && !holdings.length ? (
+                  <div className="hold-err">{holdingsError}</div>
+                ) : null}
+
+                {!holdingsLoading && holdings.length ? (
+                  <div className="hold-list">
+                    {holdings.map((item) => (
+                      <div
+                        className={`hold-row ${item.rowTone || ''}`}
+                        key={`${item.rank}-${item.code}`}
+                      >
+                        <div className="hold-cell hold-col-name">
+                          <span className="hold-name">{item.name}</span>
+                          <span className="hold-stock mono">{item.code}</span>
+                        </div>
+                        <span
+                          className={`hold-cell hold-col-chg mono ${item.dayChangeClass || 'flat'}`}
+                        >
+                          {item.dayChangeText || '--'}
+                        </span>
+                        <span className="hold-cell hold-col-w mono">{item.weightText}</span>
+                        <span
+                          className={`hold-cell hold-col-qw mono ${item.weightChangeClass || 'flat'}`}
+                        >
+                          {item.weightChangeText || '--'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
       </div>

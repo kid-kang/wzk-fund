@@ -172,3 +172,164 @@
   margin-right: -8rem;
   padding: 4rem 0 0;
 }
+
+/* —— 重仓股票（对齐小倍） —— */
+.hold-block {
+  margin-top: 24rem;
+  padding: 0 0 40rem;
+}
+
+.hold-card {
+  padding: 22rem 18rem 8rem;
+  border-radius: 24rem;
+  background: var(--panel);
+  border: 1rem solid var(--line);
+  box-shadow: 0 8rem 28rem rgba(20, 28, 40, 0.04);
+}
+
+.theme-dark .hold-card {
+  box-shadow: none;
+}
+
+.hold-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16rem;
+  padding: 0 4rem 16rem;
+}
+
+.hold-title-row {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.hold-title {
+  font-size: 30rem;
+  font-weight: 740;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.hold-total {
+  font-size: 24rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.hold-quarter {
+  flex-shrink: 0;
+  font-size: 22rem;
+  font-weight: 550;
+  color: var(--muted);
+}
+
+.hold-cols {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  padding: 4rem 8rem 12rem;
+  font-size: 20rem;
+  color: var(--muted);
+}
+
+.hold-col {
+  flex-shrink: 0;
+}
+
+.hold-col-name {
+  flex: 1.2;
+  min-width: 0;
+  text-align: left;
+}
+
+.hold-col-chg {
+  width: 112rem;
+  text-align: right;
+}
+
+.hold-col-w {
+  width: 112rem;
+  text-align: right;
+}
+
+.hold-col-qw {
+  width: 140rem;
+  text-align: right;
+}
+
+.hold-err {
+  margin: 8rem 0 16rem;
+  padding: 14rem 8rem;
+  color: var(--muted);
+  font-size: 22rem;
+}
+
+.hold-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8rem;
+  padding-bottom: 8rem;
+}
+
+.hold-row {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  min-height: 88rem;
+  padding: 14rem 8rem;
+  border-radius: 16rem;
+}
+
+.hold-row.row-rise {
+  background: rgba(215, 38, 61, 0.06);
+}
+
+.hold-row.row-fall {
+  background: rgba(11, 107, 79, 0.06);
+}
+
+.theme-dark .hold-row.row-rise {
+  background: rgba(255, 107, 122, 0.1);
+}
+
+.theme-dark .hold-row.row-fall {
+  background: rgba(75, 184, 146, 0.1);
+}
+
+.hold-cell {
+  flex-shrink: 0;
+  font-size: 24rem;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
+
+.hold-cell.hold-col-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+  min-width: 0;
+}
+
+.hold-name {
+  font-size: 26rem;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hold-stock {
+  font-size: 20rem;
+  font-weight: 550;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.hold-col-w {
+  color: var(--ink);
+  font-weight: 700;
+}

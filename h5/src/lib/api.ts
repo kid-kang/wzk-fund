@@ -249,6 +249,34 @@ export async function fetchFundQuote(code: string) {
   return assertOk(data).data
 }
 
+export type FundHoldingRow = {
+  rank: number
+  code: string
+  name: string
+  weightText: string
+  weightChangeText?: string
+  weightChangeClass?: string
+  dayChangeText?: string
+  dayChangeClass?: string
+  rowTone?: string
+}
+
+export type FundHoldingsPayload = {
+  code: string
+  holdings: FundHoldingRow[]
+  totalWeightText?: string
+  reportQuarterText?: string
+}
+
+export async function fetchFundHoldings(code: string) {
+  const {data} = await api.get<{
+    success: boolean
+    message?: string
+    data: FundHoldingsPayload
+  }>(`/funds/${encodeURIComponent(code)}/holdings`)
+  return assertOk(data).data
+}
+
 export async function fetchMarketOverview() {
   const {data} = await api.get<{success: boolean; data: MarketOverview}>('/market/overview')
   return data.data
