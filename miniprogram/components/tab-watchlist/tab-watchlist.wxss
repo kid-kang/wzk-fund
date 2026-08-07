@@ -120,13 +120,6 @@
   width: 120rpx;
 }
 
-.pct-lg {
-  font-size: 28rpx;
-  font-weight: 760;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-}
-
 /* 右下悬浮添加：遮挡基金时半透明，滑到底无遮挡时不透明 */
 .fab-add {
   position: fixed;

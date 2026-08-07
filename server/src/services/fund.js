@@ -1082,12 +1082,22 @@ function resolveSmartSectors(scoreMap, {fundName = '', balanced = false} = {}) {
   return out
 }
 
+/** 小倍关联板块内存缓存，避免行情轮询反复打接口；展示仍以拉取结果为准，不读客户端 localStorage */
+const XIAOBEI_SECTOR_TTL_MS = 3 * 24 * 60 * 60 * 1000
+const xiaobeiSectorCache = new Map()
+
 /**
  * 小倍养基关联板块（无需登录）。
  * POST /yangji-api/api/get-fund-detail-v310 → relatedIndustryV2[].themeName
- * @returns {string[]} 最多 3 个；失败或无数据返回 []
+ * @returns {string[]} 小倍返回的全部可用标签；失败或无数据返回 []
  */
 async function fetchXiaobeiSectors(code) {
+  const padded = String(code || '').padStart(6, '0')
+  const hit = xiaobeiSectorCache.get(padded)
+  if (hit && Date.now() - hit.at < XIAOBEI_SECTOR_TTL_MS) {
+    return hit.tags.slice()
+  }
+
   const data = await xiaobeiApiPost('get-fund-detail-v310', code)
   if (!data) return []
   const rows = Array.isArray(data.relatedIndustryV2)
@@ -1105,9 +1115,9 @@ async function fetchXiaobeiSectors(code) {
     if (tag.length > 16) continue
     seen.add(tag)
     tags.push(tag)
-    if (tags.length >= 3) break
   }
-  return tags
+  xiaobeiSectorCache.set(padded, {at: Date.now(), tags})
+  return tags.slice()
 }
 
 /**
@@ -1607,14 +1617,16 @@ export async function getFundQuote(fund) {
     prevNetValue = netValue
   }
 
-  let sectors = Array.isArray(fund.sectors) ? [...fund.sectors] : []
-  if (sectorsNeedRefresh(sectors, name)) {
-    try {
-      const next = await fetchFundSectorsQueued(code, name)
-      if (next.length) sectors = next
-    } catch {
-      // keep previous
+  // 板块标签每次行情请求实时拉取（小倍优先），不再沿用客户端 localStorage 缓存
+  let sectors = []
+  try {
+    const next = await fetchFundSectorsQueued(code, name)
+    if (next.length) sectors = next
+    else if (Array.isArray(fund.sectors) && fund.sectors.length) {
+      sectors = [...fund.sectors]
     }
+  } catch {
+    sectors = Array.isArray(fund.sectors) ? [...fund.sectors] : []
   }
 
   return {

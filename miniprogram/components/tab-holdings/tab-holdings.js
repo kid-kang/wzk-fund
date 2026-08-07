@@ -5,9 +5,8 @@ const Toast = require('@vant/weapp/toast/toast').default
 
 function mapHoldRow(row) {
   const name = row.name || row.code || ''
-  const confirmPct = row.dayGrowth != null ? row.dayGrowth : row.percent
   const sectors = Array.isArray(row.sectors) ? row.sectors : []
-  const sectorTags = sectors.slice(0, 2)
+  const sectorTags = sectors
   const confirmedUpdated = !!row.confirmedUpdated
   const discloseTimeText = String(row.discloseTimeText || '').trim()
   const showDiscloseTime = !!discloseTimeText
@@ -24,12 +23,10 @@ function mapHoldRow(row) {
     pnlClass: pctClass(row.pnl),
     pctClass: pctClass(row.percent),
     confirmedUpdated,
-    confirmPctText: formatPct(confirmPct),
-    confirmPctClass: pctClass(confirmPct),
     discloseTimeText,
     showDiscloseTime,
     sectorTags,
-    hasTags: confirmedUpdated || showDiscloseTime || sectorTags.length > 0,
+    hasTags: sectorTags.length > 0,
     trend: row.trend || [],
   })
 }

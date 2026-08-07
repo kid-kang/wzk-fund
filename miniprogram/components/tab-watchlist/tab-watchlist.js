@@ -98,9 +98,8 @@ Component({
         if (epoch !== this._loadEpoch) return
         const mapped = (list || []).map((row) => {
           const name = row.name || row.code || ''
-          const confirmPct = row.dayGrowth != null ? row.dayGrowth : row.percent
           const sectors = Array.isArray(row.sectors) ? row.sectors : []
-          const sectorTags = sectors.slice(0, 2)
+          const sectorTags = sectors
           const confirmedUpdated = !!row.confirmedUpdated
           const discloseTimeText = String(row.discloseTimeText || '').trim()
           const showDiscloseTime = !!discloseTimeText
@@ -110,12 +109,10 @@ Component({
             pctText: formatPct(row.percent),
             pctClass: pctClass(row.percent),
             confirmedUpdated,
-            confirmPctText: formatPct(confirmPct),
-            confirmPctClass: pctClass(confirmPct),
             discloseTimeText,
             showDiscloseTime,
             sectorTags,
-            hasTags: confirmedUpdated || showDiscloseTime || sectorTags.length > 0,
+            hasTags: sectorTags.length > 0,
             trend: row.trend || [],
           })
         })

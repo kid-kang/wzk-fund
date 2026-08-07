@@ -128,10 +128,10 @@ export function calcHoldings(
     totalAmount = totalAmount.plus(displayAmount)
     totalPnl = totalPnl.plus(pnl)
 
-    const sectors = raw.sectors?.length
-      ? raw.sectors
-      : q.sectors?.length
-        ? q.sectors
+    const sectors = q.sectors?.length
+      ? q.sectors
+      : raw.sectors?.length
+        ? raw.sectors
         : []
 
     const patch: {
@@ -140,7 +140,7 @@ export function calcHoldings(
     } = {code: raw.code}
     let needPersist = false
 
-    if (!raw.sectors?.length && sectors.length) {
+    if (sectors.length && sectors.join() !== (raw.sectors || []).join()) {
       patch.sectors = sectors
       needPersist = true
     }
@@ -228,12 +228,12 @@ export function mergeWatchlist(
   const persistPatches: Array<{code: string; sectors?: string[]}> = []
   const list = localFunds.map((f) => {
     const q = quoteMap.get(f.code) || ({} as QuoteLike)
-    const sectors = f.sectors?.length
-      ? f.sectors
-      : q.sectors?.length
-        ? q.sectors
+    const sectors = q.sectors?.length
+      ? q.sectors
+      : f.sectors?.length
+        ? f.sectors
         : []
-    if (!f.sectors?.length && sectors.length) {
+    if (sectors.length && sectors.join() !== (f.sectors || []).join()) {
       persistPatches.push({code: f.code, sectors})
     }
     return {

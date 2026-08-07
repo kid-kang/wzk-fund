@@ -37,32 +37,41 @@
                 <view class="dense-row-skin" aria-hidden="true">
                   <text class="card-mark mono">{{item.codeMark}}</text>
                 </view>
+                <view
+                  class="confirm-seal"
+                  wx:if="{{item.confirmedUpdated && !item.showDiscloseTime}}"
+                  catchtap="onOpenQaTips"
+                  data-q="badge-cn"
+                  hover-class="qa-hit-hover"
+                  aria-label="净值已更新，查看说明"
+                >
+                  <view class="confirm-seal-fold" aria-hidden="true"></view>
+                  <view class="confirm-seal-icon">
+                    <van-icon name="certificate" size="10px" color="#F5F8FF" />
+                  </view>
+                </view>
+                <view
+                  class="dense-asof"
+                  wx:if="{{item.showDiscloseTime}}"
+                  catchtap="onOpenQaTips"
+                  data-q="badge-qdii"
+                  hover-class="qa-hit-hover"
+                  aria-label="官方披露日期，查看说明"
+                >
+                  <text>{{item.discloseTimeText}}</text>
+                  <view class="dense-asof-icon">
+                    <van-icon
+                      name="certificate"
+                      size="11px"
+                      color="{{theme === 'dark' ? '#8a93a8' : '#8a93a3'}}"
+                    />
+                  </view>
+                </view>
                 <view class="dense-main">
                   <view class="name-clip">
                     <text class="dense-name">{{item.name}}</text>
                   </view>
                   <view class="tag-row" wx:if="{{item.hasTags}}">
-                    <view
-                      class="confirmed-badge {{item.confirmPctClass}}"
-                      wx:if="{{item.confirmedUpdated && !item.showDiscloseTime}}"
-                      catchtap="onOpenQaTips"
-                      data-q="badge-cn"
-                      hover-class="qa-hit-hover"
-                      aria-label="净值已更新，查看说明"
-                    >
-                      <van-icon name="certificate" size="12px" />
-                      <text class="mono" wx:if="{{item.confirmPctText !== '--'}}">{{item.confirmPctText}}</text>
-                    </view>
-                    <view
-                      class="confirmed-badge is-disclose {{item.confirmPctClass}}"
-                      wx:if="{{item.showDiscloseTime}}"
-                      catchtap="onOpenQaTips"
-                      data-q="badge-qdii"
-                      hover-class="qa-hit-hover"
-                      aria-label="官方披露日期，查看说明"
-                    >
-                      <text class="mono">{{item.discloseTimeText}}</text>
-                    </view>
                     <text
                       class="sector-tag"
                       wx:for="{{item.sectorTags}}"
@@ -91,7 +100,7 @@
 
                 <view class="dense-right">
                   <text
-                    class="mono dense-pct pct-lg {{item.pctClass}}"
+                    class="mono dense-pct {{item.pctClass}}"
                     catchtap="onOpenQaTips"
                     data-q="a-share"
                     hover-class="qa-hit-hover"

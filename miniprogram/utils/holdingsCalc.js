@@ -20,9 +20,9 @@ function cleanSectors(list) {
 }
 
 function pickSectors(local, remote) {
-  const fromLocal = cleanSectors(local)
-  if (fromLocal.length) return fromLocal
-  return cleanSectors(remote)
+  const fromRemote = cleanSectors(remote)
+  if (fromRemote.length) return fromRemote
+  return cleanSectors(local)
 }
 
 function latestEstimateNav(quote) {

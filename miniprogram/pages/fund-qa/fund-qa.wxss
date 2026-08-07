@@ -304,7 +304,7 @@
   color: var(--muted);
 }
 
-/* demo badge：复用全局 .confirmed-badge，与持仓一致 */
+/* demo：与持仓卡片同款验章 / 净值日 */
 .qa-demo-row {
   display: flex;
   align-items: center;
@@ -316,6 +316,55 @@
 .qa-demo-note {
   font-size: 22rpx;
   color: var(--muted);
+}
+
+.qa-seal-stage {
+  position: relative;
+  width: 132rpx;
+  height: 88rpx;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1rpx solid rgba(120, 140, 180, 0.22);
+  background:
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(236, 241, 250, 0.62) 48%,
+      rgba(245, 248, 255, 0.72) 100%
+    );
+}
+
+.theme-dark .qa-seal-stage {
+  border-color: rgba(154, 168, 196, 0.22);
+  background: linear-gradient(
+    118deg,
+    rgba(32, 40, 56, 0.92) 0%,
+    rgba(24, 30, 44, 0.88) 52%,
+    rgba(28, 36, 52, 0.9) 100%
+  );
+}
+
+.qa-asof-stage {
+  position: relative;
+  width: 168rpx;
+  height: 96rpx;
+  border-radius: var(--radius);
+  border: 1rpx solid rgba(120, 140, 180, 0.22);
+  background: rgba(16, 20, 28, 0.03);
+}
+
+.qa-asof-stage .dense-pct {
+  position: absolute;
+  right: 14rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.theme-dark .qa-asof-stage {
+  border-color: rgba(154, 168, 196, 0.22);
+  background: rgba(238, 242, 255, 0.04);
 }
 
 /* callout */

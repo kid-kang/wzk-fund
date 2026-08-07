@@ -45,17 +45,21 @@
               <view class="qa-ico is-ok" aria-hidden="true"><text class="qa-ico-glyph">确</text></view>
               <view class="qa-bullet-text">
                 <text class="qa-b-title">官方确认净值</text>
-                <text class="qa-b-desc">收盘后管理人公布净值与日涨跌幅，才是「确认」口径。持仓上用下方已确认图标标出，没有「更新」二字。</text>
+                <text class="qa-b-desc">收盘后管理人公布净值与日涨跌幅，才是「确认」口径。持仓卡片右上角用斜角验章标出，仅图标、无「更新」二字。</text>
               </view>
             </view>
           </view>
 
           <view class="qa-demo-row">
-            <view class="confirmed-badge rise" aria-label="净值已更新示意">
-              <van-icon name="certificate" size="12px" />
-              <text class="mono">+1.23%</text>
+            <view class="qa-seal-stage" aria-label="净值已更新示意">
+              <view class="confirm-seal">
+                <view class="confirm-seal-fold" aria-hidden="true"></view>
+                <view class="confirm-seal-icon">
+                  <van-icon name="certificate" size="10px" color="#F5F8FF" />
+                </view>
+              </view>
             </view>
-            <text class="qa-demo-note">确认态示意：已确认图标 + 官方日涨跌幅</text>
+            <text class="qa-demo-note">确认态示意：卡片右上角蓝靛斜角验章（仅图标）</text>
           </view>
 
           <text class="qa-caption">典型时间线（交易日）</text>
@@ -65,7 +69,7 @@
               <view class="qa-tl-card">
                 <text class="qa-tl-time mono">09:30–15:00</text>
                 <text class="qa-tl-title">盘中看估值</text>
-                <text class="qa-tl-desc">右侧涨跌多为估算；当日收益也会跟着估。此时一般没有已确认图标。</text>
+                <text class="qa-tl-desc">右侧涨跌多为估算；当日收益也会跟着估。此时一般没有右上角验章。</text>
               </view>
             </view>
             <view class="qa-tl-item">
@@ -73,14 +77,14 @@
               <view class="qa-tl-card">
                 <text class="qa-tl-time mono">当晚起</text>
                 <text class="qa-tl-title">净值陆续披露</text>
-                <text class="qa-tl-desc">出现官方日涨跌后，切换为确认口径，并出现已确认图标。</text>
+                <text class="qa-tl-desc">出现官方日涨跌后，切换为确认口径，卡片右上角出现斜角验章。</text>
               </view>
             </view>
             <view class="qa-tl-item">
               <view class="qa-tl-dot is-mute"></view>
               <view class="qa-tl-card">
                 <text class="qa-tl-time mono">次日 09:15 前</text>
-                <text class="qa-tl-title">已确认图标仍保留</text>
+                <text class="qa-tl-title">验章仍保留</text>
                 <text class="qa-tl-desc">确认会话保留到下一交易日开盘前，方便对照昨夜净值。</text>
               </view>
             </view>
@@ -94,23 +98,23 @@
           <view class="qa-q-mark" aria-hidden="true">
             <van-icon name="certificate" size="18px" color="{{theme === 'dark' ? '#9aa8ff' : '#4f5dff'}}" />
           </view>
-          <text class="qa-q-text">持仓上的已确认图标是什么意思？</text>
+          <text class="qa-q-text">卡片右上角的斜角验章是什么意思？</text>
           <text class="qa-chevron mono">{{openId === 'badge-cn' ? '−' : '+'}}</text>
         </view>
         <view class="qa-a" wx:if="{{openId === 'badge-cn'}}">
           <view class="qa-demo-row">
-            <view class="confirmed-badge rise">
-              <van-icon name="certificate" size="12px" />
-              <text class="mono">+0.86%</text>
+            <view class="qa-seal-stage">
+              <view class="confirm-seal">
+                <view class="confirm-seal-fold" aria-hidden="true"></view>
+                <view class="confirm-seal-icon">
+                  <van-icon name="certificate" size="10px" color="#F5F8FF" />
+                </view>
+              </view>
             </view>
-            <view class="confirmed-badge fall">
-              <van-icon name="certificate" size="12px" />
-              <text class="mono">-0.42%</text>
-            </view>
-            <text class="qa-demo-note">与持仓页同款：仅图标（+ 涨跌），无「更新」文字</text>
+            <text class="qa-demo-note">与持仓 / 自选同款：右上角蓝靛斜角验章，仅图标</text>
           </view>
-          <text class="qa-p">这主要出现在<text class="qa-em">境内基金</text>列表：用图标表明当前展示的是最新<text class="qa-em">官方确认净值涨跌</text>，且仍在确认窗口内（净值日 → 下一交易日 09:15 前）。</text>
-          <text class="qa-p">图标颜色跟涨跌一致（红涨绿跌）；旁侧数字是官方日涨跌幅。窗口结束后图标消失；盘中有估值时会优先切回估值口径。</text>
+          <text class="qa-p">这主要出现在<text class="qa-em">境内基金</text>列表：用右上角验章表明当前展示的是最新<text class="qa-em">官方确认净值涨跌</text>，且仍在确认窗口内（净值日 → 下一交易日 09:15 前）。</text>
+          <text class="qa-p">验章取收益条同系蓝靛色，不随涨跌变红绿——它只表示「已结算确认」。官方日涨跌幅看卡片右侧数字。窗口结束后验章消失；盘中有估值时会优先切回估值口径。</text>
         </view>
       </view>
 
@@ -256,17 +260,17 @@
           <view class="qa-chips">
             <view class="qa-chip">
               <text class="qa-chip-name">基金 A</text>
-              <text class="qa-chip-date mono">07-31</text>
+              <text class="qa-chip-date">7月31日</text>
               <text class="qa-chip-sub">较新 · 周三那一跳</text>
             </view>
             <view class="qa-chip">
               <text class="qa-chip-name">基金 B</text>
-              <text class="qa-chip-date mono">07-30</text>
+              <text class="qa-chip-date">7月30日</text>
               <text class="qa-chip-sub">仍停在周二</text>
             </view>
             <view class="qa-chip">
               <text class="qa-chip-name">基金 C</text>
-              <text class="qa-chip-date mono">07-29</text>
+              <text class="qa-chip-date">7月29日</text>
               <text class="qa-chip-sub">更慢 / 假期</text>
             </view>
           </view>
@@ -321,18 +325,28 @@
           <view class="qa-q-mark" aria-hidden="true">
             <van-icon name="calendar-o" size="18px" color="{{theme === 'dark' ? '#9aa8ff' : '#4f5dff'}}" />
           </view>
-          <text class="qa-q-text">QDII 上的「07-30」代表什么？</text>
+          <text class="qa-q-text">QDII 上的「7月30日」代表什么？</text>
           <text class="qa-chevron mono">{{openId === 'badge-qdii' ? '−' : '+'}}</text>
         </view>
         <view class="qa-a" wx:if="{{openId === 'badge-qdii'}}">
           <view class="qa-demo-row">
-            <view class="confirmed-badge is-disclose rise">
-              <text class="mono">07-30</text>
+            <view class="qa-asof-stage">
+              <view class="dense-asof">
+                <text>7月30日</text>
+                <view class="dense-asof-icon">
+                  <van-icon
+                    name="certificate"
+                    size="11px"
+                    color="{{theme === 'dark' ? '#8a93a8' : '#8a93a3'}}"
+                  />
+                </view>
+              </view>
+              <text class="mono dense-pct rise">+0.86%</text>
             </view>
-            <text class="qa-demo-note">与持仓页同款：只显示净值日，不用已确认图标</text>
+            <text class="qa-demo-note">与持仓 / 自选同款：日期贴右上角，不占涨跌纵向空间</text>
           </view>
-          <text class="qa-p">「QDII · 海外」不用境内那枚已确认图标，而是直接标<text class="qa-em">最新官方净值对应的净值日</text>（如 07-30），与右侧官方涨跌同一口径——不是「今天几点刷新」的时钟。</text>
-          <text class="qa-p">收益数字对应的是这一天相对上一净值日的变动；多只基金日期不同时，各自看各自的日期标签即可。</text>
+          <text class="qa-p">「QDII · 海外」不用境内那枚斜角验章，而是在卡片右上角标出<text class="qa-em">最新官方净值对应的净值日</text>（如 7月30日）——不是「今天几点刷新」的时钟。</text>
+          <text class="qa-p">日期为中性灰色、脱离文档流，涨跌数字仍在卡片右侧居中。收益对应这一天相对上一净值日的变动；多只基金日期不同时，各自看各自的日期即可。</text>
         </view>
       </view>
 

@@ -56,7 +56,10 @@ function isDelayedNavFund(quote = {}) {
 function formatOfficialDiscloseTime(netValueDate, _time, now = new Date()) {
   const navDay = normalizeNetValueDate(netValueDate, now)
   if (!navDay) return ''
-  return `${navDay.slice(5, 7)}-${navDay.slice(8, 10)}`
+  const month = Number(navDay.slice(5, 7))
+  const day = Number(navDay.slice(8, 10))
+  if (!month || !day) return ''
+  return `${month}月${day}日`
 }
 
 /**

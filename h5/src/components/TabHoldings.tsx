@@ -86,7 +86,7 @@ function mapHoldRow(row: FundQuoteRow, weight?: number): HoldRow {
   const name = row.name || row.code || ''
   const confirmPct = row.dayGrowth != null ? row.dayGrowth : row.percent
   const sectors = Array.isArray(row.sectors) ? row.sectors : []
-  const sectorTags = sectors.slice(0, 2)
+  const sectorTags = sectors
   const confirmedUpdated = !!row.confirmedUpdated
   const discloseTimeText = String(row.discloseTimeText || '').trim()
   const showDiscloseTime = !!discloseTimeText

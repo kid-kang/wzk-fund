@@ -54,9 +54,9 @@ function cleanSectors(list: string[] | undefined | null): string[] {
 }
 
 function pickSectors(local: string[] | undefined, remote: string[] | undefined): string[] {
-  const fromLocal = cleanSectors(local)
-  if (fromLocal.length) return fromLocal
-  return cleanSectors(remote)
+  const fromRemote = cleanSectors(remote)
+  if (fromRemote.length) return fromRemote
+  return cleanSectors(local)
 }
 
 /** 从估值分时末点取净值（比涨幅更精确） */

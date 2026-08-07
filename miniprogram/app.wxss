@@ -508,40 +508,50 @@ button {
   z-index: 3;
 }
 
-.confirmed-badge {
-  display: inline-flex;
-  flex-shrink: 0;
+/*
+ * 已确认：行情笺右上角斜角验章（仅图标）
+ * 色相对齐 section-pnl-bar::before 的蓝靛渐变中段
+ */
+.confirm-seal {
+  --seal-ink: rgba(22, 119, 255, 0.42);
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 52rpx;
+  height: 52rpx;
+  z-index: 4;
+  border-radius: 0 var(--radius) 0 0;
+  overflow: hidden;
+}
+
+.confirm-seal-fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 52rpx 52rpx 0;
+  border-color: transparent var(--seal-ink) transparent transparent;
+}
+
+/* 直角三角心：距顶/右各约 1/3 边长 */
+.confirm-seal-icon {
+  position: absolute;
+  left: 66.67%;
+  top: 33.33%;
+  z-index: 1;
+  width: 22rpx;
+  height: 22rpx;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4rpx;
-  box-sizing: border-box;
-  min-height: 32rpx;
-  padding: 2rpx 8rpx;
-  border-radius: 8rpx;
-  font-size: 18rpx;
-  font-weight: 650;
-  line-height: 1.2;
-  white-space: nowrap;
-  border: 1rpx solid var(--line);
-  background: rgba(16, 20, 28, 0.04);
-  color: var(--muted);
+  transform: translate(-50%, -50%) rotate(12deg);
+  transform-origin: center center;
 }
 
-.confirmed-badge.rise {
-  border-color: rgba(215, 38, 61, 0.3);
-  background: rgba(215, 38, 61, 0.08);
-  color: var(--rise);
-}
-
-.confirmed-badge.fall {
-  border-color: rgba(11, 107, 79, 0.3);
-  background: rgba(11, 107, 79, 0.08);
-  color: var(--fall);
-}
-
-/* QDII：官方披露日期，无 icon；尺寸与更新标签一致 */
-.confirmed-badge.is-disclose {
-  gap: 0;
+.theme-dark .confirm-seal {
+  --seal-ink: rgba(123, 136, 255, 0.5);
 }
 
 .sector-tag {
@@ -556,13 +566,39 @@ button {
   overflow: visible;
 }
 
-.theme-dark .confirmed-badge {
-  background: rgba(238, 242, 255, 0.06);
-}
-
 .theme-dark .sector-tag {
   background: rgba(238, 242, 255, 0.06);
 }
+
+/* QDII 净值日：贴卡片右上角，脱离文档流，不占涨跌纵向空间 */
+.dense-asof {
+  position: absolute;
+  top: 8rpx;
+  right: 12rpx;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
+  font-size: 18rpx;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #8a93a3;
+  pointer-events: auto;
+}
+
+.dense-asof-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.theme-dark .dense-asof {
+  color: #8a93a8;
+}
+
 
 .spark {
   flex: 1 1 auto;
