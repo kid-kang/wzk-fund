@@ -1,6 +1,7 @@
 const api = require('../../utils/api')
 const {formatAmount, formatMoney, formatPct, pctClass} = require('../../utils/format')
 const {navigateTo} = require('../../utils/theme')
+const {toSparkSeries, reuseUnchangedSpark} = require('../../utils/spark')
 const Toast = require('@vant/weapp/toast/toast').default
 
 function mapHoldRow(row) {
@@ -10,7 +11,8 @@ function mapHoldRow(row) {
   const confirmedUpdated = !!row.confirmedUpdated
   const discloseTimeText = String(row.discloseTimeText || '').trim()
   const showDiscloseTime = !!discloseTimeText
-  return Object.assign({}, row, {
+  const sparkSeries = toSparkSeries(row.trend || [], 'growth')
+  const mapped = Object.assign({}, row, {
     name,
     codeMark: String(row.code || '').slice(-6) || '······',
     amountText: formatAmount(row.amount),
@@ -27,8 +29,11 @@ function mapHoldRow(row) {
     showDiscloseTime,
     sectorTags,
     hasTags: sectorTags.length > 0,
-    trend: row.trend || [],
+    spark: sparkSeries.spark,
+    sparkKey: sparkSeries.sparkKey,
   })
+  delete mapped.trend
+  return mapped
 }
 
 function pctOfTotal(part, total) {
@@ -226,8 +231,14 @@ Component({
           realtimeRaw.length > 0 || delayedRaw.length > 0 || goldInPortfolio > 0
 
         patch.hasPortfolio = hasPortfolio
-        patch.realtimeList = withPortfolioWeight(realtimeRaw, grandTotal)
-        patch.delayedList = withPortfolioWeight(delayedRaw, grandTotal)
+        patch.realtimeList = reuseUnchangedSpark(
+          this.data.realtimeList,
+          withPortfolioWeight(realtimeRaw, grandTotal),
+        )
+        patch.delayedList = reuseUnchangedSpark(
+          this.data.delayedList,
+          withPortfolioWeight(delayedRaw, grandTotal),
+        )
 
         patch.domesticAmountText = formatAmount(domesticAmount)
         patch.foreignAmountText = formatAmount(foreignAmount)

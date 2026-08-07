@@ -2,7 +2,16 @@ const api = require('../../utils/api')
 const {formatPct, pctClass} = require('../../utils/format')
 const {groupWatchlistByCategory} = require('../../utils/fundCategory')
 const {navigateTo} = require('../../utils/theme')
+const {toSparkSeries, reuseUnchangedSpark} = require('../../utils/spark')
 const Toast = require('@vant/weapp/toast/toast').default
+
+function flattenGroupRows(groups) {
+  const rows = []
+  ;(groups || []).forEach((g) => {
+    ;(g.list || []).forEach((row) => rows.push(row))
+  })
+  return rows
+}
 
 Component({
   options: {
@@ -103,7 +112,8 @@ Component({
           const confirmedUpdated = !!row.confirmedUpdated
           const discloseTimeText = String(row.discloseTimeText || '').trim()
           const showDiscloseTime = !!discloseTimeText
-          return Object.assign({}, row, {
+          const sparkSeries = toSparkSeries(row.trend || [], 'growth')
+          const mappedRow = Object.assign({}, row, {
             name,
             codeMark: String(row.code || '').slice(-6) || '······',
             pctText: formatPct(row.percent),
@@ -113,10 +123,14 @@ Component({
             showDiscloseTime,
             sectorTags,
             hasTags: sectorTags.length > 0,
-            trend: row.trend || [],
+            spark: sparkSeries.spark,
+            sparkKey: sparkSeries.sparkKey,
           })
+          delete mappedRow.trend
+          return mappedRow
         })
-        const groups = groupWatchlistByCategory(mapped)
+        const reused = reuseUnchangedSpark(flattenGroupRows(this.data.groups), mapped)
+        const groups = groupWatchlistByCategory(reused)
         if (epoch !== this._loadEpoch) return
         this.emitCount(mapped.length)
         this.setData({

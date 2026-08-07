@@ -119,11 +119,9 @@
                   data-name="{{item.name}}"
                   catchtap="onOpenTrend"
                 >
-                  <ec-line
-                    wx:if="{{item.trend.length}}"
-                    points="{{item.trend}}"
-                    valueKey="growth"
-                    mode="spark"
+                  <spark-line
+                    wx:if="{{item.spark.length}}"
+                    values="{{item.spark}}"
                     theme="{{theme}}"
                     height="{{56}}"
                     toneDelta="{{item.percent}}"
@@ -310,11 +308,9 @@
                   data-name="{{item.name}}"
                   catchtap="onOpenTrend"
                 >
-                  <ec-line
-                    wx:if="{{item.trend.length}}"
-                    points="{{item.trend}}"
-                    valueKey="growth"
-                    mode="spark"
+                  <spark-line
+                    wx:if="{{item.spark.length}}"
+                    values="{{item.spark}}"
                     theme="{{theme}}"
                     height="{{56}}"
                     toneDelta="{{item.percent}}"

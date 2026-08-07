@@ -1,0 +1,6 @@
+<canvas
+  type="2d"
+  id="spark"
+  class="spark-canvas"
+  style="height: {{height}}px;"
+></canvas>
