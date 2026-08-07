@@ -13,7 +13,7 @@ import {
   isConfirmedSessionActive,
   isDelayedNavFund,
 } from './services/fund.js'
-import {getIndices, getIndexHistory, getMarketOverview} from './services/market.js'
+import {getIndices, getIndexHistory, getMarketBoards, getMarketOverview} from './services/market.js'
 import {getGoldRealtime, getGoldHistory} from './services/gold.js'
 import {getGoldAlertStatus} from './services/goldAlert.js'
 
@@ -249,6 +249,19 @@ router.get('/funds/:code/stage-stats', async (ctx) => {
 router.get('/market/overview', async (ctx) => {
   try {
     const data = await getMarketOverview()
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+/** 板块榜：?tab=gainers|hot|losers&size=（可选，默认全量），优先小倍 */
+router.get('/market/boards', async (ctx) => {
+  try {
+    const tab = String(ctx.query.tab || 'gainers')
+    const size = ctx.query.size != null && ctx.query.size !== '' ? Number(ctx.query.size) : 0
+    const data = await getMarketBoards({tab, size})
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 500

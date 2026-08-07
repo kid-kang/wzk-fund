@@ -85,12 +85,17 @@ export type SectorItem = {
   code: string
   name: string
   percent: number | null
+  heat?: number | null
 }
 
 export type MarketOverview = {
   upDown: {up: number; down: number; flat: number; time: string | null}
-  topGainers: SectorItem[]
-  topLosers: SectorItem[]
+  /** 热搜榜全量 */
+  hotSearch?: SectorItem[]
+  /** 涨幅榜全量 */
+  boardGainers?: SectorItem[]
+  boardUpdateTime?: string | null
+  boardSource?: 'xiaobei' | 'eastmoney' | string
 }
 
 export type GoldPayload = {

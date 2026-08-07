@@ -25,85 +25,234 @@
   font-size: 22rpx;
 }
 
-.index-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10rpx;
-  margin-top: 12rpx;
+.market-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
 }
 
-.index-card {
-  padding: 16rpx 18rpx;
-  min-height: 108rpx;
+/* —— 涨跌温度条 —— */
+.pulse {
+  padding: 16rpx 18rpx 14rpx;
 }
 
-.index-name {
-  display: block;
-  font-size: 22rpx;
-  color: var(--muted);
-  margin-bottom: 8rpx;
-}
-
-.index-pct {
-  font-size: 34rpx;
-  font-weight: 760;
-  letter-spacing: -0.02em;
-}
-
-.board {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10rpx;
-}
-
-.board-col {
-  padding: 12rpx 14rpx 8rpx;
-}
-
-.col-h {
+.pulse-meta {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8rpx;
-  margin-bottom: 4rpx;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.pulse-side {
+  display: flex;
+  align-items: baseline;
+  gap: 14rpx;
   min-width: 0;
 }
 
-.col-title {
-  font-size: 28rpx;
-  font-weight: 740;
-  flex-shrink: 0;
+.pulse-side-r {
+  justify-content: flex-end;
 }
 
-.col-stat {
-  font-size: 28rpx;
-  font-weight: 740;
-  letter-spacing: -0.02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.s-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8rpx;
-  padding: 10rpx 0;
-  border-top: 1rpx solid var(--line);
+.pulse-k {
   font-size: 22rpx;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
-.s-name {
-  flex: 1;
+.pulse-n {
+  font-size: 32rpx;
+  font-weight: 780;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.pulse-p {
+  font-size: 32rpx;
+  font-weight: 780;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.pulse-track {
+  position: relative;
+  height: 10rpx;
+  border-radius: 999rpx;
+  overflow: hidden;
+  background: rgba(11, 107, 79, 0.22);
+}
+
+.theme-dark .pulse-track {
+  background: rgba(75, 184, 146, 0.28);
+}
+
+.pulse-fill {
+  height: 100%;
+  border-radius: 999rpx 0 0 999rpx;
+  background: var(--rise);
+  min-width: 0;
+  transition: width 0.45s ease-out;
+}
+
+/* —— 指数报价板 —— */
+.index-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  padding: 6rpx 4rpx;
+  overflow: hidden;
+}
+
+.index-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  min-width: 0;
+  padding: 14rpx 6rpx;
+  border-right: 1rpx solid var(--line);
+  border-bottom: 1rpx solid var(--line);
+}
+
+.index-cell:nth-child(5n) {
+  border-right: none;
+}
+
+.index-cell:nth-child(n + 6) {
+  border-bottom: none;
+}
+
+.index-name {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 18rpx;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  line-height: 1.1;
 }
 
-.s-row .mono {
-  font-size: 26rpx;
-  font-weight: 700;
+.index-pct {
+  font-size: 24rpx;
+  font-weight: 760;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+/* —— 板块榜 —— */
+.board-rank {
+  padding: 4rpx 4rpx 8rpx;
+  overflow: hidden;
+}
+
+.rank-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  padding: 14rpx 16rpx 10rpx;
+}
+
+.rank-title {
+  font-size: 28rpx;
+  font-weight: 780;
   letter-spacing: -0.02em;
+  color: var(--text, var(--ink));
+}
+
+.rank-tabs {
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
+  padding: 3rpx;
+  border-radius: 12rpx;
+  background: rgba(120, 130, 150, 0.12);
+}
+
+.rank-tab {
+  min-width: 88rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 10rpx;
+  font-size: 22rpx;
+  font-weight: 650;
+  color: var(--muted);
+  text-align: center;
+}
+
+.rank-tab.is-on {
+  background: var(--panel, #fff);
+  color: var(--text, var(--ink));
+  box-shadow: 0 1rpx 4rpx rgba(20, 30, 50, 0.08);
+}
+
+.rank-list {
+  padding: 0 8rpx 4rpx;
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 16rpx 12rpx;
+  border-radius: 14rpx;
+}
+
+.rank-row:nth-child(odd) {
+  background: rgba(120, 130, 150, 0.05);
+}
+
+.rank-no {
+  width: 40rpx;
+  flex-shrink: 0;
+  font-size: 22rpx;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.rank-no.is-gold {
+  color: #c9a227;
+  opacity: 1;
+  font-weight: 780;
+}
+
+.rank-no.is-silver {
+  color: #8e99a8;
+  opacity: 1;
+  font-weight: 780;
+}
+
+.rank-no.is-bronze {
+  color: #b87333;
+  opacity: 1;
+  font-weight: 780;
+}
+
+.rank-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 28rpx;
+  font-weight: 480;
+  color: var(--text, var(--ink));
+}
+
+.rank-pct {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  font-weight: 740;
+  letter-spacing: -0.03em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-fill {
+    transition: none;
+  }
 }

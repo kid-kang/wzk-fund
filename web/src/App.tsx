@@ -18,7 +18,7 @@ import {applyTheme, getStoredTheme, type AppTheme} from '@/lib/theme'
 import {Button} from '@/components/ui/button'
 import {HoldingsModule} from '@/components/HoldingsModule'
 import {WatchlistModule} from '@/components/WatchlistModule'
-import {IndicesModule, MarketModule} from '@/components/MarketModules'
+import {BreadthModule, IndicesModule, MarketModule} from '@/components/MarketModules'
 import {ConfigDialog} from '@/components/ConfigDialog'
 import './index.css'
 
@@ -169,6 +169,7 @@ export default function App() {
           onChanged={() => load(true)}
         />
 
+        <BreadthModule data={market} loading={loading} />
         <IndicesModule list={indices} loading={loading} />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">

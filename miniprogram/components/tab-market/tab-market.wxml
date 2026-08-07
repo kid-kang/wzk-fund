@@ -19,40 +19,63 @@
         min-height="{{contentMinHeight}}"
       />
 
-      <view class="board" wx:if="{{market}}">
-        <view class="glass board-col">
-          <view class="col-h rise">
-            <text class="col-title">涨幅</text>
-            <text class="mono col-stat">{{market.upDown.up}} {{market.upDown.upPctText}}</text>
+      <view class="market-stack" wx:if="{{market || indices.length}}">
+        <!-- 涨跌温度：独立一行，在指数之上 -->
+        <view class="glass pulse" wx:if="{{market}}">
+          <view class="pulse-meta">
+            <view class="pulse-side">
+              <text class="pulse-k rise">涨</text>
+              <text class="mono pulse-p rise">{{market.upDown.upPctText}}</text>
+            </view>
+            <view class="pulse-side pulse-side-r">
+              <text class="mono pulse-p fall">{{market.upDown.downPctText}}</text>
+              <text class="pulse-k fall">跌</text>
+            </view>
           </view>
-          <view class="s-row" wx:for="{{market.topGainers}}" wx:key="code">
-            <text class="s-name">{{item.name}}</text>
-            <text class="mono rise">{{item.pctText}}</text>
-          </view>
-        </view>
-        <view class="glass board-col">
-          <view class="col-h fall">
-            <text class="col-title">跌幅</text>
-            <text class="mono col-stat">{{market.upDown.down}} {{market.upDown.downPctText}}</text>
-          </view>
-          <view class="s-row" wx:for="{{market.topLosers}}" wx:key="code">
-            <text class="s-name">{{item.name}}</text>
-            <text class="mono fall">{{item.pctText}}</text>
+          <view class="pulse-track">
+            <view class="pulse-fill" style="width: {{market.upDown.upBarPct}}%;"></view>
           </view>
         </view>
-      </view>
 
-      <view class="index-grid">
-        <view
-          class="glass index-card"
-          wx:for="{{indices}}"
-          wx:key="code"
-          data-code="{{item.code}}"
-          data-name="{{item.name}}"
-          bindtap="onOpenIndex"
-        >
-          <text class="index-name">{{item.name}}</text>
-          <text class="mono index-pct {{item.pctClass}}">{{item.pctText}}</text>
+        <!-- 指数报价板 -->
+        <view class="glass index-board" wx:if="{{indices.length}}">
+          <view
+            class="index-cell"
+            wx:for="{{indices}}"
+            wx:key="code"
+            data-code="{{item.code}}"
+            data-name="{{item.name}}"
+            bindtap="onOpenIndex"
+          >
+            <text class="index-name">{{item.shortName}}</text>
+            <text class="mono index-pct {{item.pctClass}}">{{item.pctText}}</text>
+          </view>
+        </view>
+
+        <!-- 板块榜 -->
+        <view class="glass board-rank" wx:if="{{market}}">
+          <view class="rank-head">
+            <text class="rank-title">今日板块榜</text>
+            <view class="rank-tabs">
+              <view
+                class="rank-tab {{boardTab === 'hot' ? 'is-on' : ''}}"
+                data-tab="hot"
+                bindtap="onBoardTab"
+              >热搜</view>
+              <view
+                class="rank-tab {{boardTab === 'gainers' ? 'is-on' : ''}}"
+                data-tab="gainers"
+                bindtap="onBoardTab"
+              >涨幅</view>
+            </view>
+          </view>
+          <view class="rank-list">
+            <view class="rank-row" wx:for="{{boardList}}" wx:key="code">
+              <text class="rank-no {{item.topClass}}">{{item.rankText}}</text>
+              <text class="rank-name">{{item.name}}</text>
+              <text class="mono rank-pct {{item.pctClass}}">{{item.pctText}}</text>
+            </view>
+          </view>
         </view>
       </view>
     </view>

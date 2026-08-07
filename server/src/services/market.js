@@ -1,7 +1,9 @@
 import axios from 'axios'
+import https from 'https'
 
 const ua =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+const agent = new https.Agent({rejectUnauthorized: false})
 
 const INDEX_LIST = [
   {secid: '1.000001', code: '000001', name: '上证指数', tx: 'sh000001'},
@@ -160,13 +162,135 @@ export async function getUpDownStats() {
   }
 }
 
+/** 小倍板块榜缓存，避免行情轮询打爆 */
+const XIAOBEI_BOARD_TTL_MS = 60 * 1000
+let xiaobeiBoardCache = null
+
+function round2(n) {
+  return Math.round(Number(n) * 100) / 100
+}
+
+function mapXiaobeiBoardItem(row = {}) {
+  const name = String(row.themeName || '').trim()
+  const change = Number(row.change)
+  const heat = Number(row.searchNum)
+  if (!name || !Number.isFinite(change)) return null
+  return {
+    code: String(row.sectorCode || row.mappingCode || name),
+    name,
+    // 小倍 change 为小数（0.0676 → 6.76）
+    percent: round2(change * 100),
+    heat: Number.isFinite(heat) ? heat : null,
+  }
+}
+
+/**
+ * 小倍板块榜（热搜 + 涨幅同源）。
+ * POST /yangji-api/api/get-hot-industry-ranking
+ */
+export async function fetchXiaobeiIndustryBoards() {
+  const hit = xiaobeiBoardCache
+  if (hit && Date.now() - hit.at < XIAOBEI_BOARD_TTL_MS) return hit.data
+
+  try {
+    const res = await axios.post(
+      'https://api.xiaobeiyangji.com/yangji-api/api/get-hot-industry-ranking',
+      {version: '3.8.7.0', clientType: 'APP'},
+      {
+        httpsAgent: agent,
+        timeout: 12000,
+        headers: {
+          'User-Agent': ua,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        validateStatus: () => true,
+      },
+    )
+    if (res.status !== 200 || res.data?.code !== 200) return null
+    const rawList = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
+    const list = rawList.map(mapXiaobeiBoardItem).filter(Boolean)
+    if (!list.length) return null
+    const data = {
+      list,
+      updateTime: res.data?.data?.updateTime || null,
+    }
+    xiaobeiBoardCache = {at: Date.now(), data}
+    return data
+  } catch {
+    return null
+  }
+}
+
+function sliceBoards(list, sort, size = 0) {
+  const sorted = [...list].sort((a, b) => {
+    if (sort === 'hot') return (b.heat || 0) - (a.heat || 0)
+    if (sort === 'asc') return a.percent - b.percent
+    return b.percent - a.percent
+  })
+  // size<=0：返回排序后的全部
+  const sliced = size > 0 ? sorted.slice(0, size) : sorted
+  return sliced.map(({code, name, percent, heat}) => ({
+    code,
+    name,
+    percent,
+    heat: heat ?? null,
+  }))
+}
+
+/**
+ * 板块榜：tab=gainers|hot|losers，优先小倍，失败回退东财概念榜。
+ */
+export async function getMarketBoards({tab = 'gainers', size = 0} = {}) {
+  const key = String(tab || 'gainers').toLowerCase()
+  const rawSize = Number(size)
+  // size<=0 或不传：全量；否则截断（上限 200）
+  const n = Number.isFinite(rawSize) && rawSize > 0 ? Math.min(rawSize, 200) : 0
+  const xiaobei = await fetchXiaobeiIndustryBoards()
+  if (xiaobei?.list?.length) {
+    const sort = key === 'hot' ? 'hot' : key === 'losers' ? 'asc' : 'desc'
+    return {
+      tab: key === 'hot' ? 'hot' : key === 'losers' ? 'losers' : 'gainers',
+      source: 'xiaobei',
+      updateTime: xiaobei.updateTime,
+      items: sliceBoards(xiaobei.list, sort, n),
+    }
+  }
+  const sort = key === 'losers' ? 'asc' : 'desc'
+  const items = await getSectorBoards({sort, size: n > 0 ? n : 120})
+  return {
+    tab: key === 'hot' ? 'hot' : key === 'losers' ? 'losers' : 'gainers',
+    source: 'eastmoney',
+    updateTime: null,
+    items: items.map((i) => ({...i, heat: null})),
+  }
+}
+
 export async function getMarketOverview() {
-  const [upDown, topGainers, topLosers] = await Promise.all([
+  const [upDown, xiaobei] = await Promise.all([
     getUpDownStats(),
-    getSectorBoards({sort: 'desc', size: 10}),
-    getSectorBoards({sort: 'asc', size: 10}),
+    fetchXiaobeiIndustryBoards(),
   ])
-  return {upDown, topGainers, topLosers}
+
+  if (xiaobei?.list?.length) {
+    return {
+      upDown,
+      // Tab 列表：接口全量，前端自行滚动
+      hotSearch: sliceBoards(xiaobei.list, 'hot', 0),
+      boardGainers: sliceBoards(xiaobei.list, 'desc', 0),
+      boardUpdateTime: xiaobei.updateTime,
+      boardSource: 'xiaobei',
+    }
+  }
+
+  const boardGainers = await getSectorBoards({sort: 'desc', size: 120})
+  return {
+    upDown,
+    hotSearch: [],
+    boardGainers: boardGainers.map((i) => ({...i, heat: null})),
+    boardUpdateTime: upDown.time,
+    boardSource: 'eastmoney',
+  }
 }
 
 function findIndexMeta(code) {
