@@ -31,6 +31,7 @@ export type QuoteLike = {
   time?: string | null
   trend?: {time: string; growth: number | null; netValue?: number | null}[]
   sectors?: string[]
+  sectorItems?: {name: string; sectorCode?: string; mappingCode?: string}[]
   ftype?: string
 }
 
@@ -57,6 +58,30 @@ function pickSectors(local: string[] | undefined, remote: string[] | undefined):
   const fromRemote = cleanSectors(remote)
   if (fromRemote.length) return fromRemote
   return cleanSectors(local)
+}
+
+function normalizeSectorItems(
+  items: QuoteLike['sectorItems'],
+  fallbackNames: string[],
+): {name: string; sectorCode: string; mappingCode: string}[] {
+  if (Array.isArray(items) && items.length) {
+    return items
+      .map((row) => {
+        const name = String(row?.name || '').trim()
+        if (!name || name === '--' || name === '-') return null
+        return {
+          name,
+          sectorCode: String(row?.sectorCode || '').trim(),
+          mappingCode: String(row?.mappingCode || '').trim(),
+        }
+      })
+      .filter(Boolean) as {name: string; sectorCode: string; mappingCode: string}[]
+  }
+  return cleanSectors(fallbackNames).map((name) => ({
+    name,
+    sectorCode: '',
+    mappingCode: '',
+  }))
 }
 
 /** 从估值分时末点取净值（比涨幅更精确） */
@@ -156,6 +181,7 @@ export function calcHoldings(
     totalPnl = totalPnl.plus(pnl)
 
     const sectors = pickSectors(raw.sectors, q.sectors)
+    const sectorItems = normalizeSectorItems(q.sectorItems, sectors)
     const name = q.name || raw.name
     const ftype = q.ftype || raw.ftype || ''
     const fundType = raw.fundType || classifyFundType(ftype, name)
@@ -196,6 +222,7 @@ export function calcHoldings(
       liveAmount,
       pnl,
       sectors,
+      sectorItems,
       fundType,
       ftype,
       shares,
@@ -322,6 +349,7 @@ export function mergeWatchlist(
   const list = localFunds.map((f) => {
     const q = quoteMap.get(f.code) || ({} as QuoteLike)
     const sectors = pickSectors(f.sectors, q.sectors)
+    const sectorItems = normalizeSectorItems(q.sectorItems, sectors)
     const name = q.name || f.name
     const ftype = q.ftype || f.ftype || ''
     const fundType = f.fundType || classifyFundType(ftype, name)
@@ -366,6 +394,7 @@ export function mergeWatchlist(
       time: q.time,
       trend: q.trend || [],
       sectors,
+      sectorItems,
       fundType,
       ftype,
       confirmedUpdated,

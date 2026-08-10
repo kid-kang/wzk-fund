@@ -517,6 +517,22 @@ button {
 }
 
 /* 名称区域：仅真实溢出才走马灯；双份等宽单元保证无缝循环 */
+.name-hit {
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+}
+
 .name-clip {
   position: relative;
   width: 100%;
@@ -691,6 +707,18 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+button.sector-tag {
+  appearance: none;
+  font: inherit;
+  line-height: inherit;
+  margin: 0;
+  cursor: pointer;
+}
+
+.sector-tag.is-link {
+  color: var(--text);
 }
 
 .theme-dark .confirmed-badge {

@@ -52,6 +52,12 @@ export type FundRecord = {
   updatedAt?: string
 }
 
+export type SectorTagItem = {
+  name: string
+  sectorCode?: string
+  mappingCode?: string
+}
+
 export type FundQuoteRow = FundRecord & {
   /** 实时计算的确认净值市值，不写入 localStorage */
   amount: number
@@ -74,6 +80,8 @@ export type FundQuoteRow = FundRecord & {
   confirmedUpdated?: boolean
   /** QDII 等延迟净值的官方披露日期文案 */
   discloseTimeText?: string
+  /** 板块标签（含跳转代码） */
+  sectorItems?: SectorTagItem[]
 }
 
 export type HoldGroupPayload = {
@@ -125,8 +133,10 @@ export type IndustryFundItem = {
 }
 
 export type IndustryFundsPayload = {
+  sectorCode?: string
   mappingCode: string
   themeName: string
+  source?: string
   items: IndustryFundItem[]
 }
 
@@ -259,6 +269,8 @@ export type FundQuoteDetail = {
   ageDays?: number | null
   percent?: number | null
   netValue?: number | null
+  sectors?: string[]
+  sectorItems?: SectorTagItem[]
 }
 
 export async function fetchFundQuote(code: string) {
@@ -334,12 +346,20 @@ export async function fetchMarketOverview() {
   return data.data
 }
 
-export async function fetchIndustryFunds(mappingCode: string) {
+export async function fetchIndustryFunds(opts: {
+  sectorCode?: string
+  mappingCode?: string
+}) {
   const {data} = await api.get<{
     success: boolean
     message?: string
     data: IndustryFundsPayload
-  }>('/market/boards/funds', {params: {mappingCode}})
+  }>('/market/boards/funds', {
+    params: {
+      sectorCode: opts.sectorCode || '',
+      mappingCode: opts.mappingCode || '',
+    },
+  })
   return assertOk(data).data
 }
 

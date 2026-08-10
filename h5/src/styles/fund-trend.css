@@ -77,6 +77,14 @@
   opacity: 0.8;
 }
 
+.ticket-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rem;
+  margin-top: 12rem;
+  padding: 0 4rem;
+}
+
 .ticket-rule {
   margin-top: 16rem;
   height: 2rem;

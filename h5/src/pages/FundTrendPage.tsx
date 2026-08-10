@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
-import {useSearchParams} from 'react-router-dom'
+import {useNavigate, useSearchParams} from 'react-router-dom'
 import '@/styles/fund-trend.css'
 import AppNavBar from '@/components/AppNavBar'
 import EcLine from '@/components/EcLine'
@@ -13,6 +13,7 @@ import {
   type FundHistoryPayload,
   type FundHistoryRange,
   type FundStageStatsPayload,
+  type SectorTagItem,
 } from '@/lib/api'
 import {
   availableFundRanges,
@@ -60,13 +61,36 @@ const STAGE_GRAINS = [
 type StageTab = (typeof STAGE_TABS)[number]['key']
 type StageGrain = (typeof STAGE_GRAINS)[number]['key']
 
+function mapSectorTags(quote: {
+  sectorItems?: SectorTagItem[]
+  sectors?: string[]
+}): SectorTagItem[] {
+  const items = Array.isArray(quote.sectorItems) ? quote.sectorItems : []
+  if (items.length) {
+    return items
+      .map((it) => ({
+        name: String(it?.name || '').trim(),
+        sectorCode: String(it?.sectorCode || '').trim(),
+        mappingCode: String(it?.mappingCode || '').trim(),
+      }))
+      .filter((it) => it.name)
+  }
+  const sectors = Array.isArray(quote.sectors) ? quote.sectors : []
+  return sectors
+    .map((s) => String(s || '').trim())
+    .filter(Boolean)
+    .map((n) => ({name: n, sectorCode: '', mappingCode: ''}))
+}
+
 export default function FundTrendPage() {
+  const navigate = useNavigate()
   const [params] = useSearchParams()
   const theme: AppTheme = getStoredTheme()
   const code = String(params.get('code') || '').padStart(6, '0')
   const [name, setName] = useState(
     params.get('name') ? decodeURIComponent(params.get('name') || '') : '',
   )
+  const [sectorTags, setSectorTags] = useState<SectorTagItem[]>([])
   const [ageDays, setAgeDays] = useState<number | null>(null)
   const [ageText, setAgeText] = useState('')
   const [range, setRange] = useState<FundHistoryRange>('3m')
@@ -179,6 +203,7 @@ export default function FundTrendPage() {
         nextRange = defaultFundRange(nextAge)
         byRange.current = {}
         setName(quote.name || name || code)
+        setSectorTags(mapSectorTags(quote))
         setAgeDays(nextAge)
         setAgeText(formatFundAge(quote.establishDate, nextAge))
         setRange(nextRange)
@@ -340,7 +365,7 @@ export default function FundTrendPage() {
   return (
     <div className={`subpage-root theme-${theme}`}>
       <div className="subpage-nav">
-        <AppNavBar title="基金走势" theme={theme} />
+        <AppNavBar title="基金详情" theme={theme} />
       </div>
       <div className="subpage-scroller" style={{overflowY: 'auto'}}>
         <div className={`page theme-${theme} fund-trend`}>
@@ -351,10 +376,37 @@ export default function FundTrendPage() {
                 <div className="ticket-meta">
                   <span className="ticket-code mono">{code}</span>
                   <span className="ticket-sep">·</span>
-                  <span className="ticket-name">{name || '基金走势'}</span>
+                  <span className="ticket-name">{name || '基金详情'}</span>
                   {ageText ? <span className="ticket-age mono">{ageText}</span> : null}
                 </div>
               </div>
+              {sectorTags.length ? (
+                <div className="ticket-tags">
+                  {sectorTags.map((tag) => (
+                    <button
+                      type="button"
+                      className="sector-tag is-link"
+                      key={tag.name}
+                      onClick={() => {
+                        const sectorCode = String(tag.sectorCode || '').trim()
+                        const mappingCode = String(tag.mappingCode || '').trim()
+                        if (!sectorCode && !mappingCode) {
+                          window.alert('该板块暂无详情')
+                          return
+                        }
+                        const q = new URLSearchParams({
+                          sectorCode,
+                          mappingCode,
+                          name: tag.name || '',
+                        })
+                        navigate(`/sector-funds?${q.toString()}`)
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <div className="ticket-rule" aria-hidden />
             </div>
 

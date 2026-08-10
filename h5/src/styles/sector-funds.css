@@ -37,25 +37,6 @@
   font-family: 'PingFang SC', 'HarmonyOS Sans', 'Noto Sans SC', system-ui, sans-serif;
 }
 
-.sf-ghost {
-  position: absolute;
-  right: -20rem;
-  top: 24rem;
-  z-index: 0;
-  max-width: 90%;
-  font-family: 'Songti SC', 'Noto Serif SC', 'Source Han Serif SC', 'STSong', serif;
-  font-size: 160rem;
-  font-weight: 700;
-  line-height: 0.85;
-  letter-spacing: -0.06em;
-  color: rgba(18, 26, 39, 0.05);
-  white-space: nowrap;
-  overflow: hidden;
-  pointer-events: none;
-  transform: rotate(-8deg);
-  user-select: none;
-}
-
 .sf-body {
   position: relative;
   z-index: 1;

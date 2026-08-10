@@ -1,7 +1,12 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 import '@/styles/tab-watchlist.css'
-import {fetchWatchlist, removeFund, type FundQuoteRow} from '@/lib/api'
+import {
+  fetchWatchlist,
+  removeFund,
+  type FundQuoteRow,
+  type SectorTagItem,
+} from '@/lib/api'
 import {groupWatchlistByCategory} from '@/lib/fundCategory'
 import {formatPct, pctClass} from '@/lib/utils'
 import type {AppTheme} from '@/lib/theme'
@@ -28,7 +33,7 @@ type WatchRow = FundQuoteRow & {
   confirmPctClass: string
   discloseTimeText: string
   showDiscloseTime: boolean
-  sectorTags: string[]
+  sectorTags: SectorTagItem[]
   hasTags: boolean
 }
 
@@ -38,7 +43,13 @@ type WatchGroup = {
   list: WatchRow[]
 }
 
-function NameMarquee({name}: {name: string}) {
+function NameMarquee({
+  name,
+  onClick,
+}: {
+  name: string
+  onClick?: () => void
+}) {
   const clipRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
   const [overflow, setOverflow] = useState(false)
@@ -51,15 +62,22 @@ function NameMarquee({name}: {name: string}) {
   }, [name])
 
   return (
-    <div ref={clipRef} className={`name-clip${overflow ? ' is-marquee' : ''}`}>
-      <div className="name-track">
-        <span className="dense-name name-unit">{name}</span>
-        {overflow ? <span className="dense-name name-unit">{name}</span> : null}
+    <button
+      type="button"
+      className="name-hit"
+      onClick={onClick}
+      aria-label={`查看${name}详情`}
+    >
+      <div ref={clipRef} className={`name-clip${overflow ? ' is-marquee' : ''}`}>
+        <div className="name-track">
+          <span className="dense-name name-unit">{name}</span>
+          {overflow ? <span className="dense-name name-unit">{name}</span> : null}
+        </div>
+        <span ref={measureRef} className="name-measure">
+          {name}
+        </span>
       </div>
-      <span ref={measureRef} className="name-measure">
-        {name}
-      </span>
-    </div>
+    </button>
   )
 }
 
@@ -86,7 +104,19 @@ export default function TabWatchlist({
         const name = row.name || row.code || ''
         const confirmPct = row.dayGrowth != null ? row.dayGrowth : row.percent
         const sectors = Array.isArray(row.sectors) ? row.sectors : []
-        const sectorTags = sectors
+        const sectorTags: SectorTagItem[] =
+          Array.isArray(row.sectorItems) && row.sectorItems.length
+            ? row.sectorItems
+                .map((it) => ({
+                  name: String(it?.name || '').trim(),
+                  sectorCode: String(it?.sectorCode || '').trim(),
+                  mappingCode: String(it?.mappingCode || '').trim(),
+                }))
+                .filter((it) => it.name)
+            : sectors
+                .map((s) => String(s || '').trim())
+                .filter(Boolean)
+                .map((n) => ({name: n, sectorCode: '', mappingCode: ''}))
         const confirmedUpdated = !!row.confirmedUpdated
         const discloseTimeText = String(row.discloseTimeText || '').trim()
         const showDiscloseTime = !!discloseTimeText
@@ -192,7 +222,15 @@ export default function TabWatchlist({
                         <span className="card-mark mono">{item.codeMark}</span>
                       </div>
                       <div className="dense-main">
-                        <NameMarquee name={item.name} />
+                        <NameMarquee
+                          name={item.name}
+                          onClick={() => {
+                            const q = item.name
+                              ? `code=${item.code}&name=${encodeURIComponent(item.name)}`
+                              : `code=${item.code}`
+                            navigate(`/fund-trend?${q}`)
+                          }}
+                        />
                         {item.hasTags ? (
                           <div className="tag-row">
                             {item.confirmedUpdated && !item.showDiscloseTime ? (
@@ -219,9 +257,28 @@ export default function TabWatchlist({
                               </button>
                             ) : null}
                             {item.sectorTags.map((tag) => (
-                              <span className="sector-tag" key={tag}>
-                                {tag}
-                              </span>
+                              <button
+                                type="button"
+                                className="sector-tag is-link"
+                                key={tag.name}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  const sectorCode = String(tag.sectorCode || '').trim()
+                                  const mappingCode = String(tag.mappingCode || '').trim()
+                                  if (!sectorCode && !mappingCode) {
+                                    window.alert('该板块暂无详情')
+                                    return
+                                  }
+                                  const q = new URLSearchParams({
+                                    sectorCode,
+                                    mappingCode,
+                                    name: tag.name || '',
+                                  })
+                                  navigate(`/sector-funds?${q.toString()}`)
+                                }}
+                              >
+                                {tag.name}
+                              </button>
                             ))}
                           </div>
                         ) : null}

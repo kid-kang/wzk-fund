@@ -39,6 +39,7 @@ function decorate(rows: IndustryFundItem[]): FundRow[] {
 export default function SectorFundsPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const sectorCode = String(params.get('sectorCode') || '').trim()
   const mappingCode = String(
     params.get('mappingCode') || params.get('code') || '',
   ).trim()
@@ -58,7 +59,7 @@ export default function SectorFundsPage() {
 
   const load = useCallback(async () => {
     const epoch = ++epochRef.current
-    if (!mappingCode) {
+    if (!sectorCode && !mappingCode) {
       setLoading(false)
       setError('缺少板块代码')
       setList([])
@@ -67,7 +68,7 @@ export default function SectorFundsPage() {
     setLoading(true)
     setError('')
     try {
-      const data = await fetchIndustryFunds(mappingCode)
+      const data = await fetchIndustryFunds({sectorCode, mappingCode})
       if (epoch !== epochRef.current) return
       if (data.themeName) setName(data.themeName)
       setList(decorate(data.items || []))
@@ -78,7 +79,7 @@ export default function SectorFundsPage() {
       setError(e instanceof Error ? e.message : '加载失败')
       setList([])
     }
-  }, [mappingCode])
+  }, [sectorCode, mappingCode])
 
   useEffect(() => {
     void load()
@@ -123,10 +124,6 @@ export default function SectorFundsPage() {
       </div>
       <div className="subpage-scroller sf-scroller" style={{overflowY: 'auto'}}>
         <div className="sf-page">
-          <span className="sf-ghost" aria-hidden>
-            {name || '板块'}
-          </span>
-
           {error ? <div className="sf-err">{error}</div> : null}
 
           <div className="sf-body">

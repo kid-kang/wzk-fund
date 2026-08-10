@@ -227,14 +227,15 @@ export default function TabMarket({
                         className="rank-row"
                         key={`${boardTab}-${item.code}`}
                         onClick={() => {
-                          if (!item.mappingCode) {
+                          const sector = item.sectorCode || item.code || ''
+                          if (!sector && !item.mappingCode) {
                             window.alert('该板块暂无基金列表')
                             return
                           }
                           const q = new URLSearchParams({
-                            mappingCode: item.mappingCode,
+                            sectorCode: sector,
+                            mappingCode: item.mappingCode || '',
                             name: item.name || '',
-                            sectorCode: item.sectorCode || item.code || '',
                           })
                           navigate(`/sector-funds?${q.toString()}`)
                         }}
