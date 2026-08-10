@@ -1309,14 +1309,14 @@ const xiaobeiSectorCache = new Map()
 
 /**
  * 小倍养基关联板块（无需登录）。
- * POST /yangji-api/api/get-fund-detail-v310 → relatedIndustryV2[].themeName
- * @returns {string[]} 小倍返回的全部可用标签；失败或无数据返回 []
+ * POST /yangji-api/api/get-fund-detail-v310 → relatedIndustryV2
+ * @returns {{name:string, sectorCode:string, mappingCode:string}[]}
  */
-async function fetchXiaobeiSectors(code) {
+async function fetchXiaobeiSectorItems(code) {
   const padded = String(code || '').padStart(6, '0')
   const hit = xiaobeiSectorCache.get(padded)
-  if (hit && Date.now() - hit.at < XIAOBEI_SECTOR_TTL_MS) {
-    return hit.tags.slice()
+  if (hit && Date.now() - hit.at < XIAOBEI_SECTOR_TTL_MS && Array.isArray(hit.items)) {
+    return hit.items.map((i) => ({...i}))
   }
 
   const data = await xiaobeiApiPost('get-fund-detail-v310', code)
@@ -1327,25 +1327,64 @@ async function fetchXiaobeiSectors(code) {
       ? data.relatedIndustry
       : []
   if (!rows.length) return []
-  const tags = []
+  const items = []
   const seen = new Set()
   for (const row of rows) {
-    const tag = String(row?.themeName || '').trim()
+    const name = String(row?.themeName || '').trim()
     // 小倍侧已运营精选，只去掉空/占位，保留「通信技术」等其词表
-    if (!tag || tag === '--' || tag === '-' || seen.has(tag)) continue
-    if (tag.length > 16) continue
-    seen.add(tag)
-    tags.push(tag)
+    if (!name || name === '--' || name === '-' || seen.has(name)) continue
+    if (name.length > 16) continue
+    seen.add(name)
+    items.push({
+      name,
+      sectorCode: String(row?.sectorCode || '').trim(),
+      mappingCode: String(
+        row?.mappingCode || row?.extraCode || row?.indexCode || '',
+      ).trim(),
+    })
   }
-  xiaobeiSectorCache.set(padded, {at: Date.now(), tags})
-  return tags.slice()
+  xiaobeiSectorCache.set(padded, {at: Date.now(), items})
+  return items.map((i) => ({...i}))
+}
+
+/** 用热搜/旧榜按名称补齐 sectorCode（本地推断标签用） */
+async function resolveSectorItemsByNames(names) {
+  const list = (Array.isArray(names) ? names : [])
+    .map((n) => String(n || '').trim())
+    .filter(Boolean)
+  if (!list.length) return []
+  let boards = []
+  try {
+    const market = await import('./market.js')
+    const heat = await market.fetchXiaobeiHeatBoards()
+    boards = heat?.list || []
+    if (!boards.length) {
+      const legacy = await market.fetchXiaobeiIndustryBoards()
+      boards = legacy?.list || []
+    }
+  } catch {
+    boards = []
+  }
+  const byName = new Map()
+  for (const b of boards) {
+    const n = String(b?.name || '').trim()
+    if (n && !byName.has(n)) byName.set(n, b)
+  }
+  return list.map((name) => {
+    const b = byName.get(name)
+    return {
+      name,
+      sectorCode: String(b?.sectorCode || '').trim(),
+      mappingCode: String(b?.mappingCode || '').trim(),
+    }
+  })
 }
 
 /**
- * 板块标签：优先小倍养基关联板块；失败再走本地多信号打分。
+ * 板块标签（含跳转代码）：优先小倍关联板块；失败再走本地多信号打分。
  */
-export async function fetchFundSectors(code, nameHint = '') {
-  const xiaobei = await fetchXiaobeiSectors(code)
+export async function fetchFundSectorItems(code, nameHint = '') {
+  const xiaobei = await fetchXiaobeiSectorItems(code)
   if (xiaobei.length) return xiaobei
 
   let basic = null
@@ -1505,25 +1544,37 @@ export async function fetchFundSectors(code, nameHint = '') {
   }
 
   const resolved = resolveSmartSectors(scores, {fundName: shortName, balanced})
-  if (resolved.length) return resolved
+  if (resolved.length) return resolveSectorItemsByNames(resolved)
 
   // 均衡型无清晰主题时宁可不贴
   if (balanced) return []
 
   const fallback = []
   if (basic?.TTYPENAME) fallback.push(basic.TTYPENAME)
-  return finalizeThemes(fallback.filter(isUsableSectorTag))
+  return resolveSectorItemsByNames(finalizeThemes(fallback.filter(isUsableSectorTag)))
+}
+
+/** 仅标签名（兼容建仓等旧调用） */
+export async function fetchFundSectors(code, nameHint = '') {
+  const items = await fetchFundSectorItems(code, nameHint)
+  return items.map((i) => i.name)
 }
 
 /** 串行化板块请求，降低东财限流概率 */
 let sectorChain = Promise.resolve()
-export function fetchFundSectorsQueued(code, nameHint = '') {
-  const job = sectorChain.then(() => fetchFundSectors(code, nameHint))
+export function fetchFundSectorItemsQueued(code, nameHint = '') {
+  const job = sectorChain.then(() => fetchFundSectorItems(code, nameHint))
   sectorChain = job.then(
     () => undefined,
     () => undefined,
   )
   return job
+}
+
+export function fetchFundSectorsQueued(code, nameHint = '') {
+  return fetchFundSectorItemsQueued(code, nameHint).then((items) =>
+    items.map((i) => i.name),
+  )
 }
 
 function parsePct(v) {
@@ -2069,14 +2120,23 @@ export async function getFundQuote(fund) {
 
   // 板块标签每次行情请求实时拉取（小倍优先），不再沿用客户端 localStorage 缓存
   let sectors = []
+  let sectorItems = []
   try {
-    const next = await fetchFundSectorsQueued(code, name)
-    if (next.length) sectors = next
-    else if (Array.isArray(fund.sectors) && fund.sectors.length) {
+    const next = await fetchFundSectorItemsQueued(code, name)
+    if (next.length) {
+      sectorItems = next
+      sectors = next.map((i) => i.name)
+    } else if (Array.isArray(fund.sectors) && fund.sectors.length) {
       sectors = [...fund.sectors]
+      sectorItems = await resolveSectorItemsByNames(sectors)
     }
   } catch {
     sectors = Array.isArray(fund.sectors) ? [...fund.sectors] : []
+    sectorItems = sectors.map((name) => ({
+      name: String(name || '').trim(),
+      sectorCode: '',
+      mappingCode: '',
+    }))
   }
 
   return {
@@ -2097,6 +2157,7 @@ export async function getFundQuote(fund) {
     time: trend.length ? trend[trend.length - 1].time : null,
     trend,
     sectors,
+    sectorItems,
   }
 }
 

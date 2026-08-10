@@ -275,11 +275,12 @@ router.get('/market/boards', async (ctx) => {
   }
 })
 
-/** 板块下热搜基金：?mappingCode= */
+/** 板块下热搜基金：?sectorCode=XB1128（优先）&mappingCode= 兜底 */
 router.get('/market/boards/funds', async (ctx) => {
   try {
+    const sectorCode = String(ctx.query.sectorCode || '')
     const mappingCode = String(ctx.query.mappingCode || ctx.query.code || '')
-    const data = await getIndustryFunds({mappingCode})
+    const data = await getIndustryFunds({sectorCode, mappingCode})
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = e.message?.includes('缺少') ? 400 : 500

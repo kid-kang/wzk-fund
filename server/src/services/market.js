@@ -164,7 +164,8 @@ export async function getUpDownStats() {
 
 /** 小倍板块榜缓存，避免行情轮询打爆 */
 const XIAOBEI_BOARD_TTL_MS = 60 * 1000
-let xiaobeiBoardCache = null
+let xiaobeiHeatBoardCache = null
+let xiaobeiLegacyBoardCache = null
 
 function round2(n) {
   return Math.round(Number(n) * 100) / 100
@@ -178,7 +179,27 @@ function resolveBoardMappingCode(row = {}) {
   return extra || mapping
 }
 
-function mapXiaobeiBoardItem(row = {}) {
+/** App 热搜榜 sectorHeatTop 字段 */
+function mapXiaobeiHeatBoardItem(row = {}) {
+  const name = String(row.sectorName || row.themeName || '').trim()
+  const change = Number(row.changeRate ?? row.change)
+  const heat = Number(row.heat ?? row.searchNum)
+  if (!name || !Number.isFinite(change)) return null
+  const sectorCode = String(row.sectorCode || '').trim()
+  const extraCode = String(row.extraCode || '').trim()
+  return {
+    code: sectorCode || extraCode || name,
+    name,
+    // changeRate 为小数（0.0374 → 3.74）
+    percent: round2(change * 100),
+    heat: Number.isFinite(heat) ? heat : null,
+    // 二级页 get-industry-fund 优先用 extraCode
+    mappingCode: extraCode || sectorCode,
+    sectorCode,
+  }
+}
+
+function mapXiaobeiLegacyBoardItem(row = {}) {
   const name = String(row.themeName || '').trim()
   const change = Number(row.change)
   const heat = Number(row.searchNum)
@@ -186,7 +207,6 @@ function mapXiaobeiBoardItem(row = {}) {
   return {
     code: String(row.sectorCode || row.mappingCode || name),
     name,
-    // 小倍 change 为小数（0.0676 → 6.76）
     percent: round2(change * 100),
     heat: Number.isFinite(heat) ? heat : null,
     mappingCode: resolveBoardMappingCode(row),
@@ -195,17 +215,53 @@ function mapXiaobeiBoardItem(row = {}) {
 }
 
 /**
- * 小倍板块榜（热搜 + 涨幅同源）。
+ * 小倍 App 热搜板块榜（与 App「今日板块热搜榜」同源）。
+ * POST https://apiv2.xiaobeiyangji.com/api/app/valuation/sectorHeatTop
+ * 无需登录；列表已按 heat 降序。
+ */
+export async function fetchXiaobeiHeatBoards() {
+  const hit = xiaobeiHeatBoardCache
+  if (hit && Date.now() - hit.at < XIAOBEI_BOARD_TTL_MS) return hit.data
+
+  try {
+    const res = await axios.post(
+      'https://apiv2.xiaobeiyangji.com/api/app/valuation/sectorHeatTop',
+      xiaobeiApiv2Body({limit: 100}),
+      {
+        httpsAgent: agent,
+        timeout: 12000,
+        headers: xiaobeiApiv2Headers(),
+        validateStatus: () => true,
+      },
+    )
+    if (res.status !== 200 || res.data?.code !== 200) return null
+    const rawList = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
+    const list = rawList.map(mapXiaobeiHeatBoardItem).filter(Boolean)
+    if (!list.length) return null
+    const data = {
+      list,
+      updateTime: res.data?.data?.updateTime || null,
+      source: 'xiaobei-heat',
+    }
+    xiaobeiHeatBoardCache = {at: Date.now(), data}
+    return data
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 旧接口兜底（按 searchNum / 涨跌幅本地排序）。
  * POST /yangji-api/api/get-hot-industry-ranking
  */
 export async function fetchXiaobeiIndustryBoards() {
-  const hit = xiaobeiBoardCache
+  const hit = xiaobeiLegacyBoardCache
   if (hit && Date.now() - hit.at < XIAOBEI_BOARD_TTL_MS) return hit.data
 
   try {
     const res = await axios.post(
       'https://api.xiaobeiyangji.com/yangji-api/api/get-hot-industry-ranking',
-      {version: '3.8.7.0', clientType: 'APP'},
+      {version: '3.8.8.0', clientType: 'APP'},
       {
         httpsAgent: agent,
         timeout: 12000,
@@ -219,17 +275,25 @@ export async function fetchXiaobeiIndustryBoards() {
     )
     if (res.status !== 200 || res.data?.code !== 200) return null
     const rawList = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
-    const list = rawList.map(mapXiaobeiBoardItem).filter(Boolean)
+    const list = rawList.map(mapXiaobeiLegacyBoardItem).filter(Boolean)
     if (!list.length) return null
     const data = {
       list,
       updateTime: res.data?.data?.updateTime || null,
+      source: 'xiaobei-legacy',
     }
-    xiaobeiBoardCache = {at: Date.now(), data}
+    xiaobeiLegacyBoardCache = {at: Date.now(), data}
     return data
   } catch {
     return null
   }
+}
+
+/** 热搜优先新接口；失败再回落旧榜 */
+async function fetchXiaobeiBoardsForOverview() {
+  const heat = await fetchXiaobeiHeatBoards()
+  if (heat?.list?.length) return heat
+  return fetchXiaobeiIndustryBoards()
 }
 
 function sliceBoards(list, sort, size = 0) {
@@ -254,20 +318,96 @@ function sliceBoards(list, sort, size = 0) {
 const INDUSTRY_FUND_TTL_MS = 45 * 1000
 const industryFundCache = new Map()
 
+function xiaobeiApiv2Headers() {
+  const headers = {
+    'User-Agent':
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Html5Plus/1.0 uni-app',
+    'Content-Type': 'application/json',
+    Accept: '*/*',
+    'x-gray-tag': 'gray',
+  }
+  const bearer = String(process.env.XIAOBEI_BEARER || '').trim()
+  if (bearer) headers.Authorization = bearer.startsWith('Bearer ') ? bearer : `Bearer ${bearer}`
+  return headers
+}
+
+function xiaobeiApiv2Body(extra = {}) {
+  return {
+    version: '3.8.8.0',
+    clientType: 'APP',
+    ...(process.env.XIAOBEI_UNION_ID
+      ? {unionId: String(process.env.XIAOBEI_UNION_ID)}
+      : {}),
+    ...extra,
+  }
+}
+
 /**
- * 小倍板块热搜基金（isHot=true），最多 100 条。
- * POST /yangji-api/api/get-industry-fund
+ * 小倍 App 板块热搜基金（与二级页同源）。
+ * POST /api/app/valuation/sectorFundHeatTop/getBySectorCode
  */
-export async function getIndustryFunds({mappingCode} = {}) {
-  const code = String(mappingCode || '').trim()
-  if (!code) throw new Error('缺少板块映射代码 mappingCode')
-  const cacheKey = `${code}|hot`
+export async function getIndustryFunds({sectorCode, mappingCode} = {}) {
+  const sector = String(sectorCode || '').trim()
+  const mapping = String(mappingCode || '').trim()
+  if (!sector && !mapping) throw new Error('缺少板块代码 sectorCode')
+
+  const cacheKey = `heat|${sector || mapping}`
   const hit = industryFundCache.get(cacheKey)
   if (hit && Date.now() - hit.at < INDUSTRY_FUND_TTL_MS) return hit.data
 
+  // 优先 App 热搜基金接口（按 heat）；旧 get-industry-fund 对许多板块 isHot 为空
+  if (sector) {
+    const res = await axios.post(
+      'https://apiv2.xiaobeiyangji.com/api/app/valuation/sectorFundHeatTop/getBySectorCode',
+      xiaobeiApiv2Body({limit: 100, sectorCode: sector}),
+      {
+        httpsAgent: agent,
+        timeout: 15000,
+        headers: xiaobeiApiv2Headers(),
+        validateStatus: () => true,
+      },
+    )
+    if (res.status === 200 && res.data?.code === 200) {
+      const rawList = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
+      const items = rawList
+        .map((row) => {
+          const fundCode = String(row.fundCode || row.code || '').padStart(6, '0')
+          if (!/^\d{6}$/.test(fundCode)) return null
+          const change = Number(row.changeRate ?? row.valuationY)
+          const heat = Number(row.heat)
+          return {
+            code: fundCode,
+            name: String(row.fundName || row.name || fundCode).trim(),
+            nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
+            percent: Number.isFinite(change) ? round2(change * 100) : null,
+            heat: Number.isFinite(heat) ? heat : null,
+          }
+        })
+        .filter(Boolean)
+
+      const data = {
+        sectorCode: sector,
+        mappingCode: mapping || String(rawList[0]?.extraCode || '').trim(),
+        themeName: '',
+        source: 'xiaobei-fund-heat',
+        items,
+      }
+      industryFundCache.set(cacheKey, {at: Date.now(), data})
+      return data
+    }
+  }
+
+  // 无 sectorCode 或新接口失败时，回落旧 mapping 列表
+  if (!mapping) throw new Error('板块基金列表加载失败')
+  const legacy = await fetchLegacyIndustryFunds(mapping)
+  industryFundCache.set(cacheKey, {at: Date.now(), data: legacy})
+  return legacy
+}
+
+async function fetchLegacyIndustryFunds(mappingCode) {
   const res = await axios.post(
     'https://api.xiaobeiyangji.com/yangji-api/api/get-industry-fund',
-    {version: '3.8.7.0', clientType: 'APP', mappingCode: code, isHot: true},
+    {version: '3.8.8.0', clientType: 'APP', mappingCode, isHot: true},
     {
       httpsAgent: agent,
       timeout: 15000,
@@ -294,18 +434,19 @@ export async function getIndustryFunds({mappingCode} = {}) {
         name: String(row.name || fundCode).trim(),
         nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
         percent: Number.isFinite(y) ? round2(y * 100) : null,
+        heat: null,
       }
     })
     .filter(Boolean)
     .slice(0, 100)
 
-  const data = {
-    mappingCode: code,
+  return {
+    sectorCode: '',
+    mappingCode,
     themeName: String(raw.themeName || '').trim(),
+    source: 'xiaobei-legacy-fund',
     items,
   }
-  industryFundCache.set(cacheKey, {at: Date.now(), data})
-  return data
 }
 
 /**
@@ -316,12 +457,12 @@ export async function getMarketBoards({tab = 'gainers', size = 0} = {}) {
   const rawSize = Number(size)
   // size<=0 或不传：全量；否则截断（上限 200）
   const n = Number.isFinite(rawSize) && rawSize > 0 ? Math.min(rawSize, 200) : 0
-  const xiaobei = await fetchXiaobeiIndustryBoards()
+  const xiaobei = await fetchXiaobeiBoardsForOverview()
   if (xiaobei?.list?.length) {
     const sort = key === 'hot' ? 'hot' : key === 'losers' ? 'asc' : 'desc'
     return {
       tab: key === 'hot' ? 'hot' : key === 'losers' ? 'losers' : 'gainers',
-      source: 'xiaobei',
+      source: xiaobei.source || 'xiaobei',
       updateTime: xiaobei.updateTime,
       items: sliceBoards(xiaobei.list, sort, n),
     }
@@ -339,17 +480,17 @@ export async function getMarketBoards({tab = 'gainers', size = 0} = {}) {
 export async function getMarketOverview() {
   const [upDown, xiaobei] = await Promise.all([
     getUpDownStats(),
-    fetchXiaobeiIndustryBoards(),
+    fetchXiaobeiBoardsForOverview(),
   ])
 
   if (xiaobei?.list?.length) {
     return {
       upDown,
-      // Tab 列表：接口全量，前端自行滚动
+      // 热搜：保持小倍 heat 序；涨幅：按涨跌幅重排
       hotSearch: sliceBoards(xiaobei.list, 'hot', 0),
       boardGainers: sliceBoards(xiaobei.list, 'desc', 0),
       boardUpdateTime: xiaobei.updateTime,
-      boardSource: 'xiaobei',
+      boardSource: xiaobei.source || 'xiaobei',
     }
   }
 
