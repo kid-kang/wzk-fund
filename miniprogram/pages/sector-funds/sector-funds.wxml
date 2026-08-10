@@ -7,9 +7,9 @@
   background-text-style="{{bgTextStyle}}"
 />
 
-<view class="subpage-root sf-shell">
+<view class="subpage-root sf-shell theme-{{theme}}">
   <view class="subpage-nav">
-    <app-nav-bar title="{{navTitle}}" theme="light" bgColor="transparent" />
+    <app-nav-bar title="{{navTitle}}" theme="{{theme}}" bgColor="transparent" />
   </view>
 
   <scroll-view
@@ -20,8 +20,6 @@
     show-scrollbar="{{false}}"
   >
     <view class="sf-page">
-      <text class="sf-ghost" aria-hidden="true">{{name || '板块'}}</text>
-
       <view class="sf-err" wx:if="{{error}}">{{error}}</view>
 
       <view class="sf-body">

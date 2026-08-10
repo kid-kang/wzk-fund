@@ -6,7 +6,25 @@ const {
   formatFundAge,
   isRangeAvailable,
 } = require('../../utils/fundRanges')
-const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
+const {getThemeViewState, syncNavigationBar, navigateTo} = require('../../utils/theme')
+
+function mapSectorTags(quote) {
+  const items = Array.isArray(quote && quote.sectorItems) ? quote.sectorItems : []
+  if (items.length) {
+    return items
+      .map((it) => ({
+        name: String((it && it.name) || '').trim(),
+        sectorCode: String((it && it.sectorCode) || '').trim(),
+        mappingCode: String((it && it.mappingCode) || '').trim(),
+      }))
+      .filter((it) => it.name)
+  }
+  const sectors = Array.isArray(quote && quote.sectors) ? quote.sectors : []
+  return sectors
+    .map((s) => String(s || '').trim())
+    .filter(Boolean)
+    .map((name) => ({name, sectorCode: '', mappingCode: ''}))
+}
 
 function emptyRanges(ageDays) {
   return availableFundRanges(ageDays).map((t) =>
@@ -39,9 +57,10 @@ const STAGE_GRAINS = [
 Page({
   data: {
     ...themeView,
-    navTitle: '基金走势',
+    navTitle: '基金详情',
     code: '',
     name: '',
+    sectorTags: [],
     ageDays: null,
     ageText: '',
     range: '1y',
@@ -160,6 +179,7 @@ Page({
       this._byRange = {}
       this.setData({
         name: quote.name || this.data.name || this.data.code,
+        sectorTags: mapSectorTags(quote),
         ageDays,
         ageText: formatFundAge(quote.establishDate, ageDays),
         range,
@@ -171,6 +191,22 @@ Page({
         this.setData({error: (e && e.message) || '行情加载失败'})
       }
     }
+  },
+
+  onOpenSector(e) {
+    const {name, sector, mapping} = e.currentTarget.dataset || {}
+    const sectorCode = String(sector || '').trim()
+    const mappingCode = String(mapping || '').trim()
+    if (!sectorCode && !mappingCode) {
+      wx.showToast({title: '该板块暂无详情', icon: 'none'})
+      return
+    }
+    const q = [
+      `sectorCode=${encodeURIComponent(sectorCode)}`,
+      `mappingCode=${encodeURIComponent(mappingCode)}`,
+      `name=${encodeURIComponent(name || '')}`,
+    ].join('&')
+    navigateTo(`/pages/sector-funds/sector-funds?${q}`)
   },
 
   stageSourceList() {

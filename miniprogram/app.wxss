@@ -412,6 +412,11 @@ button {
 }
 
 /* 名称区域：单行超出直接铺开显示（可盖住走势图），不省略、不换行、不走马灯 */
+.name-clip.is-link {
+  position: relative;
+  z-index: 2;
+}
+
 .name-clip {
   position: relative;
   width: 100%;
@@ -564,6 +569,10 @@ button {
   border: 1rpx solid var(--line);
   white-space: nowrap;
   overflow: visible;
+}
+
+.sector-tag.is-link {
+  color: var(--text);
 }
 
 .theme-dark .sector-tag {

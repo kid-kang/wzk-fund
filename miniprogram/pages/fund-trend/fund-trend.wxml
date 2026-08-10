@@ -21,9 +21,21 @@
             <view class="ticket-meta">
               <text class="ticket-code mono">{{code}}</text>
               <text class="ticket-sep">·</text>
-              <text class="ticket-name">{{name || '基金走势'}}</text>
+              <text class="ticket-name">{{name || '基金详情'}}</text>
               <text class="ticket-age mono" wx:if="{{ageText}}">{{ageText}}</text>
             </view>
+          </view>
+          <view class="ticket-tags" wx:if="{{sectorTags.length}}">
+            <text
+              class="sector-tag is-link"
+              wx:for="{{sectorTags}}"
+              wx:for-item="tag"
+              wx:key="name"
+              data-name="{{tag.name}}"
+              data-sector="{{tag.sectorCode}}"
+              data-mapping="{{tag.mappingCode}}"
+              catchtap="onOpenSector"
+            >{{tag.name}}</text>
           </view>
           <view class="ticket-rule" aria-hidden="true"></view>
         </view>

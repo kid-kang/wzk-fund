@@ -82,10 +82,13 @@ async function fetchMarketOverview() {
   return data.data
 }
 
-async function fetchIndustryFunds(mappingCode) {
+async function fetchIndustryFunds({sectorCode, mappingCode} = {}) {
   const data = await request({
     url: '/api/market/boards/funds',
-    data: {mappingCode},
+    data: {
+      sectorCode: sectorCode || '',
+      mappingCode: mappingCode || '',
+    },
   })
   assertOk(data)
   return data.data

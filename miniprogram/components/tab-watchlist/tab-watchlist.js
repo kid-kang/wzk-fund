@@ -108,7 +108,17 @@ Component({
         const mapped = (list || []).map((row) => {
           const name = row.name || row.code || ''
           const sectors = Array.isArray(row.sectors) ? row.sectors : []
-          const sectorTags = sectors
+          const sectorTags =
+            Array.isArray(row.sectorItems) && row.sectorItems.length
+              ? row.sectorItems.map((it) => ({
+                  name: String((it && it.name) || '').trim(),
+                  sectorCode: String((it && it.sectorCode) || '').trim(),
+                  mappingCode: String((it && it.mappingCode) || '').trim(),
+                })).filter((it) => it.name)
+              : sectors
+                  .map((s) => String(s || '').trim())
+                  .filter(Boolean)
+                  .map((n) => ({name: n, sectorCode: '', mappingCode: ''}))
           const confirmedUpdated = !!row.confirmedUpdated
           const discloseTimeText = String(row.discloseTimeText || '').trim()
           const showDiscloseTime = !!discloseTimeText
@@ -162,6 +172,22 @@ Component({
         ? `code=${code}&name=${encodeURIComponent(name)}`
         : `code=${code}`
       navigateTo(`/pages/fund-trend/fund-trend?${q}`)
+    },
+
+    onOpenSector(e) {
+      const {name, sector, mapping} = e.currentTarget.dataset || {}
+      const sectorCode = String(sector || '').trim()
+      const mappingCode = String(mapping || '').trim()
+      if (!sectorCode && !mappingCode) {
+        wx.showToast({title: '该板块暂无详情', icon: 'none'})
+        return
+      }
+      const q = [
+        `sectorCode=${encodeURIComponent(sectorCode)}`,
+        `mappingCode=${encodeURIComponent(mappingCode)}`,
+        `name=${encodeURIComponent(name || '')}`,
+      ].join('&')
+      navigateTo(`/pages/sector-funds/sector-funds?${q}`)
     },
 
     dropWatchRow(code) {

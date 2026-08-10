@@ -1,4 +1,4 @@
-/* 独立页：整页体榜单（无卡片壳） */
+/* 独立页：整页体榜单（无卡片壳）；跟随 App 深浅主题 */
 
 .sf-shell {
   --sf-mist: #d8e0eb;
@@ -11,7 +11,34 @@
   --sf-ember: #b45309;
   --sf-ember-soft: rgba(180, 83, 9, 0.12);
   --sf-surface: #d8e0eb;
+  --sf-sticky: rgba(216, 224, 235, 0.96);
+  --sf-rank: rgba(18, 26, 39, 0.35);
+  --sf-grad-a: rgba(255, 255, 255, 0.55);
+  --sf-grad-b: rgba(180, 83, 9, 0.07);
+  --sf-add-border: rgba(180, 83, 9, 0.28);
+  --sf-on-bg: rgba(15, 118, 110, 0.1);
+  --sf-on-border: rgba(15, 118, 110, 0.28);
   background: var(--sf-surface) !important;
+}
+
+.sf-shell.theme-dark {
+  --sf-mist: #121a27;
+  --sf-mist-deep: #0e1520;
+  --sf-ink: #e8eef8;
+  --sf-mute: #8b96a8;
+  --sf-line: rgba(232, 238, 248, 0.1);
+  --sf-rise: #ff6b7a;
+  --sf-fall: #3dd6c6;
+  --sf-ember: #f0a35a;
+  --sf-ember-soft: rgba(240, 163, 90, 0.14);
+  --sf-surface: #0e1520;
+  --sf-sticky: rgba(14, 21, 32, 0.96);
+  --sf-rank: rgba(232, 238, 248, 0.32);
+  --sf-grad-a: rgba(80, 110, 160, 0.16);
+  --sf-grad-b: rgba(240, 163, 90, 0.08);
+  --sf-add-border: rgba(240, 163, 90, 0.35);
+  --sf-on-bg: rgba(61, 214, 198, 0.12);
+  --sf-on-border: rgba(61, 214, 198, 0.32);
 }
 
 .sf-shell .subpage-nav {
@@ -28,29 +55,11 @@
   padding: 0 0 48rpx;
   color: var(--sf-ink);
   background:
-    radial-gradient(120% 70% at 10% -10%, rgba(255, 255, 255, 0.55), transparent 55%),
-    radial-gradient(90% 50% at 100% 0%, rgba(180, 83, 9, 0.07), transparent 45%),
+    radial-gradient(120% 70% at 10% -10%, var(--sf-grad-a), transparent 55%),
+    radial-gradient(90% 50% at 100% 0%, var(--sf-grad-b), transparent 45%),
     linear-gradient(180deg, var(--sf-mist) 0%, var(--sf-mist-deep) 100%);
   overflow: visible;
   font-family: 'PingFang SC', 'HarmonyOS Sans', 'Noto Sans SC', system-ui, sans-serif;
-}
-
-.sf-ghost {
-  position: absolute;
-  right: -20rpx;
-  top: 24rpx;
-  z-index: 0;
-  max-width: 90%;
-  font-family: 'Songti SC', 'Noto Serif SC', 'STSong', serif;
-  font-size: 160rpx;
-  font-weight: 700;
-  line-height: 0.85;
-  letter-spacing: -0.06em;
-  color: rgba(18, 26, 39, 0.05);
-  white-space: nowrap;
-  overflow: hidden;
-  pointer-events: none;
-  transform: rotate(-8deg);
 }
 
 .sf-body {
@@ -62,7 +71,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(216, 224, 235, 0.96);
+  background: var(--sf-sticky);
   backdrop-filter: blur(10px);
 }
 
@@ -89,6 +98,10 @@
   background: rgba(190, 18, 60, 0.08);
   color: var(--sf-rise);
   font-size: 26rpx;
+}
+
+.sf-shell.theme-dark .sf-err {
+  background: rgba(255, 107, 122, 0.12);
 }
 
 .sf-state {
@@ -136,7 +149,7 @@
   gap: 12rpx;
   padding: 16rpx 32rpx 12rpx;
   border-bottom: 1rpx solid var(--sf-line);
-  background: rgba(216, 224, 235, 0.96);
+  background: var(--sf-sticky);
 }
 
 .sf-h-rank,
@@ -184,7 +197,7 @@
   font-size: 20rpx;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: rgba(18, 26, 39, 0.35);
+  color: var(--sf-rank);
 }
 
 .sf-main {
@@ -245,12 +258,12 @@
   line-height: 1;
   color: var(--sf-ember);
   background: var(--sf-ember-soft);
-  border: 1rpx solid rgba(180, 83, 9, 0.28);
+  border: 1rpx solid var(--sf-add-border);
 }
 
 .sf-add.is-on {
   color: var(--sf-fall);
-  background: rgba(15, 118, 110, 0.1);
-  border-color: rgba(15, 118, 110, 0.28);
+  background: var(--sf-on-bg);
+  border-color: var(--sf-on-border);
   font-size: 22rpx;
 }

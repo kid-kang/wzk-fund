@@ -1,4 +1,4 @@
-/* 基金走势：对齐金价详情票据报头，强调色用行情 accent */
+/* 基金详情：对齐金价详情票据报头，强调色用行情 accent */
 
 .fund-trend {
   --ft-ink: var(--ink);
@@ -75,6 +75,14 @@
   letter-spacing: 0.02em;
   color: var(--muted);
   opacity: 0.8;
+}
+
+.ticket-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 12rpx;
+  padding: 0 4rpx;
 }
 
 .ticket-rule {

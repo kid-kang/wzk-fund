@@ -1,6 +1,7 @@
 const {getTone} = require('./palette')
 
-const SPARK_MAX_POINTS = 20
+/** 迷你图宽度有限，120 点已够密；过低会锯齿 */
+const SPARK_MAX_POINTS = 120
 
 function extractSparkValues(points, valueKey = 'growth') {
   const values = []

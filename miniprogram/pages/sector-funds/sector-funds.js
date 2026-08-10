@@ -2,13 +2,15 @@ const Toast = require('@vant/weapp/toast/toast')
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
 const {formatPct, pctClass} = require('../../utils/format')
-const {navigateTo, syncNavigationBar} = require('../../utils/theme')
+const {getThemeViewState, syncNavigationBar, navigateTo} = require('../../utils/theme')
 
-/** 本页独立浅色壳，不跟 App 主题走 */
-const SF_PAGE = {
-  pageBg: '#D8E0EB',
-  bgTextStyle: 'dark',
-  theme: 'light',
+/** 与本页冷雾底色对齐，避免回弹露缝 */
+function getSfThemeViewState() {
+  const base = getThemeViewState()
+  return {
+    ...base,
+    pageBg: base.theme === 'dark' ? '#0E1520' : '#D8E0EB',
+  }
 }
 
 function makeSubtitle(name) {
@@ -16,11 +18,12 @@ function makeSubtitle(name) {
   return n ? `${n}板块相关热搜基金` : '板块相关热搜基金'
 }
 
-syncNavigationBar('light')
+const themeView = getSfThemeViewState()
+syncNavigationBar(themeView.theme)
 
 Page({
   data: {
-    ...SF_PAGE,
+    ...themeView,
     navTitle: '板块基金',
     mappingCode: '',
     sectorCode: '',
@@ -35,7 +38,8 @@ Page({
     this._dead = false
     this._loadEpoch = 0
     this._adding = {}
-    syncNavigationBar('light')
+    const themePatch = getSfThemeViewState()
+    syncNavigationBar(themePatch.theme)
     const name = query.name ? decodeURIComponent(query.name) : ''
     const mappingCode = query.mappingCode
       ? decodeURIComponent(query.mappingCode)
@@ -44,7 +48,7 @@ Page({
         : ''
     const sectorCode = query.sectorCode ? decodeURIComponent(query.sectorCode) : ''
     this.setData({
-      ...SF_PAGE,
+      ...themePatch,
       name,
       subtitle: makeSubtitle(name),
       navTitle: name || '板块基金',
@@ -56,7 +60,11 @@ Page({
   },
 
   onShow() {
-    syncNavigationBar('light')
+    const next = getSfThemeViewState()
+    if (next.theme !== this.data.theme || next.pageBg !== this.data.pageBg) {
+      this.setData(next)
+    }
+    syncNavigationBar(next.theme)
     if (this.data.list && this.data.list.length) {
       this.setData({list: this.decorateRows(this.data.list)})
     }
@@ -82,14 +90,14 @@ Page({
 
   async load() {
     const epoch = ++this._loadEpoch
-    const mappingCode = this.data.mappingCode
-    if (!mappingCode) {
+    const {sectorCode, mappingCode} = this.data
+    if (!sectorCode && !mappingCode) {
       this.setData({loading: false, error: '缺少板块代码', list: []})
       return
     }
     this.setData({loading: true, error: ''})
     try {
-      const data = await api.fetchIndustryFunds(mappingCode)
+      const data = await api.fetchIndustryFunds({sectorCode, mappingCode})
       if (this._dead || epoch !== this._loadEpoch) return
       const themeName = (data && data.themeName) || this.data.name
       const items = (data && data.items) || []

@@ -202,14 +202,14 @@ Component({
 
     onOpenBoard(e) {
       const {name, mapping, sector} = e.currentTarget.dataset
-      if (!mapping) {
+      if (!sector && !mapping) {
         wx.showToast({title: '该板块暂无基金列表', icon: 'none'})
         return
       }
       const q = [
-        `mappingCode=${encodeURIComponent(mapping)}`,
-        `name=${encodeURIComponent(name || '')}`,
         `sectorCode=${encodeURIComponent(sector || '')}`,
+        `mappingCode=${encodeURIComponent(mapping || '')}`,
+        `name=${encodeURIComponent(name || '')}`,
       ].join('&')
       navigateTo(`/pages/sector-funds/sector-funds?${q}`)
     },

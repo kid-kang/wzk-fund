@@ -68,16 +68,25 @@
                   </view>
                 </view>
                 <view class="dense-main">
-                  <view class="name-clip">
+                  <view
+                    class="name-clip is-link"
+                    data-code="{{item.code}}"
+                    data-name="{{item.name}}"
+                    catchtap="onOpenTrend"
+                  >
                     <text class="dense-name">{{item.name}}</text>
                   </view>
                   <view class="tag-row" wx:if="{{item.hasTags}}">
                     <text
-                      class="sector-tag"
+                      class="sector-tag is-link"
                       wx:for="{{item.sectorTags}}"
                       wx:for-item="tag"
-                      wx:key="*this"
-                    >{{tag}}</text>
+                      wx:key="name"
+                      data-name="{{tag.name}}"
+                      data-sector="{{tag.sectorCode}}"
+                      data-mapping="{{tag.mappingCode}}"
+                      catchtap="onOpenSector"
+                    >{{tag.name}}</text>
                   </view>
                 </view>
 

@@ -25,6 +25,33 @@ function pickSectors(local, remote) {
   return cleanSectors(local)
 }
 
+function normalizeSectorItems(items, fallbackNames) {
+  if (Array.isArray(items) && items.length) {
+    return items
+      .map((row) => {
+        if (!row) return null
+        if (typeof row === 'string') {
+          const name = String(row).trim()
+          if (!name || name === '--' || name === '-') return null
+          return {name, sectorCode: '', mappingCode: ''}
+        }
+        const name = String(row.name || '').trim()
+        if (!name || name === '--' || name === '-') return null
+        return {
+          name,
+          sectorCode: String(row.sectorCode || '').trim(),
+          mappingCode: String(row.mappingCode || '').trim(),
+        }
+      })
+      .filter(Boolean)
+  }
+  return cleanSectors(fallbackNames).map((name) => ({
+    name,
+    sectorCode: '',
+    mappingCode: '',
+  }))
+}
+
 function latestEstimateNav(quote) {
   if (quote.estimateNetValue != null && quote.estimateNetValue > 0) {
     return quote.estimateNetValue
@@ -96,6 +123,7 @@ function calcHoldings(localFunds, quotes) {
     totalPnl = totalPnl.plus(pnl)
 
     const sectors = pickSectors(raw.sectors, q.sectors)
+    const sectorItems = normalizeSectorItems(q.sectorItems, sectors)
     const name = q.name || raw.name
     const ftype = q.ftype || raw.ftype || ''
     const fundType =
@@ -137,6 +165,7 @@ function calcHoldings(localFunds, quotes) {
         liveAmount,
         pnl,
         sectors,
+        sectorItems,
         fundType,
         ftype,
         shares,
@@ -265,6 +294,7 @@ function mergeWatchlist(localFunds, quotes) {
   const list = (localFunds || []).map((f) => {
     const q = quoteMap.get(f.code) || {}
     const sectors = pickSectors(f.sectors, q.sectors)
+    const sectorItems = normalizeSectorItems(q.sectorItems, sectors)
     const name = q.name || f.name
     const ftype = q.ftype || f.ftype || ''
     const fundType = f.fundType || classifyFundType(ftype, name)
@@ -295,6 +325,7 @@ function mergeWatchlist(localFunds, quotes) {
       netValueDate: navDay || q.netValueDate || '',
       trend: q.trend || [],
       sectors,
+      sectorItems,
       fundType,
       ftype,
       time: q.time || null,
