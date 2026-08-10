@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react'
+import {useEffect, useMemo, useRef, useState, type RefObject} from 'react'
 import ReactECharts from 'echarts-for-react'
 import {PALETTE} from '@/lib/palette'
 import {cn, pctClass} from '@/lib/utils'
@@ -9,6 +9,30 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {FundTrendDialog} from '@/components/FundTrendDialog'
+
+function useChartAutoResize(
+  chartRef: RefObject<ReactECharts | null>,
+  containerRef: RefObject<HTMLElement | null>,
+  layoutKey: string | number,
+) {
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const resize = () => {
+      const inst = chartRef.current?.getEchartsInstance()
+      if (!inst) return
+      const {clientWidth: width, clientHeight: height} = el
+      if (width > 0 && height > 0) inst.resize({width, height})
+    }
+    const raf = requestAnimationFrame(resize)
+    const ro = new ResizeObserver(resize)
+    ro.observe(el)
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+    }
+  }, [chartRef, containerRef, layoutKey])
+}
 
 export type TrendPoint = {
   time: string
@@ -50,18 +74,19 @@ function buildOption(
       ? Math.max((max - min) * 0.12, 0.5)
       : Math.max((max - min) * 0.12, 0.05)
   const axisColors = chartAxisColors()
-  const showPriceBadge = mode === 'price' || points.some((p) => p.price != null)
   const showX = (showAxis && !compact) || showTimeAxis
   const showY = showAxis && !compact
+  const showCornerBadge =
+    compact && (mode === 'percent' || points.some((p) => p.price != null))
 
   return {
     animation: false,
     grid: compact
       ? {
-        left: showY ? 36 : 2,
-        right: 8,
-        top: showPriceBadge ? 26 : 14,
-        bottom: showTimeAxis ? 28 : 2,
+        left: showY ? 36 : 0,
+        right: 2,
+        top: showCornerBadge ? 16 : 2,
+        bottom: showTimeAxis ? 22 : 2,
       }
       : showAxis
         ? {left: 48, right: 16, top: 28, bottom: 36}
@@ -192,6 +217,21 @@ export function SparkTrend({
   fundCode?: string
 }) {
   const [open, setOpen] = useState(false)
+  const miniWrapRef = useRef<HTMLDivElement | null>(null)
+  const miniChartRef = useRef<ReactECharts | null>(null)
+  const fullWrapRef = useRef<HTMLDivElement | null>(null)
+  const fullChartRef = useRef<ReactECharts | null>(null)
+
+  useChartAutoResize(
+    miniChartRef,
+    miniWrapRef,
+    `${points.length}:${height}:${open ? 1 : 0}`,
+  )
+  useChartAutoResize(
+    fullChartRef,
+    fullWrapRef,
+    `${points.length}:${open ? 1 : 0}:${fundCode || ''}`,
+  )
 
   const lastPoint = points[points.length - 1]
   const lastPct = badgePercent != null ? badgePercent : (lastPoint?.value ?? 0)
@@ -228,7 +268,7 @@ export function SparkTrend({
     return (
       <div
         className={cn(
-          'flex w-2/3 items-center justify-center text-[10px] text-muted',
+          'flex w-full items-center justify-center text-[10px] text-muted',
           className,
         )}
         style={{height}}
@@ -243,7 +283,7 @@ export function SparkTrend({
       <button
         type="button"
         className={cn(
-          'group relative w-2/3 cursor-zoom-in rounded-md text-left transition-opacity hover:opacity-90',
+          'group relative block w-full min-w-0 cursor-zoom-in rounded-md text-left transition-opacity hover:opacity-90',
           className,
         )}
         onClick={() => setOpen(true)}
@@ -252,15 +292,26 @@ export function SparkTrend({
         <div className="pointer-events-none absolute right-0 top-0 z-10 flex flex-col items-end gap-0.5">
           {mode === 'percent' ? <MiniPct value={lastPct} /> : null}
           {mode === 'price' || lastPrice != null ? (
-            <MiniPrice value={lastPrice} className={mode === 'price' ? 'text-gold' : undefined} />
+            <MiniPrice
+              value={lastPrice}
+              className={mode === 'price' ? 'text-gold' : undefined}
+            />
           ) : null}
         </div>
-        <ReactECharts
-          option={miniOption}
-          style={{height, width: '100%'}}
-          opts={{renderer: 'canvas'}}
-          notMerge
-        />
+        <div ref={miniWrapRef} className="min-w-0 w-full" style={{height}}>
+          <ReactECharts
+            ref={miniChartRef}
+            option={miniOption}
+            style={{height, width: '100%'}}
+            opts={{renderer: 'canvas'}}
+            notMerge
+            onChartReady={(inst) => {
+              const el = miniWrapRef.current
+              if (el) inst.resize({width: el.clientWidth, height})
+              else inst.resize()
+            }}
+          />
+        </div>
       </button>
 
       {fundCode ? (
@@ -289,12 +340,16 @@ export function SparkTrend({
                 </span>
               </DialogTitle>
             </DialogHeader>
-            <ReactECharts
-              option={fullOption}
-              style={{height: 320, width: '100%'}}
-              opts={{renderer: 'canvas'}}
-              notMerge
-            />
+            <div ref={fullWrapRef} className="w-full min-w-0">
+              <ReactECharts
+                ref={fullChartRef}
+                option={fullOption}
+                style={{height: 320, width: '100%'}}
+                opts={{renderer: 'canvas'}}
+                notMerge
+                onChartReady={(inst) => inst.resize()}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       )}

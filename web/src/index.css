@@ -74,6 +74,8 @@ html[data-theme='dark'] {
   html {
     width: 100%;
     max-width: 100vw;
+    /* 预留滚动条槽，避免 Dialog 锁滚动后页面宽度跳动 */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -88,6 +90,12 @@ html[data-theme='dark'] {
     background: var(--app-body-bg);
     background-attachment: fixed;
     transition: background 0.25s ease, color 0.2s ease;
+  }
+
+  /* scrollbar-gutter 已占位时，取消 remove-scroll 的补偿边距，避免双边距 */
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
   }
 
   /* 暗色：铺一层原 hero 风格的 ticker 网格 */
