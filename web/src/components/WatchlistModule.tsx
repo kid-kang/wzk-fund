@@ -5,6 +5,7 @@ import {Button} from '@/components/ui/button'
 import {Panel, PanelHeader} from '@/components/ui/panel'
 import {SparkTrend} from '@/components/SparkTrend'
 import {FundFormDialog} from '@/components/FundFormDialog'
+import {FundTrendDialog} from '@/components/FundTrendDialog'
 import {SectorTags} from '@/components/HoldingsModule'
 
 export function WatchlistModule({
@@ -17,18 +18,21 @@ export function WatchlistModule({
   onChanged: () => void
 }) {
   const [open, setOpen] = useState(false)
+  const [fundOpen, setFundOpen] = useState(false)
+  const [fundTarget, setFundTarget] = useState<FundQuoteRow | null>(null)
+
+  function openFundDetail(row: FundQuoteRow) {
+    setFundTarget(row)
+    setFundOpen(true)
+  }
 
   return (
     <Panel className="min-w-0">
       <PanelHeader
         title="自选基金"
-        desc="按添加顺序固定排列"
+        desc="按添加顺序固定排列 · 点名称进详情"
         action={
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setOpen(true)}
-          >
+          <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
             <Plus className="h-4 w-4" />
             添加自选
           </Button>
@@ -44,11 +48,17 @@ export function WatchlistModule({
           list.map((row) => (
             <div key={row.code} className="rounded-xl border border-line/70 bg-paper/40 p-3">
               <div className="min-w-0">
-                <div className="truncate font-medium">{row.name}</div>
+                <button
+                  type="button"
+                  className="block w-full truncate text-left font-medium hover:underline"
+                  onClick={() => openFundDetail(row)}
+                >
+                  {row.name}
+                </button>
                 <div className="font-mono text-xs text-muted">{row.code}</div>
               </div>
               <div className="mt-2">
-                <SectorTags sectors={row.sectors} />
+                <SectorTags sectors={row.sectors} sectorItems={row.sectorItems} />
               </div>
               <div className="mt-2">
                 <SparkTrend
@@ -85,8 +95,12 @@ export function WatchlistModule({
             <tr className="border-y border-line/70">
               <th className="px-3 py-2 font-medium">基金</th>
               <th className="px-3 py-2 font-medium">关联板块</th>
-              <th className="w-[32%] min-w-[170px] px-3 py-2 font-medium">走势（涨幅）</th>
-              <th className="w-24 whitespace-nowrap pl-8 pr-4 py-2 text-center font-medium">操作</th>
+              <th className="w-[32%] min-w-[170px] px-3 py-2 text-center font-medium">
+                走势（涨幅）
+              </th>
+              <th className="w-24 whitespace-nowrap pl-8 pr-4 py-2 text-center font-medium">
+                操作
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -106,11 +120,17 @@ export function WatchlistModule({
               list.map((row) => (
                 <tr key={row.code} className="border-b border-line/50 hover:bg-paper/60">
                   <td className="px-3 py-3">
-                    <div className="font-medium">{row.name}</div>
+                    <button
+                      type="button"
+                      className="block text-left font-medium hover:underline"
+                      onClick={() => openFundDetail(row)}
+                    >
+                      {row.name}
+                    </button>
                     <div className="font-mono text-xs text-muted">{row.code}</div>
                   </td>
                   <td className="px-3 py-3">
-                    <SectorTags sectors={row.sectors} />
+                    <SectorTags sectors={row.sectors} sectorItems={row.sectorItems} />
                   </td>
                   <td className="min-w-[170px] px-3 py-2">
                     <SparkTrend
@@ -124,21 +144,19 @@ export function WatchlistModule({
                         .map((p) => ({time: p.time, value: p.growth as number}))}
                     />
                   </td>
-                  <td className="w-24 whitespace-nowrap pl-8 pr-4 py-2">
-                    <div className="flex justify-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={async () => {
-                          if (!confirm(`删除自选 ${row.name}?`)) return
-                          await removeFund(row.code)
-                          onChanged()
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-rise" />
-                      </Button>
-                    </div>
+                  <td className="whitespace-nowrap pl-8 pr-4 py-2 text-center">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={async () => {
+                        if (!confirm(`删除自选 ${row.name}?`)) return
+                        await removeFund(row.code)
+                        onChanged()
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-rise" />
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -156,6 +174,16 @@ export function WatchlistModule({
           await createFund({code: payload.code, type: 'watch'})
           onChanged()
         }}
+      />
+      <FundTrendDialog
+        open={fundOpen}
+        onOpenChange={setFundOpen}
+        code={fundTarget?.code || ''}
+        name={fundTarget?.name || ''}
+        badgePercent={fundTarget?.percent}
+        intradayPoints={(fundTarget?.trend || [])
+          .filter((p) => p.growth != null)
+          .map((p) => ({time: p.time, value: p.growth as number}))}
       />
     </Panel>
   )

@@ -173,7 +173,11 @@ export default function App() {
         <IndicesModule list={indices} loading={loading} />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
-          <MarketModule data={market} loading={loading} />
+          <MarketModule
+            data={market}
+            loading={loading}
+            onWatchAdded={() => load(true)}
+          />
           <WatchlistModule list={watchlist} loading={loading} onChanged={() => load(true)} />
         </div>
 

@@ -30,7 +30,39 @@ export type QuoteLike = {
   time?: string | null
   trend?: {time: string; growth: number | null; netValue?: number | null}[]
   sectors?: string[]
+  sectorItems?: {name: string; sectorCode?: string; mappingCode?: string}[]
   ftype?: string
+}
+
+function cleanSectors(list: string[] | undefined | null): string[] {
+  return (Array.isArray(list) ? list : []).filter((s) => {
+    const t = String(s || '').trim()
+    return !!t && t !== '--' && t !== '-'
+  })
+}
+
+function normalizeSectorItems(
+  items: QuoteLike['sectorItems'],
+  fallbackNames: string[],
+): {name: string; sectorCode: string; mappingCode: string}[] {
+  if (Array.isArray(items) && items.length) {
+    return items
+      .map((row) => {
+        const name = String(row?.name || '').trim()
+        if (!name || name === '--' || name === '-') return null
+        return {
+          name,
+          sectorCode: String(row?.sectorCode || '').trim(),
+          mappingCode: String(row?.mappingCode || '').trim(),
+        }
+      })
+      .filter(Boolean) as {name: string; sectorCode: string; mappingCode: string}[]
+  }
+  return cleanSectors(fallbackNames).map((name) => ({
+    name,
+    sectorCode: '',
+    mappingCode: '',
+  }))
 }
 
 /** 从估值分时末点取净值（比涨幅更精确） */
@@ -128,11 +160,8 @@ export function calcHoldings(
     totalAmount = totalAmount.plus(displayAmount)
     totalPnl = totalPnl.plus(pnl)
 
-    const sectors = q.sectors?.length
-      ? q.sectors
-      : raw.sectors?.length
-        ? raw.sectors
-        : []
+    const sectors = cleanSectors(q.sectors?.length ? q.sectors : raw.sectors)
+    const sectorItems = normalizeSectorItems(q.sectorItems, sectors)
 
     const patch: {
       code: string
@@ -164,6 +193,7 @@ export function calcHoldings(
       liveAmount,
       pnl,
       sectors,
+      sectorItems,
       shares,
       type: raw.type,
       code: raw.code,
@@ -228,11 +258,8 @@ export function mergeWatchlist(
   const persistPatches: Array<{code: string; sectors?: string[]}> = []
   const list = localFunds.map((f) => {
     const q = quoteMap.get(f.code) || ({} as QuoteLike)
-    const sectors = q.sectors?.length
-      ? q.sectors
-      : f.sectors?.length
-        ? f.sectors
-        : []
+    const sectors = cleanSectors(q.sectors?.length ? q.sectors : f.sectors)
+    const sectorItems = normalizeSectorItems(q.sectorItems, sectors)
     if (sectors.length && sectors.join() !== (f.sectors || []).join()) {
       persistPatches.push({code: f.code, sectors})
     }
@@ -245,6 +272,7 @@ export function mergeWatchlist(
       time: q.time,
       trend: q.trend || [],
       sectors,
+      sectorItems,
     } as FundQuoteRow
   })
   return {list, persistPatches}

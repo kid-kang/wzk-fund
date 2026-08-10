@@ -42,6 +42,12 @@ export type FundRecord = {
   updatedAt?: string
 }
 
+export type SectorTagItem = {
+  name: string
+  sectorCode?: string
+  mappingCode?: string
+}
+
 export type FundQuoteRow = FundRecord & {
   /** 实时计算的确认净值市值，不写入 localStorage */
   amount: number
@@ -62,6 +68,10 @@ export type FundQuoteRow = FundRecord & {
   weight?: number
   /** 晚间官方确认涨跌后展示，下一交易日开盘清除 */
   confirmedUpdated?: boolean
+  /** QDII 等延迟净值的官方披露日期文案 */
+  discloseTimeText?: string
+  /** 板块标签（含跳转代码） */
+  sectorItems?: SectorTagItem[]
 }
 
 export type HoldingsPayload = {
@@ -90,6 +100,22 @@ export type SectorItem = {
   sectorCode?: string
 }
 
+export type IndustryFundItem = {
+  code: string
+  name: string
+  nav: number | null
+  percent: number | null
+  heat?: number | null
+}
+
+export type IndustryFundsPayload = {
+  sectorCode?: string
+  mappingCode: string
+  themeName: string
+  source?: string
+  items: IndustryFundItem[]
+}
+
 export type MarketOverview = {
   upDown: {up: number; down: number; flat: number; time: string | null}
   /** 热搜榜全量 */
@@ -97,7 +123,7 @@ export type MarketOverview = {
   /** 涨幅榜全量 */
   boardGainers?: SectorItem[]
   boardUpdateTime?: string | null
-  boardSource?: 'xiaobei' | 'eastmoney' | string
+  boardSource?: string
 }
 
 export type GoldPayload = {
@@ -216,6 +242,8 @@ export type FundQuoteDetail = {
   ageDays?: number | null
   percent?: number | null
   netValue?: number | null
+  sectors?: string[]
+  sectorItems?: SectorTagItem[]
 }
 
 export async function fetchFundQuote(code: string) {
@@ -227,9 +255,85 @@ export async function fetchFundQuote(code: string) {
   return assertOk(data).data
 }
 
+export type FundHoldingRow = {
+  rank: number
+  code: string
+  name: string
+  weightText: string
+  weightChangeText?: string
+  weightChangeClass?: string
+  dayChangeText?: string
+  dayChangeClass?: string
+  rowTone?: string
+}
+
+export type FundHoldingsPayload = {
+  code: string
+  holdings: FundHoldingRow[]
+  totalWeightText?: string
+  reportQuarterText?: string
+}
+
+export async function fetchFundHoldings(code: string) {
+  const {data} = await api.get<{
+    success: boolean
+    message?: string
+    data: FundHoldingsPayload
+  }>(`/funds/${encodeURIComponent(code)}/holdings`)
+  return assertOk(data).data
+}
+
+export type FundStageRow = {
+  key?: string
+  label?: string
+  date?: string
+  dateLabel?: string
+  percentText?: string
+  percentClass?: string
+  dayChangeText?: string
+  dayChangeClass?: string
+}
+
+export type FundStageStatsPayload = {
+  code: string
+  navHistory: FundStageRow[]
+  periodReturns: FundStageRow[]
+  monthlyReturns: FundStageRow[]
+  quarterlyReturns: FundStageRow[]
+  semiAnnualReturns: FundStageRow[]
+  annualReturns: FundStageRow[]
+  drawdowns: FundStageRow[]
+}
+
+export async function fetchFundStageStats(code: string) {
+  const {data} = await api.get<{
+    success: boolean
+    message?: string
+    data: FundStageStatsPayload
+  }>(`/funds/${encodeURIComponent(code)}/stage-stats`)
+  return assertOk(data).data
+}
+
 export async function fetchMarketOverview() {
   const {data} = await api.get<{success: boolean; data: MarketOverview}>('/market/overview')
   return data.data
+}
+
+export async function fetchIndustryFunds(opts: {
+  sectorCode?: string
+  mappingCode?: string
+}) {
+  const {data} = await api.get<{
+    success: boolean
+    message?: string
+    data: IndustryFundsPayload
+  }>('/market/boards/funds', {
+    params: {
+      sectorCode: opts.sectorCode || '',
+      mappingCode: opts.mappingCode || '',
+    },
+  })
+  return assertOk(data).data
 }
 
 export async function fetchGold() {

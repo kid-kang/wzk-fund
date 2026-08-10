@@ -1,8 +1,13 @@
 import {useState} from 'react'
-import type {IndexItem, MarketOverview} from '@/lib/api'
+import type {IndexItem, MarketOverview, SectorItem} from '@/lib/api'
 import {formatPct, pctClass} from '@/lib/utils'
 import {Panel, PanelHeader} from '@/components/ui/panel'
 import {IndexTrendDialog} from '@/components/IndexTrendDialog'
+import {
+  SectorFundsDialog,
+  type SectorFundsTarget,
+} from '@/components/SectorFundsDialog'
+import {FundTrendDialog} from '@/components/FundTrendDialog'
 
 const INDEX_SHORT: Record<string, string> = {
   '000001': '上证',
@@ -113,16 +118,38 @@ export function IndicesModule({
 export function MarketModule({
   data,
   loading,
+  onWatchAdded,
 }: {
   data: MarketOverview | null
   loading?: boolean
+  onWatchAdded?: () => void
 }) {
   const [boardTab, setBoardTab] = useState<'hot' | 'gainers'>('gainers')
+  const [sectorOpen, setSectorOpen] = useState(false)
+  const [sectorTarget, setSectorTarget] = useState<SectorFundsTarget | null>(null)
+  const [fundOpen, setFundOpen] = useState(false)
+  const [fundTarget, setFundTarget] = useState<{code: string; name: string} | null>(
+    null,
+  )
   const gainers = data?.boardGainers || []
   const hot = data?.hotSearch?.length ? data.hotSearch : gainers
   const boardItems = boardTab === 'hot' ? hot : gainers
   const sourceHint =
-    data?.boardSource === 'xiaobei' ? '小倍板块热搜 / 涨幅' : '概念板块涨跌'
+    data?.boardSource === 'eastmoney' ? '概念板块涨跌' : '板块热搜 / 涨幅 · 点击查看基金'
+
+  function openSector(item: SectorItem) {
+    const sector = item.sectorCode || item.code || ''
+    if (!sector && !item.mappingCode) {
+      window.alert('该板块暂无基金列表')
+      return
+    }
+    setSectorTarget({
+      name: item.name || '',
+      sectorCode: sector,
+      mappingCode: item.mappingCode || '',
+    })
+    setSectorOpen(true)
+  }
 
   return (
     <Panel className="h-full min-w-0">
@@ -150,7 +177,7 @@ export function MarketModule({
             </button>
           </div>
         </div>
-        <div className="space-y-0.5">
+        <div className="max-h-[28rem] space-y-0.5 overflow-y-auto">
           {loading && !boardItems.length ? (
             <div className="py-6 text-center text-xs text-muted">加载中...</div>
           ) : boardItems.length === 0 ? (
@@ -160,26 +187,28 @@ export function MarketModule({
               const rank = idx + 1
               const rankText = rank < 10 ? `0${rank}` : String(rank)
               return (
-                <div
+                <button
+                  type="button"
                   key={`${boardTab}-${item.code}`}
-                  className={`flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 ${
+                  className={`flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-paper-deep/70 ${
                     idx % 2 === 0 ? 'bg-paper/55' : ''
                   }`}
+                  onClick={() => openSector(item)}
                 >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span
-                        className={`w-6 font-mono text-xs font-semibold tabular-nums ${
-                          rank === 1
-                            ? 'text-[#c9a227]'
-                            : rank === 2
-                              ? 'text-[#8e99a8]'
-                              : rank === 3
-                                ? 'text-[#b87333]'
-                                : 'font-normal text-muted/80'
-                        }`}
-                      >
-                        {rankText}
-                      </span>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span
+                      className={`w-6 font-mono text-xs font-semibold tabular-nums ${
+                        rank === 1
+                          ? 'text-[#c9a227]'
+                          : rank === 2
+                            ? 'text-[#8e99a8]'
+                            : rank === 3
+                              ? 'text-[#b87333]'
+                              : 'font-normal text-muted/80'
+                      }`}
+                    >
+                      {rankText}
+                    </span>
                     <span className="truncate text-sm font-normal">{item.name}</span>
                   </div>
                   <span
@@ -187,12 +216,31 @@ export function MarketModule({
                   >
                     {formatPct(item.percent)}
                   </span>
-                </div>
+                </button>
               )
             })
           )}
         </div>
       </div>
+
+      <SectorFundsDialog
+        open={sectorOpen}
+        onOpenChange={setSectorOpen}
+        target={sectorTarget}
+        onWatchAdded={onWatchAdded}
+        onOpenFund={(fund) => {
+          setFundTarget(fund)
+          setFundOpen(true)
+        }}
+      />
+      {fundTarget ? (
+        <FundTrendDialog
+          open={fundOpen}
+          onOpenChange={setFundOpen}
+          code={fundTarget.code}
+          name={fundTarget.name}
+        />
+      ) : null}
     </Panel>
   )
 }

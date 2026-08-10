@@ -13,6 +13,11 @@ import {Button} from '@/components/ui/button'
 import {Panel, PanelHeader} from '@/components/ui/panel'
 import {SparkTrend} from '@/components/SparkTrend'
 import {FundFormDialog} from '@/components/FundFormDialog'
+import {FundTrendDialog} from '@/components/FundTrendDialog'
+import {
+  SectorFundsDialog,
+  type SectorFundsTarget,
+} from '@/components/SectorFundsDialog'
 import {GoldPanel} from '@/components/GoldHoldingsRow'
 
 const HIDE_AMOUNTS_KEY = 'holdings_hide_amounts'
@@ -41,9 +46,16 @@ export function HoldingsModule({
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<FundQuoteRow | null>(null)
   const [hideAmounts, setHideAmounts] = useState(readHideAmounts)
+  const [fundOpen, setFundOpen] = useState(false)
+  const [fundTarget, setFundTarget] = useState<FundQuoteRow | null>(null)
 
   const summary = data?.summary ?? null
   const list = data?.list || []
+
+  function openFundDetail(row: FundQuoteRow) {
+    setFundTarget(row)
+    setFundOpen(true)
+  }
 
   function toggleHideAmounts() {
     setHideAmounts((prev) => {
@@ -130,7 +142,13 @@ export function HoldingsModule({
             list.map((row) => (
               <div key={row.code} className="rounded-xl border border-line/70 bg-paper/40 p-3">
                 <div className="min-w-0">
-                  <div className="truncate font-medium">{row.name}</div>
+                  <button
+                    type="button"
+                    className="block w-full truncate text-left font-medium hover:underline"
+                    onClick={() => openFundDetail(row)}
+                  >
+                    {row.name}
+                  </button>
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span className="font-mono text-xs text-muted">{row.code}</span>
                     <ConfirmedUpdatedBadge
@@ -180,7 +198,7 @@ export function HoldingsModule({
                   </div>
                   <div>
                     <div className="text-[11px] text-muted">板块</div>
-                    <SectorTags sectors={row.sectors} />
+                    <SectorTags sectors={row.sectors} sectorItems={row.sectorItems} />
                   </div>
                 </div>
                 <div className="mt-2">
@@ -235,7 +253,9 @@ export function HoldingsModule({
                 <th className="px-3 py-2 font-medium">实时收益</th>
                 <th className="px-3 py-2 font-medium">占比</th>
                 <th className="px-3 py-2 font-medium">板块</th>
-                <th className="px-3 py-2 font-medium">走势（涨幅）</th>
+                <th className="min-w-[200px] w-[28%] px-3 py-2 text-center font-medium">
+                  走势（涨幅）
+                </th>
                 <th className="whitespace-nowrap px-3 py-2 text-center font-medium">操作</th>
               </tr>
             </thead>
@@ -250,7 +270,13 @@ export function HoldingsModule({
                 list.map((row) => (
                   <tr key={row.code} className="border-b border-line/50 hover:bg-paper/60">
                     <td className="px-3 py-3">
-                      <div className="truncate font-medium text-ink">{row.name}</div>
+                      <button
+                        type="button"
+                        className="block max-w-full truncate text-left font-medium text-ink hover:underline"
+                        onClick={() => openFundDetail(row)}
+                      >
+                        {row.name}
+                      </button>
                       <div className="flex min-w-0 items-center gap-1.5">
                         <span className="font-mono text-xs text-muted">{row.code}</span>
                         <ConfirmedUpdatedBadge
@@ -275,10 +301,11 @@ export function HoldingsModule({
                       {formatPct(row.weight, 1).replace('+', '')}
                     </td>
                     <td className="px-3 py-3">
-                      <SectorTags sectors={row.sectors} />
+                      <SectorTags sectors={row.sectors} sectorItems={row.sectorItems} />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="min-w-[200px] w-[28%] px-3 py-2">
                       <SparkTrend
+                        className="w-full"
                         height={64}
                         title={row.name}
                         fundCode={row.code}
@@ -340,6 +367,16 @@ export function HoldingsModule({
             }
             onChanged()
           }}
+        />
+        <FundTrendDialog
+          open={fundOpen}
+          onOpenChange={setFundOpen}
+          code={fundTarget?.code || ''}
+          name={fundTarget?.name || ''}
+          badgePercent={fundTarget?.percent}
+          intradayPoints={(fundTarget?.trend || [])
+            .filter((p) => p.growth != null)
+            .map((p) => ({time: p.time, value: p.growth as number}))}
         />
       </Panel>
 
@@ -419,18 +456,76 @@ export function ConfirmedUpdatedBadge({
   )
 }
 
-export function SectorTags({sectors}: {sectors?: string[]}) {
-  if (!sectors?.length) return <span className="text-xs text-muted">--</span>
+export function SectorTags({
+  sectors,
+  sectorItems,
+}: {
+  sectors?: string[]
+  sectorItems?: {name: string; sectorCode?: string; mappingCode?: string}[]
+}) {
+  const [open, setOpen] = useState(false)
+  const [target, setTarget] = useState<SectorFundsTarget | null>(null)
+  const [fundOpen, setFundOpen] = useState(false)
+  const [fundTarget, setFundTarget] = useState<{code: string; name: string} | null>(
+    null,
+  )
+  const tags =
+    Array.isArray(sectorItems) && sectorItems.length
+      ? sectorItems
+          .map((it) => ({
+            name: String(it?.name || '').trim(),
+            sectorCode: String(it?.sectorCode || '').trim(),
+            mappingCode: String(it?.mappingCode || '').trim(),
+          }))
+          .filter((it) => it.name)
+      : (sectors || [])
+          .map((s) => String(s || '').trim())
+          .filter(Boolean)
+          .map((name) => ({name, sectorCode: '', mappingCode: ''}))
+
+  if (!tags.length) return <span className="text-xs text-muted">--</span>
   return (
-    <div className="flex flex-wrap gap-1">
-      {sectors.map((s) => (
-        <span
-          key={s}
-          className="rounded border border-line bg-paper px-1.5 py-0.5 text-[11px] text-ink-soft"
-        >
-          {s}
-        </span>
-      ))}
-    </div>
+    <>
+      <div className="flex flex-wrap gap-1">
+        {tags.map((tag) => (
+          <button
+            type="button"
+            key={tag.name}
+            className="rounded border border-line bg-paper px-1.5 py-0.5 text-[11px] text-ink transition-colors hover:border-ink/30 hover:bg-paper-deep"
+            onClick={() => {
+              if (!tag.sectorCode && !tag.mappingCode) {
+                window.alert('该板块暂无详情')
+                return
+              }
+              setTarget({
+                name: tag.name,
+                sectorCode: tag.sectorCode,
+                mappingCode: tag.mappingCode,
+              })
+              setOpen(true)
+            }}
+          >
+            {tag.name}
+          </button>
+        ))}
+      </div>
+      <SectorFundsDialog
+        open={open}
+        onOpenChange={setOpen}
+        target={target}
+        onOpenFund={(fund) => {
+          setFundTarget(fund)
+          setFundOpen(true)
+        }}
+      />
+      {fundTarget ? (
+        <FundTrendDialog
+          open={fundOpen}
+          onOpenChange={setFundOpen}
+          code={fundTarget.code}
+          name={fundTarget.name}
+        />
+      ) : null}
+    </>
   )
 }
