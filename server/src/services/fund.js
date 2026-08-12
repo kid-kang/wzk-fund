@@ -1606,13 +1606,16 @@ export async function getFundMatiaria(code) {
   }
 }
 
-/** 基金历史涨幅区间 → 回溯自然日（成立以来不截断） */
+/**
+ * 基金区间涨幅 → 回溯自然日（与详情页「阶段涨幅」一致；成立以来不截断）。
+ * 走势图取点与胶囊百分比共用此口径，不再为画线额外加长窗口。
+ */
 const FUND_RANGE_CALENDAR_DAYS = {
-  '1m': 40,
-  '3m': 100,
-  '6m': 200,
-  '1y': 400,
-  '3y': 1200,
+  '1m': 30,
+  '3m': 90,
+  '6m': 180,
+  '1y': 365,
+  '3y': 365 * 3,
   since: null,
 }
 
@@ -1669,18 +1672,8 @@ async function fetchFundNavHistoryPaged(code, opts = {}) {
   return all
 }
 
-function filterFundNavByRange(rowsAsc, range) {
-  const days = FUND_RANGE_CALENDAR_DAYS[range]
-  if (days == null) return rowsAsc
-  const start = new Date()
-  start.setHours(0, 0, 0, 0)
-  start.setDate(start.getDate() - days)
-  const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
-  return rowsAsc.filter((p) => p.date >= startStr)
-}
-
 /**
- * 基金历史净值涨幅（相对区间首日单位净值）
+ * 基金历史净值涨幅（与阶段涨幅同口径：名义自然日 + 起点前一交易日净值作基准）
  * @param {string} code
  * @param {'1m'|'3m'|'6m'|'1y'|'3y'|'since'} range
  */
@@ -1713,12 +1706,22 @@ export async function getFundHistory(code, range = '3m') {
 
   if (!desc.length) throw new Error(`暂无基金 ${padded} 历史净值`)
 
-  // 接口降序 → 升序后再按区间截断
-  const asc = filterFundNavByRange([...desc].reverse(), key)
-  if (!asc.length) throw new Error(`暂无该周期净值数据`)
+  const asc = [...desc].reverse()
+  const days = FUND_RANGE_CALENDAR_DAYS[key]
+  const fromDate = days != null ? calendarDateOffset(days) : null
 
-  const base = asc[0].netValue
-  const points = asc.map((p) => ({
+  // 与 sliceReturn 相同：找到 onOrAfter(cutoff) 后，用前一交易日净值作 0% 基准
+  let i = 0
+  if (fromDate) {
+    i = findNavIndexOnOrAfter(asc, fromDate)
+    if (i < 0) i = 0
+  }
+  const baseIdx = i > 0 ? i - 1 : i
+  const series = asc.slice(baseIdx)
+  if (!series.length) throw new Error(`暂无该周期净值数据`)
+
+  const base = series[0].netValue
+  const points = series.map((p) => ({
     date: p.date,
     netValue: p.netValue,
     percent:
@@ -1879,15 +1882,15 @@ function buildCalendarReturns(asc, kind) {
       baseNav != null
         ? baseNav
         : (() => {
-            const firstInBucket = asc.find((p) => {
-              const [y, m] = p.date.split('-').map(Number)
-              if (kind === 'month') return `${y}-${String(m).padStart(2, '0')}` === cur.key
-              if (kind === 'quarter') return `${y}-Q${Math.ceil(m / 3)}` === cur.key
-              if (kind === 'semi') return `${y}-H${m <= 6 ? 1 : 2}` === cur.key
-              return String(y) === cur.key
-            })
-            return firstInBucket?.netValue
-          })()
+          const firstInBucket = asc.find((p) => {
+            const [y, m] = p.date.split('-').map(Number)
+            if (kind === 'month') return `${y}-${String(m).padStart(2, '0')}` === cur.key
+            if (kind === 'quarter') return `${y}-Q${Math.ceil(m / 3)}` === cur.key
+            if (kind === 'semi') return `${y}-H${m <= 6 ? 1 : 2}` === cur.key
+            return String(y) === cur.key
+          })
+          return firstInBucket?.netValue
+        })()
     rows.push({
       key: cur.key,
       label: cur.label,
@@ -1931,18 +1934,18 @@ export async function getFundStageStats(code) {
   })
 
   const periodReturns = buildPeriodRows(asc, [
-    {key: '1m', label: '近1月', days: 30},
-    {key: '3m', label: '近3月', days: 90},
-    {key: '6m', label: '近6月', days: 180},
-    {key: '1y', label: '近1年', days: 365},
-    {key: '3y', label: '近3年', days: 365 * 3},
+    {key: '1m', label: '近1月', days: FUND_RANGE_CALENDAR_DAYS['1m']},
+    {key: '3m', label: '近3月', days: FUND_RANGE_CALENDAR_DAYS['3m']},
+    {key: '6m', label: '近6月', days: FUND_RANGE_CALENDAR_DAYS['6m']},
+    {key: '1y', label: '近1年', days: FUND_RANGE_CALENDAR_DAYS['1y']},
+    {key: '3y', label: '近3年', days: FUND_RANGE_CALENDAR_DAYS['3y']},
   ])
 
   const drawdowns = buildPeriodRows(asc, [
-    {key: '3m', label: '近3月', days: 90, mode: 'drawdown'},
-    {key: '6m', label: '近6月', days: 180, mode: 'drawdown'},
-    {key: '1y', label: '近1年', days: 365, mode: 'drawdown'},
-    {key: '3y', label: '近3年', days: 365 * 3, mode: 'drawdown'},
+    {key: '3m', label: '近3月', days: FUND_RANGE_CALENDAR_DAYS['3m'], mode: 'drawdown'},
+    {key: '6m', label: '近6月', days: FUND_RANGE_CALENDAR_DAYS['6m'], mode: 'drawdown'},
+    {key: '1y', label: '近1年', days: FUND_RANGE_CALENDAR_DAYS['1y'], mode: 'drawdown'},
+    {key: '3y', label: '近3年', days: FUND_RANGE_CALENDAR_DAYS['3y'], mode: 'drawdown'},
     {key: 'ytd', label: '今年以来', from: 'ytd', mode: 'drawdown'},
     {key: 'since', label: '成立以来', from: 'since', mode: 'drawdown'},
   ])
