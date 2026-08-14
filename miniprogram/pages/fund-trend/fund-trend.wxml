@@ -25,17 +25,13 @@
               <text class="ticket-age mono" wx:if="{{ageText}}">{{ageText}}</text>
             </view>
           </view>
-          <view class="ticket-tags" wx:if="{{sectorTags.length}}">
-            <text
-              class="sector-tag is-link"
-              wx:for="{{sectorTags}}"
-              wx:for-item="tag"
-              wx:key="name"
-              data-name="{{tag.name}}"
-              data-sector="{{tag.sectorCode}}"
-              data-mapping="{{tag.mappingCode}}"
-              catchtap="onOpenSector"
-            >{{tag.name}}</text>
+          <view class="ticket-tags">
+            <text wx:if="{{!watched}}" class="watch-tag is-add {{watchBusy ? 'is-busy' : ''}}" catchtap="onAddWatch">+
+              自选</text>
+            <text wx:else class="watch-tag {{held ? 'is-hold' : 'is-watch'}}">{{watchLabel}}</text>
+            <text class="sector-tag is-link" wx:for="{{sectorTags}}" wx:for-item="tag" wx:key="name"
+              data-name="{{tag.name}}" data-sector="{{tag.sectorCode}}" data-mapping="{{tag.mappingCode}}"
+              catchtap="onOpenSector">{{tag.name}}</text>
           </view>
           <view class="ticket-rule" aria-hidden="true"></view>
         </view>
@@ -57,83 +53,114 @@
             extraKey="netValue" extraLabel="净值" showExtremes="{{true}}" range="{{range}}" height="{{chartHeight}}" />
         </view>
 
-        <view class="hold-block">
-          <view class="hold-card">
-            <view class="hold-head">
-              <view class="hold-title-row">
-                <text class="hold-title">重仓股票</text>
-                <text class="hold-total mono" wx:if="{{totalWeightText}}">（占比{{totalWeightText}}）</text>
-              </view>
-              <text class="hold-quarter" wx:if="{{reportQuarterText}}">{{reportQuarterText}}</text>
-            </view>
-
-            <view class="hold-cols" wx:if="{{holdings.length}}">
-              <text class="hold-col hold-col-name">重仓股票</text>
-              <text class="hold-col hold-col-chg">涨跌幅</text>
-              <text class="hold-col hold-col-w">持仓占比</text>
-              <text class="hold-col hold-col-qw">较上季度变化</text>
-            </view>
-
-            <van-empty wx:if="{{holdingsLoading}}" description="加载重仓…" />
-            <view class="hold-err" wx:elif="{{holdingsError && !holdings.length}}">{{holdingsError}}</view>
-
-            <view class="hold-list" wx:if="{{!holdingsLoading && holdings.length}}">
-              <view class="hold-row {{item.rowTone}}" wx:for="{{holdings}}" wx:key="rank">
-                <view class="hold-cell hold-col-name">
-                  <text class="hold-name">{{item.name}}</text>
-                  <text class="hold-stock mono">{{item.code}}</text>
-                </view>
-                <text class="hold-cell hold-col-chg mono {{item.dayChangeClass}}">{{item.dayChangeText}}</text>
-                <text class="hold-cell hold-col-w mono">{{item.weightText}}</text>
-                <text class="hold-cell hold-col-qw mono {{item.weightChangeClass}}">{{item.weightChangeText || '--'}}</text>
-              </view>
-            </view>
-          </view>
-        </view>
-
         <view class="stage-block">
           <view class="stage-card">
             <view class="stage-tabs">
-              <view
-                class="stage-tab {{stageTab === item.key ? 'is-on' : ''}}"
-                wx:for="{{stageTabs}}"
-                wx:key="key"
-                data-key="{{item.key}}"
-                bindtap="onStageTabTap"
-              >
+              <view class="stage-tab {{stageTab === item.key ? 'is-on' : ''}}" wx:for="{{stageTabs}}" wx:key="key"
+                data-key="{{item.key}}" bindtap="onStageTabTap">
                 <text class="stage-tab-label">{{item.label}}</text>
               </view>
             </view>
 
-            <view class="stage-grains" wx:if="{{stageShowGrain}}">
-              <view
-                class="stage-grain {{stageGrain === item.key ? 'is-on' : ''}}"
-                wx:for="{{stageGrains}}"
-                wx:key="key"
-                data-key="{{item.key}}"
-                bindtap="onStageGrainTap"
-              >{{item.label}}</view>
+            <view class="stage-pane" style="min-height: {{stagePaneMinH}}px;">
+              <block wx:if="{{stageTab === 'hold'}}">
+                <view class="hold-body">
+                  <view class="hold-filing">
+                    <view class="hold-stat">
+                      <text class="hold-stat-k">前十大占比</text>
+                      <text class="hold-stat-v mono" wx:if="{{totalWeightText}}">{{totalWeightText}}</text>
+                    </view>
+                    <view class="hold-stamp" wx:if="{{reportStampYear}}">
+                      <text class="hold-stamp-y">{{reportStampYear}}</text>
+                      <text class="hold-stamp-q">第{{reportStampQ}}季</text>
+                    </view>
+                    <view class="hold-stamp" wx:elif="{{reportQuarterText}}">
+                      <text class="hold-stamp-q">{{reportQuarterText}}</text>
+                    </view>
+                  </view>
+
+                  <view class="hold-cols" wx:if="{{holdings.length}}">
+                    <text class="hold-col hold-col-name">重仓股票</text>
+                    <text class="hold-col hold-col-chg">涨跌幅</text>
+                    <text class="hold-col hold-col-w">持仓占比</text>
+                    <text class="hold-col hold-col-qw">较上季度</text>
+                  </view>
+
+                  <van-empty wx:if="{{holdingsLoading}}" description="加载重仓…" />
+                  <view class="hold-err" wx:elif="{{holdingsError && !holdings.length}}">{{holdingsError}}</view>
+
+                  <view class="hold-list" wx:if="{{!holdingsLoading && holdings.length}}">
+                    <view class="hold-row {{item.rowTone}}" wx:for="{{holdings}}" wx:key="rank">
+                      <view class="hold-cell hold-col-name">
+                        <text class="hold-name">{{item.name}}</text>
+                        <text class="hold-stock mono">{{item.code}}</text>
+                      </view>
+                      <text class="hold-cell hold-col-chg mono {{item.dayChangeClass}}">{{item.dayChangeText}}</text>
+                      <text class="hold-cell hold-col-w mono">{{item.weightText}}</text>
+                      <text class="hold-cell hold-col-qw mono {{item.weightChangeClass}}">{{item.weightChangeText ||
+                        '--'}}</text>
+                    </view>
+                  </view>
+                </view>
+              </block>
+
+              <block wx:elif="{{stageTab === 'scale'}}">
+                <view class="scale-body">
+                  <view class="scale-head" wx:if="{{scaleLatest}}">
+                    <text class="scale-date-hint">截至 {{scaleLatest.date}}</text>
+                    <view class="scale-latest">
+                      <text class="scale-latest-val mono">{{scaleLatest.valueText}}</text>
+                      <text class="scale-latest-mom mono {{scaleLatest.momClass}}"
+                        wx:if="{{scaleLatest.momText && scaleLatest.momText !== '--'}}">{{scaleLatest.momText}}</text>
+                    </view>
+                  </view>
+
+                  <van-empty wx:if="{{scaleLoading}}" description="加载规模…" />
+                  <view class="scale-err" wx:elif="{{scaleError && !scalePoints.length}}">{{scaleError}}</view>
+                  <view class="scale-err" wx:elif="{{!scaleLoading && !scalePoints.length}}">暂无规模数据</view>
+
+                  <view class="scale-chart" wx:if="{{!scaleLoading && scalePoints.length}}">
+                    <view class="scale-col {{item.isLatest ? 'is-on' : ''}}" wx:for="{{scalePoints}}" wx:key="date">
+                      <text class="scale-col-val mono">{{item.valueText}}</text>
+                      <view class="scale-track">
+                        <view class="scale-bar" style="height: {{item.barPct}}%;"></view>
+                      </view>
+                      <text class="scale-col-date">{{item.dateLabel}}</text>
+                    </view>
+                  </view>
+                </view>
+              </block>
+
+              <block wx:else>
+                <view class="stage-grains" wx:if="{{stageShowGrain}}">
+                  <view class="stage-grain {{stageGrain === item.key ? 'is-on' : ''}}" wx:for="{{stageGrains}}"
+                    wx:key="key" data-key="{{item.key}}" bindtap="onStageGrainTap">{{item.label}}</view>
+                </view>
+
+                <view class="stage-cols {{stageShowDd ? 'has-dd' : ''}}" wx:if="{{stageRows.length}}">
+                  <text class="stage-col-label">{{stageLabelCol}}</text>
+                  <text class="stage-col-value">{{stageValueCol}}</text>
+                  <text class="stage-col-dd" wx:if="{{stageShowDd}}">{{stageDdCol}}</text>
+                </view>
+
+                <van-empty wx:if="{{stageLoading}}" description="加载阶段数据…" />
+                <view class="stage-err" wx:elif="{{stageError && !stageRows.length}}">{{stageError}}</view>
+
+                <view class="stage-list" wx:if="{{!stageLoading && stageRows.length}}">
+                  <view class="stage-row {{stageShowDd ? 'has-dd' : ''}}" wx:for="{{stageRows}}" wx:key="key">
+                    <text class="stage-row-label">{{item.label}}</text>
+                    <text class="stage-row-value mono {{item.valueClass}}">{{item.valueText}}</text>
+                    <text class="stage-row-dd mono {{item.ddClass}}" wx:if="{{stageShowDd}}">{{item.ddText}}</text>
+                  </view>
+                </view>
+
+                <view class="stage-more" wx:if="{{stageHasMore}}" bindtap="onStageMoreTap">查看更多</view>
+              </block>
             </view>
-
-            <view class="stage-cols" wx:if="{{stageRows.length}}">
-              <text class="stage-col-label">{{stageLabelCol}}</text>
-              <text class="stage-col-value">{{stageValueCol}}</text>
-            </view>
-
-            <van-empty wx:if="{{stageLoading}}" description="加载阶段数据…" />
-            <view class="stage-err" wx:elif="{{stageError && !stageRows.length}}">{{stageError}}</view>
-
-            <view class="stage-list" wx:if="{{!stageLoading && stageRows.length}}">
-              <view class="stage-row" wx:for="{{stageRows}}" wx:key="key">
-                <text class="stage-row-label">{{item.label}}</text>
-                <text class="stage-row-value mono {{item.valueClass}}">{{item.valueText}}</text>
-              </view>
-            </view>
-
-            <view class="stage-more" wx:if="{{stageHasMore}}" bindtap="onStageMoreTap">查看更多</view>
           </view>
         </view>
       </view>
     </view>
   </scroll-view>
+  <van-toast id="van-toast" />
 </view>

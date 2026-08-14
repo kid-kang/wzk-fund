@@ -1,4 +1,6 @@
+const Toast = require('@vant/weapp/toast/toast').default
 const api = require('../../utils/api')
+const store = require('../../utils/portfolioStore')
 const {formatPct, pctClass} = require('../../utils/format')
 const {
   availableFundRanges,
@@ -32,22 +34,31 @@ function emptyRanges(ageDays) {
   )
 }
 
+function parseQuarterStamp(text) {
+  const m = String(text || '').match(/(\d{4})年第(\d)季度/)
+  if (!m) return {reportStampYear: '', reportStampQ: ''}
+  return {reportStampYear: m[1], reportStampQ: m[2]}
+}
+
 const themeView = getThemeViewState()
 syncNavigationBar(themeView.theme)
 
 /** 停留详情页时重仓行情轮询间隔 */
 const HOLDINGS_POLL_MS = 60 * 1000
 /** 阶段表默认展示行数；「查看更多」每次追加 */
-const STAGE_PAGE_SIZE = 5
+const STAGE_PAGE_SIZE = 8
+/** 历史净值默认多展示一些交易日 */
+const NAV_PAGE_SIZE = 15
 
 const STAGE_TABS = [
+  {key: 'hold', label: '重仓股'},
   {key: 'nav', label: '历史净值'},
-  {key: 'return', label: '阶段涨幅'},
-  {key: 'drawdown', label: '阶段回撤'},
+  {key: 'return', label: '阶段涨跌'},
+  {key: 'drawdown', label: '最大回撤'},
+  {key: 'scale', label: '规模'},
 ]
 
 const STAGE_GRAINS = [
-  {key: 'stage', label: '阶段'},
   {key: 'month', label: '月度'},
   {key: 'quarter', label: '季度'},
   {key: 'semi', label: '半年度'},
@@ -77,16 +88,29 @@ Page({
     reportQuarterText: '',
     stageTabs: STAGE_TABS,
     stageGrains: STAGE_GRAINS,
-    stageTab: 'return',
-    stageGrain: 'stage',
-    stageShowGrain: true,
-    stageLabelCol: '周期',
-    stageValueCol: '本基金',
+    stageTab: 'hold',
+    stageGrain: 'month',
+    stageShowGrain: false,
+    stageShowDd: false,
+    stageLabelCol: '日期',
+    stageValueCol: '日涨跌',
+    stageDdCol: '最大回撤',
     stageLoading: false,
     stageError: '',
     stageRows: [],
     stageHasMore: false,
     stageLimit: STAGE_PAGE_SIZE,
+    watched: false,
+    held: false,
+    watchLabel: '+ 自选',
+    watchBusy: false,
+    scaleLoading: true,
+    scaleError: '',
+    scaleLatest: null,
+    scalePoints: [],
+    reportStampYear: '',
+    reportStampQ: '',
+    stagePaneMinH: 0,
   },
 
   onLoad(query) {
@@ -109,17 +133,20 @@ Page({
       loading: true,
       holdingsLoading: true,
       stageLoading: true,
+      scaleLoading: true,
     })
+    this.syncWatchState()
     this.bootstrap()
     this.loadHoldings({silent: false})
-    // 阶段统计与图表并行，但不轮询（全量净值重）
     this.loadStageStats()
+    this.loadScale()
   },
 
   onShow() {
     const next = getThemeViewState()
     if (next.theme !== this.data.theme) this.setData(next)
     syncNavigationBar(next.theme)
+    this.syncWatchState()
     this.startHoldingsPoll()
   },
 
@@ -216,17 +243,24 @@ Page({
     if (tab === 'nav') return stats.navHistory || []
     if (tab === 'drawdown') return stats.drawdowns || []
     const g = this.data.stageGrain
-    if (g === 'month') return stats.monthlyReturns || []
     if (g === 'quarter') return stats.quarterlyReturns || []
     if (g === 'semi') return stats.semiAnnualReturns || []
     if (g === 'year') return stats.annualReturns || []
-    return stats.periodReturns || []
+    return stats.monthlyReturns || []
+  },
+
+  pageSizeForTab(tab) {
+    return tab === 'nav' ? NAV_PAGE_SIZE : STAGE_PAGE_SIZE
   },
 
   refreshStageRows(limit) {
+    const tab = this.data.stageTab
+    if (tab === 'hold' || tab === 'scale') {
+      this.setData({stageShowGrain: false, stageShowDd: false})
+      return
+    }
     const all = this.stageSourceList()
     const n = limit != null ? limit : this.data.stageLimit
-    const tab = this.data.stageTab
     const rows = all.slice(0, n).map((item) => {
       if (tab === 'nav') {
         return {
@@ -241,6 +275,8 @@ Page({
         label: item.label,
         valueText: item.percentText,
         valueClass: item.percentClass,
+        ddText: item.drawdownText || '',
+        ddClass: item.drawdownClass || 'flat',
       }
     })
     this.setData({
@@ -248,8 +284,10 @@ Page({
       stageLimit: n,
       stageHasMore: all.length > n,
       stageShowGrain: tab === 'return',
+      stageShowDd: tab === 'return',
       stageLabelCol: tab === 'nav' ? '日期' : '周期',
-      stageValueCol: tab === 'nav' ? '日涨跌' : '本基金',
+      stageValueCol: tab === 'nav' ? '日涨跌' : tab === 'drawdown' ? '最大回撤' : '涨跌',
+      stageDdCol: '最大回撤',
     })
   },
 
@@ -259,7 +297,7 @@ Page({
       const data = await api.fetchFundStageStats(this.data.code)
       if (this._dead) return
       this._stageStats = data || null
-      this.refreshStageRows(STAGE_PAGE_SIZE)
+      this.refreshStageRows(this.pageSizeForTab(this.data.stageTab))
       this.setData({stageLoading: false})
     } catch (e) {
       if (this._dead) return
@@ -277,7 +315,14 @@ Page({
     const key = e.currentTarget.dataset.key
     if (!key || key === this.data.stageTab) return
     this.setData({stageTab: key})
-    this.refreshStageRows(STAGE_PAGE_SIZE)
+    if (key === 'scale' || key === 'hold') {
+      this.setData({stageShowGrain: false, stageShowDd: false})
+      if (key === 'hold') {
+        wx.nextTick(() => this.captureHoldPaneHeight())
+      }
+      return
+    }
+    this.refreshStageRows(this.pageSizeForTab(key))
   },
 
   onStageGrainTap(e) {
@@ -291,6 +336,74 @@ Page({
     this.refreshStageRows(this.data.stageLimit + STAGE_PAGE_SIZE)
   },
 
+  captureHoldPaneHeight() {
+    if (this._dead || this.data.stageTab !== 'hold') return
+    wx.createSelectorQuery()
+      .in(this)
+      .select('.hold-body')
+      .boundingClientRect((rect) => {
+        if (this._dead || !rect || !rect.height) return
+        const h = Math.ceil(rect.height)
+        if (Math.abs(h - (this.data.stagePaneMinH || 0)) < 4) return
+        this.setData({stagePaneMinH: h})
+      })
+      .exec()
+  },
+
+  watchMeta(code) {
+    const fund = store.getFund(code || this.data.code)
+    const held = !!(fund && fund.type === 'hold')
+    const watched = !!(fund && (fund.type === 'watch' || fund.type === 'hold'))
+    return {
+      held,
+      watched,
+      watchLabel: held ? '已持有' : watched ? '已自选' : '+ 自选',
+    }
+  },
+
+  syncWatchState() {
+    this.setData(this.watchMeta(this.data.code))
+  },
+
+  async onAddWatch() {
+    const code = this.data.code
+    const name = this.data.name
+    if (!code || this.data.watchBusy) return
+    const {held, watched} = this.watchMeta(code)
+    if (held || watched) return
+    this.setData({watchBusy: true, watched: true, watchLabel: '已自选'})
+    try {
+      await api.createFund({code, name, type: 'watch'})
+      if (this._dead) return
+      this.setData(Object.assign({watchBusy: false}, this.watchMeta(code)))
+      Toast.success('已添加自选')
+    } catch (err) {
+      this.setData(Object.assign({watchBusy: false}, this.watchMeta(code)))
+      Toast.fail((err && err.message) || '添加失败')
+    }
+  },
+
+  async loadScale() {
+    this.setData({scaleLoading: true, scaleError: ''})
+    try {
+      const data = await api.fetchFundScale(this.data.code)
+      if (this._dead) return
+      this.setData({
+        scaleLoading: false,
+        scaleLatest: (data && data.latest) || null,
+        scalePoints: (data && data.points) || [],
+      })
+    } catch (e) {
+      if (this._dead) return
+      this.setData({
+        scaleLoading: false,
+        scaleError: (e && e.message) || '规模加载失败',
+        scaleLatest: null,
+        scalePoints: [],
+      })
+    }
+  },
+
   async loadHoldings({silent = false} = {}) {
     if (this._holdingsFetching) return
     this._holdingsFetching = true
@@ -299,13 +412,23 @@ Page({
       const data = await api.fetchFundHoldings(this.data.code)
       if (this._dead) return
       const holdings = (data && data.holdings) || []
-      this.setData({
-        holdings,
-        totalWeightText: (data && data.totalWeightText) || '',
-        reportQuarterText: (data && data.reportQuarterText) || '',
-        holdingsLoading: false,
-        holdingsError: holdings.length ? '' : '暂无重仓数据',
-      })
+      const reportQuarterText = (data && data.reportQuarterText) || ''
+      this.setData(
+        Object.assign(
+          {
+            holdings,
+            totalWeightText: (data && data.totalWeightText) || '',
+            reportQuarterText,
+            holdingsLoading: false,
+            holdingsError: holdings.length ? '' : '暂无重仓数据',
+          },
+          parseQuarterStamp(reportQuarterText),
+        ),
+        () => {
+          if (silent) return
+          wx.nextTick(() => this.captureHoldPaneHeight())
+        },
+      )
     } catch (e) {
       if (this._dead) return
       // 轮询失败保留旧数据，避免整块闪空
@@ -317,6 +440,8 @@ Page({
         holdings: [],
         totalWeightText: '',
         reportQuarterText: '',
+        reportStampYear: '',
+        reportStampQ: '',
         holdingsLoading: false,
         holdingsError: (e && e.message) || '重仓加载失败',
       })

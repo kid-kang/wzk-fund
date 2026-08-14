@@ -292,6 +292,9 @@ export type FundStageRow = {
   percentClass?: string
   dayChangeText?: string
   dayChangeClass?: string
+  drawdown?: number | null
+  drawdownText?: string
+  drawdownClass?: string
 }
 
 export type FundStageStatsPayload = {

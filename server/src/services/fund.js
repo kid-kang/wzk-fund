@@ -698,6 +698,40 @@ function formatReportQuarterText(reportDate, year, quarter) {
   return formatReportText(reportDate, year, quarter)
 }
 
+function parseReportPeriod(reportDate, year, quarter) {
+  const y = Number(year)
+  const q = Number(quarter)
+  if (Number.isFinite(y) && Number.isFinite(q) && q >= 1 && q <= 4) {
+    return {year: y, quarter: q, reportDate: String(reportDate || '').trim(), order: y * 10 + q}
+  }
+  const raw = String(reportDate || '').replace(/\D/g, '')
+  if (raw.length >= 6) {
+    const yy = Number(raw.slice(0, 4))
+    const mm = Number(raw.slice(4, 6))
+    if (Number.isFinite(yy) && mm >= 1 && mm <= 12) {
+      const qq = Math.ceil(mm / 3)
+      return {year: yy, quarter: qq, reportDate: raw.length >= 8 ? raw : '', order: yy * 10 + qq}
+    }
+  }
+  return null
+}
+
+function pickLatestReportPeriod(periods) {
+  return (periods || []).filter(Boolean).sort((a, b) => b.order - a.order)[0] || null
+}
+
+async function fetchEastmoneyReportPeriod(code) {
+  const padded = String(code || '').padStart(6, '0')
+  if (!/^\d{6}$/.test(padded)) return null
+  try {
+    const data = await eastmoneyFundGet('FundMNAssetAllocationNew', {FCODE: padded})
+    const rows = Array.isArray(data) ? data : []
+    return parseReportPeriod(rows[0]?.FSRQ)
+  } catch {
+    return null
+  }
+}
+
 /** 600519.SH / 01888.HK / SNDK.O → 展示用代码 */
 function formatHoldingCode(row) {
   const wind = String(row?.stock || row?.sInfoWindcode || '').trim().toUpperCase()
@@ -1078,7 +1112,11 @@ async function fetchEastmoneyHoldingsFallback(code, meta = {}) {
  */
 export async function getFundTopHoldings(code) {
   const padded = String(code || '').padStart(6, '0')
-  let bundle = await fetchXiaobeiHoldingsBundle(padded)
+  const [xiaobeiBundle, fundPeriod] = await Promise.all([
+    fetchXiaobeiHoldingsBundle(padded),
+    fetchEastmoneyReportPeriod(padded),
+  ])
+  let bundle = xiaobeiBundle
   if (!bundle.holdings.length) {
     bundle = await fetchEastmoneyHoldingsFallback(padded, {
       reportDate: bundle.reportDate,
@@ -1086,6 +1124,26 @@ export async function getFundTopHoldings(code) {
       quarter: bundle.quarter,
       allocation: bundle.allocation,
     })
+  }
+  const etfPeriod = bundle.etfCode ? await fetchEastmoneyReportPeriod(bundle.etfCode) : null
+  const best = pickLatestReportPeriod([
+    parseReportPeriod(bundle.reportDate, bundle.year, bundle.quarter),
+    fundPeriod,
+    etfPeriod,
+  ])
+  if (best) {
+    bundle = {
+      ...bundle,
+      year: best.year,
+      quarter: best.quarter,
+      reportDate: best.reportDate || bundle.reportDate,
+      reportText: formatReportText(best.reportDate || bundle.reportDate, best.year, best.quarter),
+      reportQuarterText: formatReportQuarterText(
+        best.reportDate || bundle.reportDate,
+        best.year,
+        best.quarter,
+      ),
+    }
   }
   return {
     code: padded,
@@ -1743,6 +1801,7 @@ export async function getFundHistory(code, range = '3m') {
  * 12h 覆盖同日多次进详情，隔日会自然过期重算。
  */
 const STAGE_STATS_TTL_MS = 12 * 60 * 60 * 1000
+const STAGE_STATS_CACHE_VER = 'dd1'
 const stageStatsCache = new Map()
 
 function pctFromNav(startNav, endNav) {
@@ -1866,10 +1925,11 @@ function buildCalendarReturns(asc, kind) {
     }
     let b = buckets.get(key)
     if (!b) {
-      b = {key, label, order, last: p}
+      b = {key, label, order, last: p, points: [p]}
       buckets.set(key, b)
     } else {
       b.last = p
+      b.points.push(p)
     }
   }
   const chrono = [...buckets.values()].sort((a, b) => a.order - b.order)
@@ -1878,36 +1938,29 @@ function buildCalendarReturns(asc, kind) {
     const cur = chrono[i]
     const baseNav = i > 0 ? chrono[i - 1].last.netValue : null
     // 首个桶：桶内首末；其后：上期末 → 本期末
-    const startNav =
-      baseNav != null
-        ? baseNav
-        : (() => {
-          const firstInBucket = asc.find((p) => {
-            const [y, m] = p.date.split('-').map(Number)
-            if (kind === 'month') return `${y}-${String(m).padStart(2, '0')}` === cur.key
-            if (kind === 'quarter') return `${y}-Q${Math.ceil(m / 3)}` === cur.key
-            if (kind === 'semi') return `${y}-H${m <= 6 ? 1 : 2}` === cur.key
-            return String(y) === cur.key
-          })
-          return firstInBucket?.netValue
-        })()
+    const startNav = baseNav != null ? baseNav : cur.points[0]?.netValue
+    const dd = formatStatPct(maxDrawdownPct(cur.points))
     rows.push({
       key: cur.key,
       label: cur.label,
       order: cur.order,
       ...formatStatPct(pctFromNav(startNav, cur.last.netValue)),
+      drawdown: dd.percent,
+      drawdownText: dd.percentText,
+      drawdownClass: dd.percentClass,
     })
   }
   return rows.sort((a, b) => b.order - a.order).map(({order, ...rest}) => rest)
 }
 
 /**
- * 详情页「历史净值 / 阶段涨幅 / 阶段回撤」：
+ * 详情页「净值 / 阶段涨跌 / 回撤」：
  * 一次拉全量净值，服务端算好各表，前端只做 Tab 切换与分页展示。
  */
 export async function getFundStageStats(code) {
   const padded = String(code || '').padStart(6, '0')
-  const hit = stageStatsCache.get(padded)
+  const cacheKey = `${STAGE_STATS_CACHE_VER}:${padded}`
+  const hit = stageStatsCache.get(cacheKey)
   if (hit && Date.now() - hit.at < STAGE_STATS_TTL_MS) {
     return hit.data
   }
@@ -1960,7 +2013,7 @@ export async function getFundStageStats(code) {
     annualReturns: buildCalendarReturns(asc, 'year'),
     drawdowns,
   }
-  stageStatsCache.set(padded, {at: Date.now(), data})
+  stageStatsCache.set(cacheKey, {at: Date.now(), data})
   return data
 }
 
@@ -2253,6 +2306,222 @@ function resolveDisplayPercent({
     return {percent: dayGrowth, percentSource: null}
   }
   return {percent: null, percentSource: null}
+}
+
+function round2(n) {
+  return Math.round(Number(n) * 100) / 100
+}
+
+function formatYi(n) {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return '--'
+  return v.toFixed(2)
+}
+
+function formatScaleDate(date) {
+  const s = String(date || '')
+  if (s.length < 7) return s
+  return `${s.slice(2, 4)}/${s.slice(5, 7)}`
+}
+
+/**
+ * 板块列表等批量涨跌：与持仓/自选同一套口径。
+ * 东财 FundMNFInfo：GSZZL 估涨、NAVCHGRT 确认涨跌；QDII 走上一确认。
+ */
+export async function getFundsDisplayPercents(codes) {
+  const unique = [
+    ...new Set(
+      (codes || [])
+        .map((c) => String(c || '').padStart(6, '0'))
+        .filter((c) => /^\d{6}$/.test(c)),
+    ),
+  ]
+  const map = new Map()
+  if (!unique.length) return map
+
+  const chunkSize = 30
+  const chunks = []
+  for (let i = 0; i < unique.length; i += chunkSize) {
+    chunks.push(unique.slice(i, i + chunkSize))
+  }
+
+  const settled = await Promise.allSettled(
+    chunks.map((chunk) =>
+      eastmoneyFundGet('FundMNFInfo', {
+        Fcodes: chunk.join(','),
+        pageIndex: 1,
+        pageSize: chunk.length,
+      }),
+    ),
+  )
+
+  for (const s of settled) {
+    if (s.status !== 'fulfilled') continue
+    const list = Array.isArray(s.value) ? s.value : []
+    for (const row of list) {
+      const code = String(row?.FCODE || '').padStart(6, '0')
+      if (!/^\d{6}$/.test(code)) continue
+      const name = String(row?.SHORTNAME || row?.FULLNAME || '').trim()
+      const estimateGrowth = parsePct(row?.GSZZL)
+      const dayGrowth = parsePct(row?.NAVCHGRT)
+      const netValueDate = normalizeNetValueDate(row?.PDATE || '')
+      const delayedDisclosure = isDelayedNavFund({name})
+      const {percent, percentSource} = resolveDisplayPercent({
+        estimateGrowth,
+        dayGrowth,
+        netValueDate,
+        delayedDisclosure,
+      })
+      map.set(code, {
+        percent: percent == null ? null : round2(percent),
+        percentSource,
+        name,
+      })
+    }
+  }
+  return map
+}
+
+const SCALE_TTL_MS = 12 * 60 * 60 * 1000
+const scaleCache = new Map()
+
+function parseGmbdScaleRows(html) {
+  const rows = []
+  const trs = String(html || '').split(/<tr/i).slice(1)
+  for (const tr of trs) {
+    const cells = [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) =>
+      String(m[1] || '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, '')
+        .trim(),
+    )
+    if (cells.length < 5) continue
+    const date = cells[0]
+    const nav = parseFloat(String(cells[4]).replace(/,/g, ''))
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+    if (!Number.isFinite(nav)) continue
+    rows.push({date, value: round2(nav)})
+  }
+  return rows
+}
+
+async function fetchFundScaleFromGmbd(code) {
+  const res = await axios.get('https://fundf10.eastmoney.com/FundArchivesDatas.aspx', {
+    timeout: 12000,
+    headers: {
+      'User-Agent': ua,
+      Referer: 'https://fund.eastmoney.com/',
+    },
+    params: {type: 'gmbd', code},
+    validateStatus: () => true,
+  })
+  if (res.status !== 200 || typeof res.data !== 'string') return []
+  return parseGmbdScaleRows(res.data)
+}
+
+async function fetchFundScaleFromPingzhong(code) {
+  const res = await axios.get(`https://fund.eastmoney.com/pingzhongdata/${code}.js`, {
+    timeout: 15000,
+    headers: {
+      'User-Agent': ua,
+      Referer: 'https://fund.eastmoney.com/',
+    },
+    validateStatus: () => true,
+  })
+  if (res.status !== 200 || typeof res.data !== 'string') return []
+  const m = String(res.data).match(/Data_fluctuationScale\s*=\s*(\{[\s\S]*?\});/)
+  if (!m) return []
+  let parsed
+  try {
+    parsed = JSON.parse(m[1])
+  } catch {
+    return []
+  }
+  const cats = Array.isArray(parsed?.categories) ? parsed.categories : []
+  const series = Array.isArray(parsed?.series) ? parsed.series : []
+  const rows = []
+  for (let i = 0; i < cats.length; i++) {
+    const date = String(cats[i] || '').slice(0, 10)
+    const value = Number(series[i]?.y)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(value)) continue
+    rows.push({date, value: round2(value)})
+  }
+  return rows
+}
+
+function buildScalePayload(code, rawRows) {
+  const byDate = new Map()
+  for (const row of rawRows || []) {
+    if (!row?.date || !Number.isFinite(Number(row.value))) continue
+    byDate.set(row.date, {date: row.date, value: Number(row.value)})
+  }
+  const chronological = [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1))
+  const series = chronological.slice(-5)
+  const max = Math.max(...series.map((p) => p.value), 0)
+  const points = series.map((p, i, arr) => {
+    const prev = arr[i - 1]
+    const mom =
+      prev && prev.value > 0
+        ? roundWeight(((p.value - prev.value) / prev.value) * 100)
+        : null
+    const barPct =
+      max > 0 ? Math.max(8, Math.round((p.value / max) * 100)) : 8
+    return {
+      date: p.date,
+      dateLabel: formatScaleDate(p.date),
+      value: p.value,
+      valueText: formatYi(p.value),
+      mom,
+      momText: mom == null ? '--' : signedPctText(mom),
+      momClass: pctTone(mom),
+      barPct,
+      isLatest: i === arr.length - 1,
+    }
+  })
+  const latest = points.length ? points[points.length - 1] : null
+  return {
+    code,
+    unit: '亿',
+    latest: latest
+      ? {
+        date: latest.date,
+        value: latest.value,
+        valueText: `${latest.valueText}亿`,
+        momText: latest.momText,
+        momClass: latest.momClass,
+      }
+      : null,
+    points,
+  }
+}
+
+/**
+ * 基金规模柱状图：近 5 个季报期末净资产（亿元），与支付宝详情口径接近。
+ */
+export async function getFundScaleHistory(code) {
+  const padded = String(code || '').padStart(6, '0')
+  if (!/^\d{6}$/.test(padded)) throw new Error('基金代码无效')
+  const hit = scaleCache.get(padded)
+  if (hit && Date.now() - hit.at < SCALE_TTL_MS) return hit.data
+
+  let rows = []
+  try {
+    rows = await fetchFundScaleFromGmbd(padded)
+  } catch {
+    rows = []
+  }
+  if (rows.length < 2) {
+    try {
+      const fb = await fetchFundScaleFromPingzhong(padded)
+      if (fb.length > rows.length) rows = fb
+    } catch {
+      // keep gmbd
+    }
+  }
+
+  const data = buildScalePayload(padded, rows)
+  scaleCache.set(padded, {at: Date.now(), data})
+  return data
 }
 
 export async function getFundsQuotes(funds) {

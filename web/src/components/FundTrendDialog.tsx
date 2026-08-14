@@ -46,16 +46,17 @@ const HISTORY_TAB_DEFS: {key: FundHistoryRange; label: string}[] = [
 ]
 
 const HOLDINGS_POLL_MS = 60_000
-const STAGE_PAGE_SIZE = 5
+const STAGE_PAGE_SIZE = 8
+const NAV_PAGE_SIZE = 15
 
 const STAGE_TABS = [
+  {key: 'hold' as const, label: '重仓股'},
   {key: 'nav' as const, label: '历史净值'},
-  {key: 'return' as const, label: '阶段涨幅'},
-  {key: 'drawdown' as const, label: '阶段回撤'},
+  {key: 'return' as const, label: '阶段涨跌'},
+  {key: 'drawdown' as const, label: '最大回撤'},
 ]
 
 const STAGE_GRAINS = [
-  {key: 'stage' as const, label: '阶段'},
   {key: 'month' as const, label: '月度'},
   {key: 'quarter' as const, label: '季度'},
   {key: 'semi' as const, label: '半年度'},
@@ -100,8 +101,8 @@ export function FundTrendDialog({
   const [holdingsError, setHoldingsError] = useState('')
   const [totalWeightText, setTotalWeightText] = useState('')
   const [reportQuarterText, setReportQuarterText] = useState('')
-  const [stageTab, setStageTab] = useState<(typeof STAGE_TABS)[number]['key']>('return')
-  const [stageGrain, setStageGrain] = useState<(typeof STAGE_GRAINS)[number]['key']>('stage')
+  const [stageTab, setStageTab] = useState<(typeof STAGE_TABS)[number]['key']>('hold')
+  const [stageGrain, setStageGrain] = useState<(typeof STAGE_GRAINS)[number]['key']>('month')
   const [stageLoading, setStageLoading] = useState(false)
   const [stageError, setStageError] = useState('')
   const [stageLimit, setStageLimit] = useState(STAGE_PAGE_SIZE)
@@ -412,15 +413,17 @@ export function FundTrendDialog({
   }, [open, range, chartHeight, option])
 
   const stageShowGrain = stageTab === 'return'
+  const stageShowDd = stageTab === 'return'
   const stageSource: FundStageRow[] = (() => {
     if (!stageStats) return []
+    if (stageTab === 'hold') return []
     if (stageTab === 'nav') return stageStats.navHistory || []
     if (stageTab === 'drawdown') return stageStats.drawdowns || []
     if (stageGrain === 'month') return stageStats.monthlyReturns || []
     if (stageGrain === 'quarter') return stageStats.quarterlyReturns || []
     if (stageGrain === 'semi') return stageStats.semiAnnualReturns || []
     if (stageGrain === 'year') return stageStats.annualReturns || []
-    return stageStats.periodReturns || []
+    return stageStats.monthlyReturns || []
   })()
   const stageRows = stageSource.slice(0, stageLimit).map((item) => {
     if (stageTab === 'nav') {
@@ -429,6 +432,8 @@ export function FundTrendDialog({
         label: item.dateLabel || '',
         valueText: item.dayChangeText || '--',
         valueClass: item.dayChangeClass || 'flat',
+        ddText: '',
+        ddClass: 'flat',
       }
     }
     return {
@@ -436,293 +441,323 @@ export function FundTrendDialog({
       label: item.label || '',
       valueText: item.percentText || '--',
       valueClass: item.percentClass || 'flat',
+      ddText: item.drawdownText || '',
+      ddClass: item.drawdownClass || 'flat',
     }
   })
   const stageHasMore = stageSource.length > stageLimit
   const stageLabelCol = stageTab === 'nav' ? '日期' : '周期'
   const stageValueCol =
-    stageTab === 'nav' ? '日涨跌' : stageTab === 'drawdown' ? '回撤' : '本基金'
+    stageTab === 'nav' ? '日涨跌' : stageTab === 'drawdown' ? '最大回撤' : '涨跌'
+  const pageSizeForTab = (tab: (typeof STAGE_TABS)[number]['key']) =>
+    tab === 'nav' ? NAV_PAGE_SIZE : STAGE_PAGE_SIZE
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] w-[calc(100%-1rem)] max-w-2xl overflow-y-auto p-4 sm:w-[calc(100%-2rem)] sm:max-w-4xl sm:p-5 lg:max-w-5xl">
-        <DialogHeader className="pr-6">
-          <DialogTitle className="flex min-w-0 items-baseline gap-2 text-base sm:text-lg">
-            <span className="truncate">{titleName || name || '基金详情'}</span>
-            {ageText ? (
-              <span className="shrink-0 text-xs font-medium tabular-nums text-muted">
-                {ageText}
-              </span>
-            ) : null}
-          </DialogTitle>
-          {sectorTags.length ? (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {sectorTags.map((tag) => (
-                <button
-                  type="button"
-                  key={tag.name}
-                  className="rounded border border-line bg-paper px-2 py-0.5 text-[11px] text-ink transition-colors hover:border-ink/30 hover:bg-paper-deep"
-                  onClick={() => {
-                    const sectorCode = String(tag.sectorCode || '').trim()
-                    const mappingCode = String(tag.mappingCode || '').trim()
-                    if (!sectorCode && !mappingCode) {
-                      window.alert('该板块暂无详情')
-                      return
-                    }
-                    setSectorTarget({
-                      name: tag.name,
-                      sectorCode,
-                      mappingCode,
-                    })
-                    setSectorOpen(true)
-                  }}
-                >
-                  {tag.name}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </DialogHeader>
-
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
-          {tabs.map((r) => {
-            const pct = tabPercent(r.key)
-            const selected = range === r.key
-            const tabLoading =
-              r.key !== 'intraday' &&
-              pct == null &&
-              (r.key === 'since' ? loadingSince : loadingHistory)
-            return (
-              <Button
-                key={r.key}
-                type="button"
-                size="sm"
-                variant="outline"
-                className={cn(
-                  'h-auto min-h-9 shrink-0 flex-col gap-0.5 px-2.5 py-1.5 text-xs sm:px-3',
-                  selected
-                    ? 'border-ink/40 bg-paper-deep text-ink shadow-[inset_0_0_0_1px_var(--app-ink)] hover:bg-paper-deep'
-                    : 'text-ink-soft',
-                )}
-                onClick={() => setRange(r.key)}
-              >
-                <span className={selected ? 'font-semibold text-ink' : undefined}>
-                  {r.label}
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[90dvh] w-[calc(100%-1rem)] max-w-2xl overflow-y-auto p-4 sm:w-[calc(100%-2rem)] sm:max-w-4xl sm:p-5 lg:max-w-5xl">
+          <DialogHeader className="pr-6">
+            <DialogTitle className="flex min-w-0 items-baseline gap-2 text-base sm:text-lg">
+              <span className="truncate">{titleName || name || '基金详情'}</span>
+              {ageText ? (
+                <span className="shrink-0 text-xs font-medium tabular-nums text-muted">
+                  {ageText}
                 </span>
-                <span
-                  className={cn(
-                    'text-[10px] font-semibold tabular-nums leading-none',
-                    tabLoading ? 'opacity-60' : pctClass(pct),
-                  )}
-                >
-                  {tabLoading ? '…' : formatPct(pct)}
-                </span>
-              </Button>
-            )
-          })}
-        </div>
-
-        <div className="mt-2" style={{minHeight: chartHeight}}>
-          {range !== 'intraday' && error && !option ? (
-            <div
-              className="flex items-center justify-center text-sm text-rise"
-              style={{height: chartHeight}}
-            >
-              {error}
-            </div>
-          ) : loading && !option ? (
-            <div
-              className="flex items-center justify-center text-sm text-muted"
-              style={{height: chartHeight}}
-            >
-              加载中...
-            </div>
-          ) : option ? (
-            <ReactECharts
-              ref={chartRef}
-              option={option}
-              style={{height: chartHeight, width: '100%'}}
-              opts={{renderer: 'canvas'}}
-              notMerge
-              onChartReady={(inst) => inst.resize()}
-            />
-          ) : (
-            <div
-              className="flex items-center justify-center text-sm text-muted"
-              style={{height: chartHeight}}
-            >
-              暂无该周期数据
-            </div>
-          )}
-        </div>
-
-        <div className="mt-5 rounded-xl border border-line/80 bg-paper/40 p-3 sm:p-4">
-          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-semibold">重仓股票</span>
-              {totalWeightText ? (
-                <span className="font-mono text-xs text-muted">（占比{totalWeightText}）</span>
               ) : null}
-            </div>
-            {reportQuarterText ? (
-              <span className="text-xs text-muted">{reportQuarterText}</span>
+            </DialogTitle>
+            {sectorTags.length ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {sectorTags.map((tag) => (
+                  <button
+                    type="button"
+                    key={tag.name}
+                    className="rounded border border-line bg-paper px-2 py-0.5 text-[11px] text-ink transition-colors hover:border-ink/30 hover:bg-paper-deep"
+                    onClick={() => {
+                      const sectorCode = String(tag.sectorCode || '').trim()
+                      const mappingCode = String(tag.mappingCode || '').trim()
+                      if (!sectorCode && !mappingCode) {
+                        window.alert('该板块暂无详情')
+                        return
+                      }
+                      setSectorTarget({
+                        name: tag.name,
+                        sectorCode,
+                        mappingCode,
+                      })
+                      setSectorOpen(true)
+                    }}
+                  >
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
             ) : null}
-          </div>
-          {holdings.length ? (
-            <div className="mb-1.5 grid grid-cols-[minmax(0,1.4fr)_0.7fr_0.7fr_0.9fr] gap-2 text-[10px] font-semibold tracking-wide text-muted">
-              <span>重仓股票</span>
-              <span className="text-right">涨跌幅</span>
-              <span className="text-right">持仓占比</span>
-              <span className="text-right">较上季度变化</span>
-            </div>
-          ) : null}
-          {holdingsLoading ? (
-            <div className="py-6 text-center text-sm text-muted">加载重仓…</div>
-          ) : null}
-          {!holdingsLoading && holdingsError && !holdings.length ? (
-            <div className="py-4 text-center text-sm text-muted">{holdingsError}</div>
-          ) : null}
-          {!holdingsLoading && holdings.length ? (
-            <div className="divide-y divide-line/60">
-              {holdings.map((item) => (
-                <div
-                  key={`${item.rank}-${item.code}`}
-                  className="grid grid-cols-[minmax(0,1.4fr)_0.7fr_0.7fr_0.9fr] items-center gap-2 py-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{item.name}</div>
-                    <div className="font-mono text-[11px] text-muted">{item.code}</div>
-                  </div>
-                  <span
-                    className={cn(
-                      'text-right font-mono text-xs font-semibold tabular-nums',
-                      item.dayChangeClass || 'text-muted',
-                    )}
-                  >
-                    {item.dayChangeText || '--'}
-                  </span>
-                  <span className="text-right font-mono text-xs tabular-nums text-ink-soft">
-                    {item.weightText}
-                  </span>
-                  <span
-                    className={cn(
-                      'text-right font-mono text-xs tabular-nums',
-                      item.weightChangeClass || 'text-muted',
-                    )}
-                  >
-                    {item.weightChangeText || '--'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
+          </DialogHeader>
 
-        <div className="mt-4 rounded-xl border border-line/80 bg-paper/40 p-3 sm:p-4">
-          <div className="mb-2 flex flex-wrap gap-1.5">
-            {STAGE_TABS.map((item) => (
-              <button
-                type="button"
-                key={item.key}
-                className={cn(
-                  'rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
-                  stageTab === item.key
-                    ? 'bg-panel text-ink shadow-sm'
-                    : 'text-muted hover:bg-paper-deep/70',
-                )}
-                onClick={() => {
-                  setStageTab(item.key)
-                  setStageLimit(STAGE_PAGE_SIZE)
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
+            {tabs.map((r) => {
+              const pct = tabPercent(r.key)
+              const selected = range === r.key
+              const tabLoading =
+                r.key !== 'intraday' &&
+                pct == null &&
+                (r.key === 'since' ? loadingSince : loadingHistory)
+              return (
+                <Button
+                  key={r.key}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    'h-auto min-h-9 shrink-0 flex-col gap-0.5 px-2.5 py-1.5 text-xs sm:px-3',
+                    selected
+                      ? 'border-ink/40 bg-paper-deep text-ink shadow-[inset_0_0_0_1px_var(--app-ink)] hover:bg-paper-deep'
+                      : 'text-ink-soft',
+                  )}
+                  onClick={() => setRange(r.key)}
+                >
+                  <span className={selected ? 'font-semibold text-ink' : undefined}>
+                    {r.label}
+                  </span>
+                  <span
+                    className={cn(
+                      'text-[10px] font-semibold tabular-nums leading-none',
+                      tabLoading ? 'opacity-60' : pctClass(pct),
+                    )}
+                  >
+                    {tabLoading ? '…' : formatPct(pct)}
+                  </span>
+                </Button>
+              )
+            })}
           </div>
-          {stageShowGrain ? (
-            <div className="mb-2 flex flex-wrap gap-1">
-              {STAGE_GRAINS.map((item) => (
+
+          <div className="mt-2" style={{minHeight: chartHeight}}>
+            {range !== 'intraday' && error && !option ? (
+              <div
+                className="flex items-center justify-center text-sm text-rise"
+                style={{height: chartHeight}}
+              >
+                {error}
+              </div>
+            ) : loading && !option ? (
+              <div
+                className="flex items-center justify-center text-sm text-muted"
+                style={{height: chartHeight}}
+              >
+                加载中...
+              </div>
+            ) : option ? (
+              <ReactECharts
+                ref={chartRef}
+                option={option}
+                style={{height: chartHeight, width: '100%'}}
+                opts={{renderer: 'canvas'}}
+                notMerge
+                onChartReady={(inst) => inst.resize()}
+              />
+            ) : (
+              <div
+                className="flex items-center justify-center text-sm text-muted"
+                style={{height: chartHeight}}
+              >
+                暂无该周期数据
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 min-h-[260px] rounded-xl border border-line/80 bg-paper/40 p-3 sm:p-4">
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {STAGE_TABS.map((item) => (
                 <button
                   type="button"
                   key={item.key}
                   className={cn(
-                    'rounded-md px-2 py-1 text-[11px] transition-colors',
-                    stageGrain === item.key
-                      ? 'bg-ink/90 text-panel'
-                      : 'bg-paper-deep/70 text-muted hover:text-ink',
+                    'rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    stageTab === item.key
+                      ? 'bg-panel text-ink shadow-sm'
+                      : 'text-muted hover:bg-paper-deep/70',
                   )}
                   onClick={() => {
-                    setStageGrain(item.key)
-                    setStageLimit(STAGE_PAGE_SIZE)
+                    setStageTab(item.key)
+                    setStageLimit(pageSizeForTab(item.key))
                   }}
                 >
                   {item.label}
                 </button>
               ))}
             </div>
-          ) : null}
-          {stageRows.length ? (
-            <div className="mb-1 flex justify-between text-[10px] font-semibold tracking-wide text-muted">
-              <span>{stageLabelCol}</span>
-              <span>{stageValueCol}</span>
-            </div>
-          ) : null}
-          {stageLoading ? (
-            <div className="py-6 text-center text-sm text-muted">加载阶段数据…</div>
-          ) : null}
-          {!stageLoading && stageError && !stageRows.length ? (
-            <div className="py-4 text-center text-sm text-muted">{stageError}</div>
-          ) : null}
-          {!stageLoading && stageRows.length ? (
-            <div className="divide-y divide-line/60">
-              {stageRows.map((item) => (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between gap-3 py-2 text-sm"
-                >
-                  <span className="text-ink-soft">{item.label}</span>
-                  <span
+            {stageTab === 'hold' ? (
+              <>
+                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="flex items-baseline gap-1.5">
+                    {totalWeightText ? (
+                      <span className="font-mono text-xs text-muted">占比{totalWeightText}</span>
+                    ) : null}
+                  </div>
+                  {reportQuarterText ? (
+                    <span className="text-xs text-muted">{reportQuarterText}</span>
+                  ) : null}
+                </div>
+                {holdings.length ? (
+                  <div className="mb-1.5 grid grid-cols-[minmax(0,1.4fr)_0.7fr_0.7fr_0.9fr] gap-2 text-[10px] font-semibold tracking-wide text-muted">
+                    <span>重仓股票</span>
+                    <span className="text-right">涨跌幅</span>
+                    <span className="text-right">持仓占比</span>
+                    <span className="text-right">较上季度</span>
+                  </div>
+                ) : null}
+                {holdingsLoading ? (
+                  <div className="py-6 text-center text-sm text-muted">加载重仓…</div>
+                ) : null}
+                {!holdingsLoading && holdingsError && !holdings.length ? (
+                  <div className="py-4 text-center text-sm text-muted">{holdingsError}</div>
+                ) : null}
+                {!holdingsLoading && holdings.length ? (
+                  <div className="divide-y divide-line/60">
+                    {holdings.map((item) => (
+                      <div
+                        key={`${item.rank}-${item.code}`}
+                        className="grid grid-cols-[minmax(0,1.4fr)_0.7fr_0.7fr_0.9fr] items-center gap-2 py-2 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{item.name}</div>
+                          <div className="font-mono text-[11px] text-muted">{item.code}</div>
+                        </div>
+                        <span
+                          className={cn(
+                            'text-right font-mono text-xs font-semibold tabular-nums',
+                            item.dayChangeClass || 'text-muted',
+                          )}
+                        >
+                          {item.dayChangeText || '--'}
+                        </span>
+                        <span className="text-right font-mono text-xs tabular-nums text-ink-soft">
+                          {item.weightText}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-right font-mono text-xs tabular-nums',
+                            item.weightChangeClass || 'text-muted',
+                          )}
+                        >
+                          {item.weightChangeText || '--'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {stageShowGrain ? (
+                  <div className="mb-2 flex flex-wrap gap-1">
+                    {STAGE_GRAINS.map((item) => (
+                      <button
+                        type="button"
+                        key={item.key}
+                        className={cn(
+                          'rounded-md px-2 py-1 text-[11px] transition-colors',
+                          stageGrain === item.key
+                            ? 'bg-ink/90 text-panel'
+                            : 'bg-paper-deep/70 text-muted hover:text-ink',
+                        )}
+                        onClick={() => {
+                          setStageGrain(item.key)
+                          setStageLimit(STAGE_PAGE_SIZE)
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {stageRows.length ? (
+                  <div
                     className={cn(
-                      'font-mono text-xs font-semibold tabular-nums',
-                      item.valueClass,
+                      'mb-1 grid items-center gap-2 text-[10px] font-semibold tracking-wide text-muted',
+                      stageShowDd
+                        ? 'grid-cols-[minmax(0,1fr)_5.5rem_5.5rem]'
+                        : 'grid-cols-[minmax(0,1fr)_5.5rem]',
                     )}
                   >
-                    {item.valueText}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {stageHasMore ? (
-            <button
-              type="button"
-              className="mt-2 w-full rounded-lg py-2 text-xs font-medium text-muted hover:bg-paper-deep/60 hover:text-ink"
-              onClick={() => setStageLimit((n) => n + STAGE_PAGE_SIZE)}
-            >
-              查看更多
-            </button>
-          ) : null}
-        </div>
-      </DialogContent>
-    </Dialog>
-    <SectorFundsDialog
-      open={sectorOpen}
-      onOpenChange={setSectorOpen}
-      target={sectorTarget}
-      onOpenFund={(fund) => {
-        setChildFund(fund)
-        setChildFundOpen(true)
-      }}
-    />
-    {childFund ? (
-      <FundTrendDialog
-        open={childFundOpen}
-        onOpenChange={setChildFundOpen}
-        code={childFund.code}
-        name={childFund.name}
+                    <span>{stageLabelCol}</span>
+                    <span className="text-right">{stageValueCol}</span>
+                    {stageShowDd ? <span className="text-right">最大回撤</span> : null}
+                  </div>
+                ) : null}
+                {stageLoading ? (
+                  <div className="py-6 text-center text-sm text-muted">加载阶段数据…</div>
+                ) : null}
+                {!stageLoading && stageError && !stageRows.length ? (
+                  <div className="py-4 text-center text-sm text-muted">{stageError}</div>
+                ) : null}
+                {!stageLoading && stageRows.length ? (
+                  <div className="divide-y divide-line/60">
+                    {stageRows.map((item) => (
+                      <div
+                        key={item.key}
+                        className={cn(
+                          'grid items-center gap-2 py-2 text-sm',
+                          stageShowDd
+                            ? 'grid-cols-[minmax(0,1fr)_5.5rem_5.5rem]'
+                            : 'grid-cols-[minmax(0,1fr)_5.5rem]',
+                        )}
+                      >
+                        <span className="text-ink-soft">{item.label}</span>
+                        <span
+                          className={cn(
+                            'text-right font-mono text-xs font-semibold tabular-nums',
+                            item.valueClass,
+                          )}
+                        >
+                          {item.valueText}
+                        </span>
+                        {stageShowDd ? (
+                          <span
+                            className={cn(
+                              'text-right font-mono text-xs font-semibold tabular-nums',
+                              item.ddClass,
+                            )}
+                          >
+                            {item.ddText}
+                          </span>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {stageHasMore ? (
+                  <button
+                    type="button"
+                    className="mt-2 w-full rounded-lg py-2 text-xs font-medium text-muted hover:bg-paper-deep/60 hover:text-ink"
+                    onClick={() => setStageLimit((n) => n + STAGE_PAGE_SIZE)}
+                  >
+                    查看更多
+                  </button>
+                ) : null}
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <SectorFundsDialog
+        open={sectorOpen}
+        onOpenChange={setSectorOpen}
+        target={sectorTarget}
+        onOpenFund={(fund) => {
+          setChildFund(fund)
+          setChildFundOpen(true)
+        }}
       />
-    ) : null}
+      {childFund ? (
+        <FundTrendDialog
+          open={childFundOpen}
+          onOpenChange={setChildFundOpen}
+          code={childFund.code}
+          name={childFund.name}
+        />
+      ) : null}
     </>
   )
 }

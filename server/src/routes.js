@@ -9,6 +9,7 @@ import {
   fetchFundFtype,
   getFundHistory,
   getFundStageStats,
+  getFundScaleHistory,
   getFundTopHoldings,
   isConfirmedSessionActive,
   isDelayedNavFund,
@@ -245,6 +246,16 @@ router.get('/funds/:code/holdings', async (ctx) => {
 router.get('/funds/:code/stage-stats', async (ctx) => {
   try {
     const data = await getFundStageStats(ctx.params.code)
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 400
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+router.get('/funds/:code/scale', async (ctx) => {
+  try {
+    const data = await getFundScaleHistory(ctx.params.code)
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 400
