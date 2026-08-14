@@ -16,7 +16,7 @@
 
 添加持仓需「代码 + 金额 + 金额口径」；添加自选只需「代码」；名称与板块自动拉取。顶部「配置」可导入/导出完整本地配置。
 
-### 近期能力（小程序 / H5 为主）
+### 近期能力（小程序为主）
 
 | 能力 | 说明 |
 |------|------|
@@ -26,7 +26,7 @@
 | 基金详情 | 原「基金走势」升级为完整详情页（见下）；持仓 / 自选点基金名或迷你图即可进入 |
 | 迷你走势 | 列表估值曲线为原生 canvas 绘制，点位更密，减少折线锯齿 |
 
-**基金详情页**（小程序 / H5）主要区块：
+**基金详情页**（小程序）主要区块：
 
 | 区块 | 说明 |
 |------|------|
@@ -226,13 +226,8 @@
 ## 技术栈
 
 - Web：Rsbuild + React + Tailwind CSS + Shadcn 风格组件 + ECharts + Axios
-- H5：Rsbuild + React + React Router + ECharts + Axios（移动端四 Tab，对齐小程序）
 - 小程序：原生微信小程序 + Vant Weapp；详情走势用 ECharts（ec-canvas），列表迷你图用 canvas 2d
 - 代理：Node.js + Koa（转发第三方行情；个人配置在客户端本地）
-
-## H5
-
-移动端 H5 客户端（`h5/`），四 Tab + 二级路由，UI/逻辑对齐小程序；与 Web / 小程序共用代理、计算口径与 `wzk-fund-config`。开发端口 :5174。详见 [h5/README.md](./h5/README.md)。
 
 ## 微信小程序
 
@@ -275,7 +270,6 @@
 |------|------|
 | `server/` | 行情代理（Koa，默认 :8787） |
 | `web/` | Web 看板（:5173） |
-| `h5/` | 移动端 H5（:5174，对齐小程序四 Tab） |
 | `miniprogram/` | 微信小程序（用微信开发者工具打开该目录） |
 | `screenshot/` | 界面截图（Web / 小程序亮暗色） |
 
@@ -292,15 +286,10 @@ cd web
 npm install
 npm run dev
 
-# 可选：H5 移动端 :5174
-cd h5
-npm install
-npm run dev
-
 # 可选：微信小程序
 cd miniprogram
 npm install   # 会打包 Vant 到 miniprogram_npm
 # 再用微信开发者工具导入本目录 miniprogram/
 ```
 
-浏览器打开 http://127.0.0.1:5173 （Web）或 http://127.0.0.1:5174 （H5），前端通过 `/api` 代理到 Koa。H5 细节见 [h5/README.md](./h5/README.md)；小程序见 [miniprogram/README.md](./miniprogram/README.md)。
+浏览器打开 http://127.0.0.1:5173 ，前端通过 `/api` 代理到 Koa。小程序见 [miniprogram/README.md](./miniprogram/README.md)。
