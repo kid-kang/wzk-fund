@@ -1,5 +1,6 @@
 import axios from 'axios'
 import https from 'https'
+import {getFundsDisplayPercents} from './fund.js'
 
 const ua =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
@@ -342,6 +343,32 @@ function xiaobeiApiv2Body(extra = {}) {
   }
 }
 
+function parseXiaobeiFundPercent(row) {
+  const raw = row?.changeRate ?? row?.valuationY
+  const change = Number(raw)
+  if (!Number.isFinite(change)) return null
+  return round2(change * 100)
+}
+
+async function attachDisplayPercents(items) {
+  const list = Array.isArray(items) ? items : []
+  if (!list.length) return list
+  try {
+    const quotes = await getFundsDisplayPercents(list.map((row) => row.code))
+    return list.map((row) => {
+      const q = quotes.get(String(row.code).padStart(6, '0'))
+      if (!q || q.percent == null) return row
+      return {
+        ...row,
+        percent: q.percent,
+        percentSource: q.percentSource || null,
+      }
+    })
+  } catch {
+    return list
+  }
+}
+
 /**
  * 小倍 App 板块热搜基金（与二级页同源）。
  * POST /api/app/valuation/sectorFundHeatTop/getBySectorCode
@@ -373,13 +400,12 @@ export async function getIndustryFunds({sectorCode, mappingCode} = {}) {
         .map((row) => {
           const fundCode = String(row.fundCode || row.code || '').padStart(6, '0')
           if (!/^\d{6}$/.test(fundCode)) return null
-          const change = Number(row.changeRate ?? row.valuationY)
           const heat = Number(row.heat)
           return {
             code: fundCode,
             name: String(row.fundName || row.name || fundCode).trim(),
             nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
-            percent: Number.isFinite(change) ? round2(change * 100) : null,
+            percent: parseXiaobeiFundPercent(row),
             heat: Number.isFinite(heat) ? heat : null,
           }
         })
@@ -390,7 +416,7 @@ export async function getIndustryFunds({sectorCode, mappingCode} = {}) {
         mappingCode: mapping || String(rawList[0]?.extraCode || '').trim(),
         themeName: '',
         source: 'xiaobei-fund-heat',
-        items,
+        items: await attachDisplayPercents(items),
       }
       industryFundCache.set(cacheKey, {at: Date.now(), data})
       return data
@@ -428,12 +454,11 @@ async function fetchLegacyIndustryFunds(mappingCode) {
     .map((row) => {
       const fundCode = String(row.code || '').padStart(6, '0')
       if (!/^\d{6}$/.test(fundCode)) return null
-      const y = Number(row.valuationY)
       return {
         code: fundCode,
         name: String(row.name || fundCode).trim(),
         nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
-        percent: Number.isFinite(y) ? round2(y * 100) : null,
+        percent: parseXiaobeiFundPercent(row),
         heat: null,
       }
     })
@@ -445,7 +470,7 @@ async function fetchLegacyIndustryFunds(mappingCode) {
     mappingCode,
     themeName: String(raw.themeName || '').trim(),
     source: 'xiaobei-legacy-fund',
-    items,
+    items: await attachDisplayPercents(items),
   }
 }
 

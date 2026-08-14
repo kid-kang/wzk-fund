@@ -1,4 +1,4 @@
-const Toast = require('@vant/weapp/toast/toast')
+const Toast = require('@vant/weapp/toast/toast').default
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
 const {formatPct, pctClass} = require('../../utils/format')
@@ -81,8 +81,8 @@ Page({
       const rank = idx + 1
       return Object.assign({}, row, {
         rankText: String(rank),
-        pctText: row.pctText || formatPct(row.percent),
-        pctClass: row.pctClass || pctClass(row.percent),
+        pctText: formatPct(row.percent),
+        pctClass: pctClass(row.percent),
         watched,
       })
     })
@@ -135,20 +135,50 @@ Page({
     )
   },
 
+  patchRow(code, patch) {
+    const key = String(code || '').padStart(6, '0')
+    const idx = (this.data.list || []).findIndex(
+      (row) => String(row.code || '').padStart(6, '0') === key,
+    )
+    if (idx < 0) return
+    const next = Object.assign({}, this.data.list[idx], patch)
+    this.setData({[`list[${idx}]`]: next})
+  },
+
   async onToggleWatch(e) {
-    const {code, name, watched} = e.currentTarget.dataset
+    const {code, name} = e.currentTarget.dataset
     if (!code || this._adding[code]) return
-    if (watched === true || watched === 'true') {
-      Toast('已在列表中')
+    const fund = store.getFund(code)
+    const held = !!(fund && fund.type === 'hold')
+    const watched = !!(fund && fund.type === 'watch')
+    if (held) {
+      Toast('已持有')
       return
     }
     this._adding[code] = true
+    if (watched) {
+      this.patchRow(code, {watched: false})
+      try {
+        await api.removeFund(code)
+        if (this._dead) return
+        Toast.success('已移出自选')
+        this.patchRow(code, {watched: false})
+      } catch (err) {
+        this.patchRow(code, {watched: true})
+        Toast.fail((err && err.message) || '删除失败')
+      } finally {
+        delete this._adding[code]
+      }
+      return
+    }
+    this.patchRow(code, {watched: true})
     try {
       await api.createFund({code, name, type: 'watch'})
       if (this._dead) return
       Toast.success('已添加自选')
-      this.setData({list: this.decorateRows(this.data.list)})
+      this.patchRow(code, {watched: true})
     } catch (err) {
+      this.patchRow(code, {watched: false})
       Toast.fail((err && err.message) || '添加失败')
     } finally {
       delete this._adding[code]

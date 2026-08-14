@@ -64,7 +64,7 @@
               class="sf-add {{item.watched ? 'is-on' : ''}}"
               data-code="{{item.code}}"
               data-name="{{item.name}}"
-              data-watched="{{item.watched}}"
+              data-watched="{{item.watched ? 1 : 0}}"
               catchtap="onToggleWatch"
             >{{item.watched ? '✓' : '+'}}</view>
           </view>
