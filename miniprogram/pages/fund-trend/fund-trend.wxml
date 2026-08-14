@@ -26,9 +26,9 @@
             </view>
           </view>
           <view class="ticket-tags">
-            <text wx:if="{{!watched}}" class="watch-tag is-add {{watchBusy ? 'is-busy' : ''}}" catchtap="onAddWatch">+
-              自选</text>
-            <text wx:else class="watch-tag {{held ? 'is-hold' : 'is-watch'}}">{{watchLabel}}</text>
+            <view wx:if="{{!watched}}" class="watch-tag is-add {{watchBusy ? 'is-busy' : ''}}" catchtap="onAddWatch">
+              {{watchLabel}}</view>
+            <view wx:else class="watch-tag {{held ? 'is-hold' : 'is-watch'}}">{{watchLabel}}</view>
             <text class="sector-tag is-link" wx:for="{{sectorTags}}" wx:for-item="tag" wx:key="name"
               data-name="{{tag.name}}" data-sector="{{tag.sectorCode}}" data-mapping="{{tag.mappingCode}}"
               catchtap="onOpenSector">{{tag.name}}</text>
@@ -109,9 +109,9 @@
                   <view class="scale-head" wx:if="{{scaleLatest}}">
                     <text class="scale-date-hint">截至 {{scaleLatest.date}}</text>
                     <view class="scale-latest">
-                      <text class="scale-latest-val mono">{{scaleLatest.valueText}}</text>
                       <text class="scale-latest-mom mono {{scaleLatest.momClass}}"
                         wx:if="{{scaleLatest.momText && scaleLatest.momText !== '--'}}">{{scaleLatest.momText}}</text>
+                      <text class="scale-latest-val mono">{{scaleLatest.valueText}}</text>
                     </view>
                   </view>
 
