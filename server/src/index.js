@@ -3,6 +3,7 @@ import Koa from 'koa'
 import cors from '@koa/cors'
 import bodyParser from 'koa-bodyparser'
 import router from './routes.js'
+import {clientIp, clientUa, writeAccessLog} from './accessLog.js'
 import {startGoldAlert} from './services/goldAlert.js'
 
 const app = new Koa()
@@ -22,7 +23,17 @@ app.use(async (ctx, next) => {
     console.error('[error]', err)
   }
   const ms = Date.now() - start
-  console.log(`${ctx.method} ${ctx.url} ${ctx.status} ${ms}ms`)
+  const ip = clientIp(ctx)
+  writeAccessLog({
+    ts: new Date().toISOString(),
+    method: ctx.method,
+    path: ctx.path,
+    status: ctx.status,
+    ms,
+    ip,
+    ua: clientUa(ctx),
+  })
+  console.log(`${ctx.method} ${ctx.path} ${ctx.status} ${ms}ms ${ip}`)
 })
 
 app.use(router.routes()).use(router.allowedMethods())

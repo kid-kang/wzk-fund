@@ -9,6 +9,7 @@
     "dev:server": "caffeinate -dimsu npm run dev --prefix server",
     "dev:miniprogram": "npm install --prefix miniprogram",
     "build": "npm run build --prefix web",
-    "start": "npm run start --prefix server"
+    "start": "npm run start --prefix server",
+    "stats:weekly": "npm run stats:weekly --prefix server"
   }
 }

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "stats:weekly": "node scripts/weekly-users.js"
   },
   "dependencies": {
     "@koa/cors": "^5.0.0",
