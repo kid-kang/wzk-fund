@@ -119,6 +119,14 @@ function calcHoldings(localFunds, quotes) {
     const liveAmount =
       shares > 0 && currNav != null ? amountFromShares(shares, currNav) : displayAmount
 
+    const cost = Number(raw.cost) > 0 ? round2(raw.cost) : 0
+    let costPnl = null
+    let costPnlPercent = null
+    if (cost > 0) {
+      costPnl = round2(new Decimal(displayAmount).minus(cost))
+      costPnlPercent = round2(new Decimal(costPnl).div(cost).mul(100))
+    }
+
     totalAmount = totalAmount.plus(displayAmount)
     totalPnl = totalPnl.plus(pnl)
 
@@ -164,6 +172,9 @@ function calcHoldings(localFunds, quotes) {
         amount: displayAmount,
         liveAmount,
         pnl,
+        cost,
+        costPnl,
+        costPnlPercent,
         sectors,
         sectorItems,
         fundType,

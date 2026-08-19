@@ -28,6 +28,13 @@ function normalizeHolding(value) {
   return Math.round(n * 10000) / 10000
 }
 
+/** 持仓成本（元）。未填或无效视为 0，列表不展示收益率。 */
+function normalizeCost(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return 0
+  return Math.round(n * 100) / 100
+}
+
 function normalizeFund(raw, prev) {
   const code = String(raw.code || '').padStart(6, '0')
   const now = new Date().toISOString()
@@ -40,6 +47,7 @@ function normalizeFund(raw, prev) {
         ? raw.type
         : (prev && prev.type) || 'watch',
     shares: Number(raw.shares != null ? raw.shares : (prev && prev.shares) || 0) || 0,
+    cost: normalizeCost(raw.cost != null ? raw.cost : prev && prev.cost),
     sectors: Array.isArray(raw.sectors) ? raw.sectors : (prev && prev.sectors) || [],
     fundType: raw.fundType || (prev && prev.fundType) || '',
     ftype: raw.ftype != null ? raw.ftype : (prev && prev.ftype) || '',

@@ -37,6 +37,8 @@ export type FundRecord = {
   fundKey?: string
   type: 'hold' | 'watch'
   shares: number
+  /** 可选持仓成本（元）。未填则不展示收益率。 */
+  cost?: number
   sectors: string[]
   createdAt?: string
   updatedAt?: string
@@ -451,6 +453,7 @@ export async function createFund(
     fundKey: meta.fundKey,
     type: payload.type || 'watch',
     shares,
+    cost: payload.type === 'hold' ? payload.cost : 0,
     sectors: payload.sectors?.length ? payload.sectors : meta.sectors,
   })
 }

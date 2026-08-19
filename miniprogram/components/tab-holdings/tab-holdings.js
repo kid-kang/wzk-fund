@@ -10,16 +10,16 @@ function mapHoldRow(row) {
   const sectorTags =
     Array.isArray(row.sectorItems) && row.sectorItems.length
       ? row.sectorItems
-          .map((it) => ({
-            name: String((it && it.name) || '').trim(),
-            sectorCode: String((it && it.sectorCode) || '').trim(),
-            mappingCode: String((it && it.mappingCode) || '').trim(),
-          }))
-          .filter((it) => it.name)
+        .map((it) => ({
+          name: String((it && it.name) || '').trim(),
+          sectorCode: String((it && it.sectorCode) || '').trim(),
+          mappingCode: String((it && it.mappingCode) || '').trim(),
+        }))
+        .filter((it) => it.name)
       : sectors
-          .map((s) => String(s || '').trim())
-          .filter(Boolean)
-          .map((n) => ({name: n, sectorCode: '', mappingCode: ''}))
+        .map((s) => String(s || '').trim())
+        .filter(Boolean)
+        .map((n) => ({name: n, sectorCode: '', mappingCode: ''}))
   const confirmedUpdated = !!row.confirmedUpdated
   const discloseTimeText = String(row.discloseTimeText || '').trim()
   const showDiscloseTime = !!discloseTimeText
@@ -36,6 +36,8 @@ function mapHoldRow(row) {
     pctText: formatPct(row.percent),
     pnlClass: pctClass(row.pnl),
     pctClass: pctClass(row.percent),
+    hasCostYield: row.costPnlPercent != null,
+    costPctText: formatPct(row.costPnlPercent),
     confirmedUpdated,
     discloseTimeText,
     showDiscloseTime,
@@ -294,12 +296,17 @@ Component({
     },
 
     onEdit(e) {
-      const code = e.currentTarget.dataset.code
-      const name = e.currentTarget.dataset.name || ''
-      const q = name
-        ? `mode=hold&code=${code}&name=${encodeURIComponent(name)}`
-        : `mode=hold&code=${code}`
-      navigateTo(`/pages/fund-form/fund-form?${q}`)
+      const ds = e.currentTarget.dataset || {}
+      const code = ds.code
+      const parts = [`mode=hold`, `code=${code}`]
+      if (ds.name) parts.push(`name=${encodeURIComponent(ds.name)}`)
+      if (ds.amount != null && ds.amount !== '') {
+        parts.push(`amount=${encodeURIComponent(String(ds.amount))}`)
+      }
+      if (ds.cost != null && Number(ds.cost) > 0) {
+        parts.push(`cost=${encodeURIComponent(String(ds.cost))}`)
+      }
+      navigateTo(`/pages/fund-form/fund-form?${parts.join('&')}`)
     },
 
     onOpenTrend(e) {

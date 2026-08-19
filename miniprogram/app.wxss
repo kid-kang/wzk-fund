@@ -462,6 +462,19 @@ button {
   min-width: 0;
 }
 
+.yield-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+.dense-yield {
+  font-size: 20rpx;
+  font-weight: 620;
+  color: #8a93a3;
+}
+
 /* 石色甜甜圈：点明占比，不抢涨跌红绿 */
 .pie-icon {
   width: 20rpx;
@@ -487,7 +500,8 @@ button {
   color: #9aa3b5;
 }
 
-.theme-dark .dense-weight {
+.theme-dark .dense-weight,
+.theme-dark .dense-yield {
   color: #7a8496;
 }
 

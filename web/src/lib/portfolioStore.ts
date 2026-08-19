@@ -17,6 +17,11 @@ function normalizeFund(raw: Partial<FundRecord> & {code: string}, prev?: FundRec
     fundKey: raw.fundKey ?? prev?.fundKey ?? '',
     type: raw.type === 'hold' || raw.type === 'watch' ? raw.type : prev?.type || 'watch',
     shares: Number(raw.shares ?? prev?.shares ?? 0) || 0,
+    cost: (() => {
+      const n = Number(raw.cost ?? prev?.cost ?? 0)
+      if (!Number.isFinite(n) || n <= 0) return 0
+      return Math.round(n * 100) / 100
+    })(),
     sectors: Array.isArray(raw.sectors) ? raw.sectors : prev?.sectors || [],
     createdAt: prev?.createdAt || raw.createdAt || now,
     updatedAt: now,

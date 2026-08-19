@@ -169,6 +169,7 @@ async function createFund(payload) {
     fundKey: meta.fundKey,
     type: payload.type || 'watch',
     shares,
+    cost: payload.type === 'hold' ? payload.cost : 0,
     sectors: payload.sectors && payload.sectors.length ? payload.sectors : meta.sectors,
     ftype,
     fundType: classifyFundType(ftype, name),

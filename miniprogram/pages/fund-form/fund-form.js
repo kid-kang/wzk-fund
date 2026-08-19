@@ -16,6 +16,7 @@ Page({
     nameHint: '',
     codeLocked: false,
     amount: '',
+    cost: '',
     resolving: false,
     saving: false,
     error: '',
@@ -23,6 +24,7 @@ Page({
 
   _resolveTimer: null,
   _resolveSeq: 0,
+  _prefilledAmount: '',
 
   onLoad(query) {
     const themePatch = getThemeViewState()
@@ -48,10 +50,28 @@ Page({
     }
 
     if (code && mode === 'hold') {
-      this.prefillHold(code, name, patch)
-    } else {
-      this.setData(patch)
-      if (code) this.resolveName(code)
+      const local = store.getFund(code)
+      const amountFromQuery =
+        query.amount != null && String(query.amount) !== ''
+          ? String(query.amount)
+          : ''
+      const costFromQuery =
+        query.cost != null && Number(query.cost) > 0 ? String(query.cost) : ''
+      const costFromLocal =
+        local && Number(local.cost) > 0 ? String(local.cost) : ''
+      patch.amount = amountFromQuery
+      patch.cost = costFromLocal || costFromQuery
+      if (!patch.name && local && local.name) patch.name = local.name
+      this._prefilledAmount = patch.amount
+    }
+
+    this.setData(patch)
+
+    if (code && mode === 'hold') {
+      this.refreshHoldAmount(code)
+      if (!patch.name) this.resolveName(code)
+    } else if (code) {
+      this.resolveName(code)
     }
   },
 
@@ -69,23 +89,26 @@ Page({
     if (this._resolveTimer) clearTimeout(this._resolveTimer)
   },
 
-  async prefillHold(code, nameFromQuery, patch) {
+  async refreshHoldAmount(code) {
     try {
       const holdings = await api.fetchHoldings()
       const row = (holdings.list || []).find((f) => f.code === code)
-      if (row) {
-        patch.amount = row.amount != null ? String(row.amount) : ''
-        patch.name = row.name || nameFromQuery || ''
-      } else {
-        const local = store.getFund(code)
-        if (local && local.name) patch.name = local.name
-        else if (nameFromQuery) patch.name = nameFromQuery
+      if (!row) return
+      const patch = {}
+      const currentAmount = this.data.amount
+      if (
+        row.amount != null &&
+        (!currentAmount || currentAmount === this._prefilledAmount)
+      ) {
+        patch.amount = String(row.amount)
+        this._prefilledAmount = patch.amount
       }
+      if (row.name && row.name !== this.data.name) patch.name = row.name
+      if (!this.data.cost && Number(row.cost) > 0) patch.cost = String(row.cost)
+      if (Object.keys(patch).length) this.setData(patch)
     } catch (e) {
-      if (nameFromQuery) patch.name = nameFromQuery
+      // 列表已带入金额；刷新失败不挡编辑
     }
-    this.setData(patch)
-    if (!patch.name) this.resolveName(code)
   },
 
   onCodeInput(e) {
@@ -140,6 +163,20 @@ Page({
     this.setData({amount: raw})
   },
 
+  onCostInput(e) {
+    const raw =
+      typeof e.detail === 'object' && e.detail
+        ? e.detail.value
+        : e.detail
+    this.setData({cost: raw})
+  },
+
+  parseCost() {
+    const n = Number(String(this.data.cost || '').trim())
+    if (!Number.isFinite(n) || n <= 0) return 0
+    return Math.round(n * 100) / 100
+  },
+
   async onSubmit() {
     if (this.data.saving) return
     const mode = this.data.mode
@@ -155,6 +192,7 @@ Page({
         if (mode === 'hold') {
           await api.updateFund(code, {
             amount: Number(this.data.amount) || 0,
+            cost: this.parseCost(),
           })
         }
       } else {
@@ -163,6 +201,7 @@ Page({
           type: mode,
           name: this.data.name || undefined,
           amount: mode === 'hold' ? Number(this.data.amount) || 0 : undefined,
+          cost: mode === 'hold' ? this.parseCost() : undefined,
         })
       }
       Toast.success('已保存')

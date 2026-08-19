@@ -178,6 +178,32 @@
   line-height: 1.4;
 }
 
+.field-tip.is-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  line-height: 1;
+}
+
+.field-tip.is-inline > text {
+  line-height: 1;
+}
+
+.field-tip-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22rpx;
+  height: 22rpx;
+  margin: 0;
+  transform: translateY(-2rpx);
+}
+
+.field-tip-icon {
+  display: block !important;
+  line-height: 1 !important;
+}
+
 .basis {
   display: flex;
   flex-direction: column;
