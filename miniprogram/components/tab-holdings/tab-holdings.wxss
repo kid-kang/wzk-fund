@@ -487,7 +487,10 @@
 .gold-card {
   position: relative;
   overflow: hidden;
-  padding: 18rpx 18rpx 16rpx 24rpx;
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 18rpx 8rpx 16rpx 24rpx;
   background: rgba(255, 255, 255, 0.78);
   border: 1rpx solid rgba(184, 137, 45, 0.28);
   box-shadow:
@@ -510,6 +513,8 @@
   grid-template-columns: 1.1fr 1.1fr 0.95fr 1.15fr;
   gap: 6rpx;
   align-items: start;
+  flex: 1;
+  min-width: 0;
 }
 
 .gm {
@@ -538,24 +543,15 @@
   line-height: 1.15;
 }
 
-.gm-price {
-  padding-right: 0;
-}
-
-.gm-price-head {
+.gold-card-go {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 4rpx;
-  width: fit-content;
-  margin-bottom: 6rpx;
+  opacity: 0.55;
 }
 
-.gm-price .gm-k {
-  margin-bottom: 0;
-}
-
-.gm-price-hover {
-  opacity: 0.72;
+.gold-card-hover {
+  opacity: 0.88;
 }
 
 .gm.gold-price {

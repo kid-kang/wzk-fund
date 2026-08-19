@@ -64,7 +64,7 @@
         <view class="field-tip is-inline">
           <text>不填则列表不显示收益率</text>
           <view class="field-tip-mark">
-            <van-icon custom-class="field-tip-icon" name="chart-trending-o" size="11px"
+            <van-icon custom-class="field-tip-icon" name="gold-coin-o" size="11px"
               color="{{theme === 'dark' ? '#7a8496' : '#8a93a3'}}" />
           </view>
         </view>

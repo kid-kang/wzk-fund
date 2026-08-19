@@ -75,8 +75,7 @@
                       <text class="dense-weight mono">{{item.weightText}}</text>
                     </view>
                     <view class="yield-chip" wx:if="{{item.hasCostYield}}">
-                      <van-icon name="chart-trending-o" size="11px"
-                        color="{{theme === 'dark' ? '#7a8496' : '#8a93a3'}}" />
+                      <van-icon name="gold-coin-o" size="11px" color="{{theme === 'dark' ? '#7a8496' : '#8a93a3'}}" />
                       <text class="mono dense-yield">{{item.costPctText}}</text>
                     </view>
                   </view>
@@ -201,8 +200,7 @@
                       <text class="dense-weight mono">{{item.weightText}}</text>
                     </view>
                     <view class="yield-chip" wx:if="{{item.hasCostYield}}">
-                      <van-icon name="chart-trending-o" size="11px"
-                        color="{{theme === 'dark' ? '#7a8496' : '#8a93a3'}}" />
+                      <van-icon name="gold-coin-o" size="11px" color="{{theme === 'dark' ? '#7a8496' : '#8a93a3'}}" />
                       <text class="mono dense-yield">{{item.costPctText}}</text>
                     </view>
                   </view>
@@ -262,7 +260,7 @@
         <desk-sync wx:if="{{loading && goldPriceText === '--' && !error}}" theme="{{theme}}" variant="gold" />
 
         <view class="gold-wrap" wx:else>
-          <view class="glass gold-card">
+          <view class="glass gold-card" catchtap="onOpenGoldTrend" hover-class="gold-card-hover" aria-label="查看金价走势">
             <view class="gold-metrics">
               <view class="gm gold-price">
                 <text class="gm-k">总价值</text>
@@ -276,13 +274,13 @@
                 <text class="gm-k">收益率</text>
                 <text class="mono gm-v">{{goldCostPctText}}</text>
               </view>
-              <view class="gm gm-price gold-price" catchtap="onOpenGoldTrend" hover-class="gm-price-hover">
-                <view class="gm-price-head">
-                  <text class="gm-k">实时金价</text>
-                  <van-icon name="chart-trending-o" size="13px" color="#B8892D" />
-                </view>
+              <view class="gm gold-price">
+                <text class="gm-k">实时金价</text>
                 <text class="mono gm-v">{{goldPriceText}}</text>
               </view>
+            </view>
+            <view class="gold-card-go" aria-hidden="true">
+              <van-icon name="arrow" size="14px" color="#B8892D" />
             </view>
           </view>
         </view>
