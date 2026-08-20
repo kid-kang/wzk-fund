@@ -22,6 +22,12 @@ function formatAmount(v, digits = 2) {
   return Number(v).toFixed(digits)
 }
 
+/** 基金规模（亿元） */
+function formatScaleYi(v, digits = 2) {
+  if (v == null || Number.isNaN(Number(v))) return '--'
+  return `${Number(v).toFixed(digits)}亿`
+}
+
 /**
  * 走势图横轴日期标签（天级点距时用）。
  * 近3月等：MM-DD；更长周期由 chartOptions 抽稀后另标。
@@ -43,5 +49,6 @@ module.exports = {
   formatPct,
   formatMoney,
   formatAmount,
+  formatScaleYi,
   formatTrendAxisDate,
 }

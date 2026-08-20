@@ -106,7 +106,7 @@ export type IndustryFundItem = {
   code: string
   name: string
   nav: number | null
-  percent: number | null
+  scale: number | null
   heat?: number | null
 }
 

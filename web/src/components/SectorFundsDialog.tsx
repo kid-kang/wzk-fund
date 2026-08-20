@@ -4,7 +4,7 @@ import {
   fetchIndustryFunds,
   type IndustryFundItem,
 } from '@/lib/api'
-import {cn, formatPct, pctClass} from '@/lib/utils'
+import {cn, formatScaleYi} from '@/lib/utils'
 import {Button} from '@/components/ui/button'
 import {
   Dialog,
@@ -127,7 +127,7 @@ export function SectorFundsDialog({
             <div className="mb-1 flex items-center gap-2 border-b border-line px-1 pb-1.5 text-[10px] font-semibold tracking-wider text-muted">
               <span className="w-6">#</span>
               <span className="flex-1">名称</span>
-              <span className="w-16 text-right">估涨跌</span>
+              <span className="w-20 text-right">规模</span>
               <span className="w-8" />
             </div>
             <div className="divide-y divide-line/70">
@@ -150,13 +150,8 @@ export function SectorFundsDialog({
                     <div className="truncate text-sm font-medium">{item.name}</div>
                     <div className="font-mono text-[11px] text-muted">{item.code}</div>
                   </div>
-                  <span
-                    className={cn(
-                      'w-16 text-right font-mono text-sm font-semibold tabular-nums',
-                      pctClass(item.percent),
-                    )}
-                  >
-                    {formatPct(item.percent)}
+                  <span className="w-20 text-right font-mono text-sm font-semibold tabular-nums">
+                    {formatScaleYi(item.scale)}
                   </span>
                   <Button
                     type="button"

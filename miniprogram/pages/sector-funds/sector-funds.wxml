@@ -1,24 +1,12 @@
-<page-meta
-  page-style="background-color: {{pageBg}};"
-  background-color="{{pageBg}}"
-  background-color-top="{{pageBg}}"
-  background-color-bottom="{{pageBg}}"
-  root-background-color="{{pageBg}}"
-  background-text-style="{{bgTextStyle}}"
-/>
+<page-meta page-style="background-color: {{pageBg}};" background-color="{{pageBg}}" background-color-top="{{pageBg}}"
+  background-color-bottom="{{pageBg}}" root-background-color="{{pageBg}}" background-text-style="{{bgTextStyle}}" />
 
 <view class="subpage-root sf-shell theme-{{theme}}">
   <view class="subpage-nav">
     <app-nav-bar title="{{navTitle}}" theme="{{theme}}" bgColor="transparent" />
   </view>
 
-  <scroll-view
-    class="subpage-scroller sf-scroller"
-    scroll-y
-    enhanced
-    bounces="{{false}}"
-    show-scrollbar="{{false}}"
-  >
+  <scroll-view class="subpage-scroller sf-scroller" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="sf-page">
       <view class="sf-err" wx:if="{{error}}">{{error}}</view>
 
@@ -30,7 +18,7 @@
           <view class="sf-head" wx:if="{{!loading && list.length}}">
             <text class="sf-h-rank">#</text>
             <text class="sf-h-name">名称</text>
-            <text class="sf-h-pct">估涨跌</text>
+            <text class="sf-h-scale">规模</text>
             <text class="sf-h-act"></text>
           </view>
         </view>
@@ -46,27 +34,16 @@
         </view>
 
         <block wx:elif="{{list.length}}">
-          <view
-            class="sf-row"
-            wx:for="{{list}}"
-            wx:key="code"
-            data-code="{{item.code}}"
-            data-name="{{item.name}}"
-            bindtap="onOpenFund"
-          >
+          <view class="sf-row" wx:for="{{list}}" wx:key="code" data-code="{{item.code}}" data-name="{{item.name}}"
+            bindtap="onOpenFund">
             <text class="sf-rank">{{item.rankText}}</text>
             <view class="sf-main">
               <text class="sf-name">{{item.name}}</text>
               <text class="sf-code">{{item.code}}</text>
             </view>
-            <text class="sf-pct {{item.pctClass}}">{{item.pctText}}</text>
-            <view
-              class="sf-add {{item.watched ? 'is-on' : ''}}"
-              data-code="{{item.code}}"
-              data-name="{{item.name}}"
-              data-watched="{{item.watched ? 1 : 0}}"
-              catchtap="onToggleWatch"
-            >{{item.watched ? '✓' : '+'}}</view>
+            <text class="sf-scale">{{item.scaleText}}</text>
+            <view class="sf-add {{item.watched ? 'is-on' : ''}}" data-code="{{item.code}}" data-name="{{item.name}}"
+              data-watched="{{item.watched ? 1 : 0}}" catchtap="onToggleWatch">{{item.watched ? '✓' : '+'}}</view>
           </view>
         </block>
       </view>

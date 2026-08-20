@@ -154,7 +154,7 @@
 
 .sf-h-rank,
 .sf-h-name,
-.sf-h-pct,
+.sf-h-scale,
 .sf-h-act {
   font-size: 20rpx;
   font-weight: 650;
@@ -170,8 +170,8 @@
   flex: 1;
 }
 
-.sf-h-pct {
-  width: 120rpx;
+.sf-h-scale {
+  width: 152rpx;
   text-align: right;
 }
 
@@ -226,23 +226,15 @@
   color: var(--sf-mute);
 }
 
-.sf-pct {
+.sf-scale {
   flex-shrink: 0;
-  width: 120rpx;
+  width: 152rpx;
   text-align: right;
   font-size: 24rpx;
   font-weight: 720;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
-  color: var(--sf-mute);
-}
-
-.sf-pct.rise {
-  color: var(--sf-rise);
-}
-
-.sf-pct.fall {
-  color: var(--sf-fall);
+  color: var(--sf-ink);
 }
 
 .sf-add {

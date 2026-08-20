@@ -31,6 +31,12 @@ export function formatAmount(v: number | null | undefined, digits = 2) {
   return v.toFixed(digits);
 }
 
+/** 基金规模（亿元） */
+export function formatScaleYi(v: number | null | undefined, digits = 2) {
+  if (v == null || Number.isNaN(Number(v))) return '--';
+  return `${Number(v).toFixed(digits)}亿`;
+}
+
 /** tab 名义跨度（年）；成立来等未知周期用数据首尾推算 */
 const RANGE_YEARS: Record<string, number> = {
   '1m': 1 / 12,

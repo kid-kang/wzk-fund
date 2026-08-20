@@ -1,7 +1,7 @@
 const Toast = require('@vant/weapp/toast/toast').default
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
-const {formatPct, pctClass} = require('../../utils/format')
+const {formatScaleYi} = require('../../utils/format')
 const {getThemeViewState, syncNavigationBar, navigateTo} = require('../../utils/theme')
 
 /** 与本页冷雾底色对齐，避免回弹露缝 */
@@ -81,8 +81,7 @@ Page({
       const rank = idx + 1
       return Object.assign({}, row, {
         rankText: String(rank),
-        pctText: formatPct(row.percent),
-        pctClass: pctClass(row.percent),
+        scaleText: formatScaleYi(row.scale),
         watched,
       })
     })
@@ -101,14 +100,7 @@ Page({
       if (this._dead || epoch !== this._loadEpoch) return
       const themeName = (data && data.themeName) || this.data.name
       const items = (data && data.items) || []
-      const list = this.decorateRows(
-        items.map((row) =>
-          Object.assign({}, row, {
-            pctText: formatPct(row.percent),
-            pctClass: pctClass(row.percent),
-          }),
-        ),
-      )
+      const list = this.decorateRows(items)
       const nextName = themeName || this.data.name
       this.setData({
         loading: false,

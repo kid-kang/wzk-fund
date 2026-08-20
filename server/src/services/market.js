@@ -1,6 +1,6 @@
 import axios from 'axios'
 import https from 'https'
-import {getFundsDisplayPercents} from './fund.js'
+import {getFundsLatestScales} from './fund.js'
 
 const ua =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
@@ -343,29 +343,23 @@ function xiaobeiApiv2Body(extra = {}) {
   }
 }
 
-function parseXiaobeiFundPercent(row) {
-  const raw = row?.changeRate ?? row?.valuationY
-  const change = Number(raw)
-  if (!Number.isFinite(change)) return null
-  return round2(change * 100)
-}
-
-async function attachDisplayPercents(items) {
+async function attachScalesAndSort(items) {
   const list = Array.isArray(items) ? items : []
   if (!list.length) return list
   try {
-    const quotes = await getFundsDisplayPercents(list.map((row) => row.code))
-    return list.map((row) => {
-      const q = quotes.get(String(row.code).padStart(6, '0'))
-      if (!q || q.percent == null) return row
-      return {
-        ...row,
-        percent: q.percent,
-        percentSource: q.percentSource || null,
-      }
-    })
-  } catch {
+    const scales = await getFundsLatestScales(list.map((row) => row.code))
     return list
+      .map((row) => ({
+        ...row,
+        scale: scales.get(String(row.code).padStart(6, '0')) ?? null,
+      }))
+      .sort((a, b) => {
+        const as = a.scale == null ? -Infinity : a.scale
+        const bs = b.scale == null ? -Infinity : b.scale
+        return bs - as
+      })
+  } catch {
+    return list.map((row) => ({...row, scale: row.scale ?? null}))
   }
 }
 
@@ -382,7 +376,7 @@ export async function getIndustryFunds({sectorCode, mappingCode} = {}) {
   const hit = industryFundCache.get(cacheKey)
   if (hit && Date.now() - hit.at < INDUSTRY_FUND_TTL_MS) return hit.data
 
-  // 优先 App 热搜基金接口（按 heat）；旧 get-industry-fund 对许多板块 isHot 为空
+  // 优先 App 热搜基金接口取候选池；列表按最新规模降序
   if (sector) {
     const res = await axios.post(
       'https://apiv2.xiaobeiyangji.com/api/app/valuation/sectorFundHeatTop/getBySectorCode',
@@ -405,7 +399,7 @@ export async function getIndustryFunds({sectorCode, mappingCode} = {}) {
             code: fundCode,
             name: String(row.fundName || row.name || fundCode).trim(),
             nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
-            percent: parseXiaobeiFundPercent(row),
+            scale: null,
             heat: Number.isFinite(heat) ? heat : null,
           }
         })
@@ -416,7 +410,7 @@ export async function getIndustryFunds({sectorCode, mappingCode} = {}) {
         mappingCode: mapping || String(rawList[0]?.extraCode || '').trim(),
         themeName: '',
         source: 'xiaobei-fund-heat',
-        items: await attachDisplayPercents(items),
+        items: await attachScalesAndSort(items),
       }
       industryFundCache.set(cacheKey, {at: Date.now(), data})
       return data
@@ -458,7 +452,7 @@ async function fetchLegacyIndustryFunds(mappingCode) {
         code: fundCode,
         name: String(row.name || fundCode).trim(),
         nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
-        percent: parseXiaobeiFundPercent(row),
+        scale: null,
         heat: null,
       }
     })
@@ -470,7 +464,7 @@ async function fetchLegacyIndustryFunds(mappingCode) {
     mappingCode,
     themeName: String(raw.themeName || '').trim(),
     source: 'xiaobei-legacy-fund',
-    items: await attachDisplayPercents(items),
+    items: await attachScalesAndSort(items),
   }
 }
 

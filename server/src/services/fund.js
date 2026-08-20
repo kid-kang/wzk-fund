@@ -2324,11 +2324,45 @@ function formatScaleDate(date) {
   return `${s.slice(2, 4)}/${s.slice(5, 7)}`
 }
 
+const SCALE_TTL_MS = 12 * 60 * 60 * 1000
+const scaleCache = new Map()
+const latestScaleCache = new Map()
+
+/** 东财 ENDNAV / FEGM 为人民币元，转成亿元 */
+function parseLatestScaleYi(row) {
+  const endNav = Number(row?.ENDNAV)
+  if (Number.isFinite(endNav) && endNav > 0) return round2(endNav / 1e8)
+  const fegm = Number(row?.FEGM)
+  if (Number.isFinite(fegm) && fegm > 0) return round2(fegm / 1e8)
+  return null
+}
+
+async function fetchFundBasicInfoOnce(code) {
+  const res = await axios.get('https://fundmobapi.eastmoney.com/FundMNewApi/FundMNBasicInformation', {
+    timeout: 8000,
+    headers: {
+      'User-Agent': mobileUa,
+      Referer: 'https://fund.eastmoney.com/',
+      Origin: 'https://fund.eastmoney.com',
+      Accept: 'application/json, text/plain, */*',
+    },
+    params: {
+      deviceid: 'Wap',
+      plat: 'Wap',
+      product: 'EFund',
+      version: '2.0.0',
+      appType: 'ttjj',
+      FCODE: code,
+    },
+  })
+  if (res.data?.Success) return res.data.Datas
+  throw new Error(res.data?.ErrMsg || '规模信息暂不可用')
+}
+
 /**
- * 板块列表等批量涨跌：与持仓/自选同一套口径。
- * 东财 FundMNFInfo：GSZZL 估涨、NAVCHGRT 确认涨跌；QDII 走上一确认。
+ * 批量最新规模（亿元）。供板块热搜基金列表排序 / 展示，与详情页季报柱状图缓存分开。
  */
-export async function getFundsDisplayPercents(codes) {
+export async function getFundsLatestScales(codes) {
   const unique = [
     ...new Set(
       (codes || [])
@@ -2339,51 +2373,30 @@ export async function getFundsDisplayPercents(codes) {
   const map = new Map()
   if (!unique.length) return map
 
-  const chunkSize = 30
-  const chunks = []
-  for (let i = 0; i < unique.length; i += chunkSize) {
-    chunks.push(unique.slice(i, i + chunkSize))
+  const now = Date.now()
+  const missing = []
+  for (const code of unique) {
+    const hit = latestScaleCache.get(code)
+    if (hit && now - hit.at < SCALE_TTL_MS) {
+      map.set(code, hit.scale)
+    } else {
+      missing.push(code)
+    }
   }
 
-  const settled = await Promise.allSettled(
-    chunks.map((chunk) =>
-      eastmoneyFundGet('FundMNFInfo', {
-        Fcodes: chunk.join(','),
-        pageIndex: 1,
-        pageSize: chunk.length,
-      }),
-    ),
-  )
-
-  for (const s of settled) {
-    if (s.status !== 'fulfilled') continue
-    const list = Array.isArray(s.value) ? s.value : []
-    for (const row of list) {
-      const code = String(row?.FCODE || '').padStart(6, '0')
-      if (!/^\d{6}$/.test(code)) continue
-      const name = String(row?.SHORTNAME || row?.FULLNAME || '').trim()
-      const estimateGrowth = parsePct(row?.GSZZL)
-      const dayGrowth = parsePct(row?.NAVCHGRT)
-      const netValueDate = normalizeNetValueDate(row?.PDATE || '')
-      const delayedDisclosure = isDelayedNavFund({name})
-      const {percent, percentSource} = resolveDisplayPercent({
-        estimateGrowth,
-        dayGrowth,
-        netValueDate,
-        delayedDisclosure,
-      })
-      map.set(code, {
-        percent: percent == null ? null : round2(percent),
-        percentSource,
-        name,
-      })
-    }
+  const concurrency = 10
+  for (let i = 0; i < missing.length; i += concurrency) {
+    const chunk = missing.slice(i, i + concurrency)
+    const settled = await Promise.allSettled(chunk.map((code) => fetchFundBasicInfoOnce(code)))
+    settled.forEach((s, idx) => {
+      const code = chunk[idx]
+      const scale = s.status === 'fulfilled' ? parseLatestScaleYi(s.value) : null
+      latestScaleCache.set(code, {at: Date.now(), scale})
+      map.set(code, scale)
+    })
   }
   return map
 }
-
-const SCALE_TTL_MS = 12 * 60 * 60 * 1000
-const scaleCache = new Map()
 
 function parseGmbdScaleRows(html) {
   const rows = []
