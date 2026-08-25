@@ -4,7 +4,7 @@ import {
   fetchIndustryFunds,
   type IndustryFundItem,
 } from '@/lib/api'
-import {cn, formatScaleYi} from '@/lib/utils'
+import {cn, formatPct, formatScaleYi, pctClass} from '@/lib/utils'
 import {Button} from '@/components/ui/button'
 import {
   Dialog,
@@ -22,6 +22,15 @@ export type SectorFundsTarget = {
 
 type FundRow = IndustryFundItem & {
   watched: boolean
+}
+
+function fundPctClass(percent: number | null | undefined) {
+  const tone = pctClass(percent)
+  return cn(
+    'tabular-nums font-semibold',
+    tone === 'rise' && 'text-rise',
+    tone === 'fall' && 'text-fall',
+  )
 }
 
 export function SectorFundsDialog({
@@ -148,7 +157,17 @@ export function SectorFundsDialog({
                   <span className="w-6 font-mono text-[11px] text-muted">{idx + 1}</span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{item.name}</div>
-                    <div className="font-mono text-[11px] text-muted">{item.code}</div>
+                    <div className="flex items-baseline gap-1.5 font-mono text-[11px] text-muted">
+                      <span>{item.code}</span>
+                      {item.percent != null && Number.isFinite(Number(item.percent)) ? (
+                        <>
+                          <span className="font-sans text-muted/60">｜</span>
+                          <span className={fundPctClass(item.percent)}>
+                            {formatPct(item.percent)}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
                   </div>
                   <span className="w-20 text-right font-mono text-sm font-semibold tabular-nums">
                     {formatScaleYi(item.scale)}

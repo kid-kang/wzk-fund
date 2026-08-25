@@ -1,7 +1,7 @@
 const Toast = require('@vant/weapp/toast/toast').default
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
-const {formatScaleYi} = require('../../utils/format')
+const {formatScaleYi, formatPct, pctClass} = require('../../utils/format')
 const {getThemeViewState, syncNavigationBar, navigateTo} = require('../../utils/theme')
 
 /** 与本页冷雾底色对齐，避免回弹露缝 */
@@ -79,9 +79,14 @@ Page({
       const fund = store.getFund(row.code)
       const watched = !!(fund && (fund.type === 'watch' || fund.type === 'hold'))
       const rank = idx + 1
+      const percent = row.percent == null ? NaN : Number(row.percent)
+      const hasPct = Number.isFinite(percent)
       return Object.assign({}, row, {
         rankText: String(rank),
         scaleText: formatScaleYi(row.scale),
+        hasPct,
+        pctText: hasPct ? formatPct(percent) : '',
+        pctClass: hasPct ? pctClass(percent) : 'flat',
         watched,
       })
     })

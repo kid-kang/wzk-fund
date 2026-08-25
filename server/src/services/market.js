@@ -343,6 +343,13 @@ function xiaobeiApiv2Body(extra = {}) {
   }
 }
 
+/** 基金 changeRate 为小数（0.0123 → 1.23），与板块榜同一套 */
+function parseXiaobeiFundPercent(row = {}) {
+  const raw = Number(row.changeRate ?? row.change)
+  if (!Number.isFinite(raw)) return null
+  return round2(raw * 100)
+}
+
 async function attachScalesAndSort(items) {
   const list = Array.isArray(items) ? items : []
   if (!list.length) return list
@@ -401,6 +408,7 @@ export async function getIndustryFunds({sectorCode, mappingCode} = {}) {
             nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
             scale: null,
             heat: Number.isFinite(heat) ? heat : null,
+            percent: parseXiaobeiFundPercent(row),
           }
         })
         .filter(Boolean)
@@ -454,6 +462,7 @@ async function fetchLegacyIndustryFunds(mappingCode) {
         nav: Number.isFinite(Number(row.nav)) ? Number(row.nav) : null,
         scale: null,
         heat: null,
+        percent: parseXiaobeiFundPercent(row),
       }
     })
     .filter(Boolean)

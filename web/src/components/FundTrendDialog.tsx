@@ -90,6 +90,7 @@ export function FundTrendDialog({
   const [ageText, setAgeText] = useState('')
   const [titleName, setTitleName] = useState(name)
   const [sectorTags, setSectorTags] = useState<SectorTagItem[]>([])
+  const [realtimePercent, setRealtimePercent] = useState<number | null>(null)
   const [sectorOpen, setSectorOpen] = useState(false)
   const [sectorTarget, setSectorTarget] = useState<SectorFundsTarget | null>(null)
   const [childFundOpen, setChildFundOpen] = useState(false)
@@ -147,6 +148,7 @@ export function FundTrendDialog({
     setTitleName(name)
     setByRange({})
     setSectorTags([])
+    setRealtimePercent(null)
     setHoldings([])
     setHoldingsError('')
     setTotalWeightText('')
@@ -175,6 +177,8 @@ export function FundTrendDialog({
             : null
         setAgeDays(days)
         setAgeText(formatFundAge(q.establishDate, days))
+        const live = q.realtimePercent == null ? NaN : Number(q.realtimePercent)
+        setRealtimePercent(Number.isFinite(live) ? live : null)
         const items = Array.isArray(q.sectorItems) ? q.sectorItems : []
         if (items.length) {
           setSectorTags(
@@ -200,6 +204,7 @@ export function FundTrendDialog({
           setAgeDays(null)
           setAgeText('')
           setSectorTags([])
+          setRealtimePercent(null)
         }
       })
     return () => {
@@ -465,7 +470,8 @@ export function FundTrendDialog({
                 </span>
               ) : null}
             </DialogTitle>
-            {sectorTags.length ? (
+            {sectorTags.length ||
+              (realtimePercent != null && Number.isFinite(realtimePercent)) ? (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {sectorTags.map((tag) => (
                   <button
@@ -490,6 +496,21 @@ export function FundTrendDialog({
                     {tag.name}
                   </button>
                 ))}
+                {realtimePercent != null && Number.isFinite(realtimePercent) ? (
+                  <span
+                    className={cn(
+                      'rounded border px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+                      pctClass(realtimePercent) === 'rise' &&
+                      'border-rise/30 bg-rise/10 text-rise',
+                      pctClass(realtimePercent) === 'fall' &&
+                      'border-fall/30 bg-fall/10 text-fall',
+                      pctClass(realtimePercent) === 'flat' &&
+                      'border-line bg-paper text-muted',
+                    )}
+                  >
+                    实时涨跌 {formatPct(realtimePercent)}
+                  </span>
+                ) : null}
               </div>
             ) : null}
           </DialogHeader>

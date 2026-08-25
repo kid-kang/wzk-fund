@@ -1364,6 +1364,27 @@ function resolveSmartSectors(scoreMap, {fundName = '', balanced = false} = {}) {
 /** 小倍关联板块内存缓存，避免行情轮询反复打接口；展示仍以拉取结果为准，不读客户端 localStorage */
 const XIAOBEI_SECTOR_TTL_MS = 3 * 24 * 60 * 60 * 1000
 const xiaobeiSectorCache = new Map()
+/** 小倍详情短缓存：板块标签可沿用 3 天，dailyYield 需盘中刷新 */
+const XIAOBEI_DETAIL_TTL_MS = 60 * 1000
+const xiaobeiDetailCache = new Map()
+
+async function loadXiaobeiFundDetail(code) {
+  const padded = String(code || '').padStart(6, '0')
+  if (!/^\d{6}$/.test(padded)) return null
+  const hit = xiaobeiDetailCache.get(padded)
+  if (hit && Date.now() - hit.at < XIAOBEI_DETAIL_TTL_MS) return hit.data
+  const data = await xiaobeiApiPost('get-fund-detail-v310', code)
+  const next = data || null
+  xiaobeiDetailCache.set(padded, {at: Date.now(), data: next})
+  return next
+}
+
+/** dailyYield 为小数（0.0268 → 2.68），与板块热搜 changeRate 同一套 */
+function parseXiaobeiDailyYield(data) {
+  const raw = Number(data?.dailyYield ?? data?.changeRate)
+  if (!Number.isFinite(raw)) return null
+  return Math.round(raw * 10000) / 100
+}
 
 /**
  * 小倍养基关联板块（无需登录）。
@@ -1377,7 +1398,7 @@ async function fetchXiaobeiSectorItems(code) {
     return hit.items.map((i) => ({...i}))
   }
 
-  const data = await xiaobeiApiPost('get-fund-detail-v310', code)
+  const data = await loadXiaobeiFundDetail(code)
   if (!data) return []
   const rows = Array.isArray(data.relatedIndustryV2)
     ? data.relatedIndustryV2
@@ -2177,8 +2198,11 @@ export async function getFundQuote(fund) {
   // 板块标签每次行情请求实时拉取（小倍优先），不再沿用客户端 localStorage 缓存
   let sectors = []
   let sectorItems = []
+  let realtimePercent = null
   try {
     const next = await fetchFundSectorItemsQueued(code, name)
+    const detail = await loadXiaobeiFundDetail(code)
+    realtimePercent = parseXiaobeiDailyYield(detail)
     if (next.length) {
       sectorItems = next
       sectors = next.map((i) => i.name)
@@ -2194,6 +2218,9 @@ export async function getFundQuote(fund) {
       mappingCode: '',
     }))
   }
+  if (realtimePercent == null && estimateGrowth != null) {
+    realtimePercent = round2(estimateGrowth)
+  }
 
   return {
     code,
@@ -2203,6 +2230,7 @@ export async function getFundQuote(fund) {
     estimateGrowth,
     percent,
     percentSource,
+    realtimePercent,
     netValue,
     estimateNetValue,
     prevNetValue,

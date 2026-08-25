@@ -39,7 +39,13 @@
             <text class="sf-rank">{{item.rankText}}</text>
             <view class="sf-main">
               <text class="sf-name">{{item.name}}</text>
-              <text class="sf-code">{{item.code}}</text>
+              <view class="sf-meta">
+                <text class="sf-code">{{item.code}}</text>
+                <block wx:if="{{item.hasPct}}">
+                  <text class="sf-sep">｜</text>
+                  <text class="sf-pct {{item.pctClass}}">{{item.pctText}}</text>
+                </block>
+              </view>
             </view>
             <text class="sf-scale">{{item.scaleText}}</text>
             <view class="sf-add {{item.watched ? 'is-on' : ''}}" data-code="{{item.code}}" data-name="{{item.name}}"

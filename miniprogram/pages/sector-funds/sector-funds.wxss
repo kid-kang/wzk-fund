@@ -218,12 +218,41 @@
   color: var(--sf-ink);
 }
 
+.sf-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+  min-width: 0;
+}
+
 .sf-code {
   font-size: 20rpx;
   font-weight: 500;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
   color: var(--sf-mute);
+}
+
+.sf-sep {
+  font-size: 18rpx;
+  font-weight: 400;
+  color: var(--sf-rank);
+}
+
+.sf-pct {
+  font-size: 20rpx;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf-mute);
+}
+
+.sf-pct.rise {
+  color: var(--sf-rise);
+}
+
+.sf-pct.fall {
+  color: var(--sf-fall);
 }
 
 .sf-scale {

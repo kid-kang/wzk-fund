@@ -32,6 +32,7 @@
             <text class="sector-tag is-link" wx:for="{{sectorTags}}" wx:for-item="tag" wx:key="name"
               data-name="{{tag.name}}" data-sector="{{tag.sectorCode}}" data-mapping="{{tag.mappingCode}}"
               catchtap="onOpenSector">{{tag.name}}</text>
+            <text class="sector-tag realtime-tag {{realtimePctClass}}" wx:if="{{hasRealtimePct}}">{{realtimePctText}}</text>
           </view>
           <view class="ticket-rule" aria-hidden="true"></view>
         </view>

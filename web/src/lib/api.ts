@@ -108,6 +108,7 @@ export type IndustryFundItem = {
   nav: number | null
   scale: number | null
   heat?: number | null
+  percent?: number | null
 }
 
 export type IndustryFundsPayload = {
@@ -243,6 +244,7 @@ export type FundQuoteDetail = {
   establishDate?: string
   ageDays?: number | null
   percent?: number | null
+  realtimePercent?: number | null
   netValue?: number | null
   sectors?: string[]
   sectorItems?: SectorTagItem[]

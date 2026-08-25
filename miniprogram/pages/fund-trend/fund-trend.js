@@ -72,6 +72,9 @@ Page({
     code: '',
     name: '',
     sectorTags: [],
+    hasRealtimePct: false,
+    realtimePctText: '',
+    realtimePctClass: 'flat',
     ageDays: null,
     ageText: '',
     range: '1y',
@@ -203,10 +206,16 @@ Page({
           ? Number(quote.ageDays)
           : null
       const range = defaultFundRange(ageDays)
+      const realtimePercent =
+        quote.realtimePercent == null ? NaN : Number(quote.realtimePercent)
+      const hasRealtimePct = Number.isFinite(realtimePercent)
       this._byRange = {}
       this.setData({
         name: quote.name || this.data.name || this.data.code,
         sectorTags: mapSectorTags(quote),
+        hasRealtimePct,
+        realtimePctText: hasRealtimePct ? `实时涨跌 ${formatPct(realtimePercent)}` : '',
+        realtimePctClass: hasRealtimePct ? pctClass(realtimePercent) : 'flat',
         ageDays,
         ageText: formatFundAge(quote.establishDate, ageDays),
         range,
