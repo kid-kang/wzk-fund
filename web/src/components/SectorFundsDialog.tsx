@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react'
 import {
   createFund,
   fetchIndustryFunds,
+  fetchIndustryFundYields,
   type IndustryFundItem,
 } from '@/lib/api'
 import {cn, formatPct, formatScaleYi, pctClass} from '@/lib/utils'
@@ -66,25 +67,39 @@ export function SectorFundsDialog({
     setError('')
     setTitle(target.name || '板块基金')
     fetchIndustryFunds({sectorCode, mappingCode})
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled) return
         if (data.themeName) setTitle(data.themeName)
         const watched = new Set(listFunds('watch').map((f) => f.code))
-        setList(
-          (data.items || []).map((row) => ({
-            ...row,
-            watched: watched.has(row.code),
-          })),
-        )
+        const items = (data.items || []).map((row) => ({
+          ...row,
+          watched: watched.has(row.code),
+        }))
+        setList(items)
+        setLoading(false)
+        const codes = items.map((row) => row.code).filter(Boolean)
+        if (!codes.length) return
+        try {
+          const yields = await fetchIndustryFundYields(codes)
+          if (cancelled) return
+          setList((prev) =>
+            prev.map((row) => {
+              const key = String(row.code || '').padStart(6, '0')
+              const live = yields[key] ?? yields[row.code]
+              if (live == null || !Number.isFinite(Number(live))) return row
+              return {...row, percent: Number(live)}
+            }),
+          )
+        } catch {
+          // 列表已出，涨跌补拉失败不影响浏览
+        }
       })
       .catch((e: Error) => {
         if (!cancelled) {
           setError(e.message || '加载失败')
           setList([])
+          setLoading(false)
         }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
       })
     return () => {
       cancelled = true

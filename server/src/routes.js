@@ -18,6 +18,7 @@ import {
   getIndices,
   getIndexHistory,
   getIndustryFunds,
+  getIndustryFundYields,
   getMarketBoards,
   getMarketOverview,
 } from './services/market.js'
@@ -279,6 +280,26 @@ router.get('/market/boards', async (ctx) => {
     const tab = String(ctx.query.tab || 'gainers')
     const size = ctx.query.size != null && ctx.query.size !== '' ? Number(ctx.query.size) : 0
     const data = await getMarketBoards({tab, size})
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+/** 板块基金实时涨跌（详情 dailyYield）；POST {codes:['011452']} */
+router.post('/market/boards/funds/yields', async (ctx) => {
+  try {
+    const raw = ctx.request.body?.codes
+    const list = Array.isArray(raw)
+      ? raw
+      : String(raw || ctx.query.codes || '')
+        .split(/[,，\s]+/)
+    const codes = list
+      .map((c) => String(c || '').padStart(6, '0'))
+      .filter((c) => /^\d{6}$/.test(c))
+      .slice(0, 300)
+    const data = await getIndustryFundYields(codes)
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 500

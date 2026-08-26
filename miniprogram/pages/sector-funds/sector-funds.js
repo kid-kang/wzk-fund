@@ -105,15 +105,29 @@ Page({
       if (this._dead || epoch !== this._loadEpoch) return
       const themeName = (data && data.themeName) || this.data.name
       const items = (data && data.items) || []
-      const list = this.decorateRows(items)
       const nextName = themeName || this.data.name
       this.setData({
         loading: false,
-        list,
+        list: this.decorateRows(items),
         name: nextName,
         subtitle: makeSubtitle(nextName),
         navTitle: nextName || '板块基金',
       })
+      const codes = items.map((row) => row.code).filter(Boolean)
+      if (!codes.length) return
+      try {
+        const yields = await api.fetchIndustryFundYields(codes)
+        if (this._dead || epoch !== this._loadEpoch) return
+        const merged = items.map((row) => {
+          const key = String(row.code || '').padStart(6, '0')
+          const live = yields[key] ?? yields[row.code]
+          if (live == null || !Number.isFinite(Number(live))) return row
+          return Object.assign({}, row, {percent: Number(live)})
+        })
+        this.setData({list: this.decorateRows(merged)})
+      } catch {
+        // 列表已出，涨跌补拉失败不影响浏览
+      }
     } catch (e) {
       if (this._dead || epoch !== this._loadEpoch) return
       this.setData({

@@ -343,6 +343,19 @@ export async function fetchIndustryFunds(opts: {
   return assertOk(data).data
 }
 
+export async function fetchIndustryFundYields(codes: string[]) {
+  const list = (codes || [])
+    .map((c) => String(c || '').padStart(6, '0'))
+    .filter((c) => /^\d{6}$/.test(c))
+  if (!list.length) return {} as Record<string, number>
+  const {data} = await api.post<{
+    success: boolean
+    message?: string
+    data: Record<string, number>
+  }>('/market/boards/funds/yields', {codes: list})
+  return assertOk(data).data || {}
+}
+
 export async function fetchGold() {
   const gold = loadConfig().gold
   const {data} = await api.post<{success: boolean; message?: string; data: GoldPayload}>(

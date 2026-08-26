@@ -1367,23 +1367,82 @@ const xiaobeiSectorCache = new Map()
 /** 小倍详情短缓存：板块标签可沿用 3 天，dailyYield 需盘中刷新 */
 const XIAOBEI_DETAIL_TTL_MS = 60 * 1000
 const xiaobeiDetailCache = new Map()
+const xiaobeiDetailInflight = new Map()
 
 async function loadXiaobeiFundDetail(code) {
   const padded = String(code || '').padStart(6, '0')
   if (!/^\d{6}$/.test(padded)) return null
   const hit = xiaobeiDetailCache.get(padded)
   if (hit && Date.now() - hit.at < XIAOBEI_DETAIL_TTL_MS) return hit.data
-  const data = await xiaobeiApiPost('get-fund-detail-v310', code)
-  const next = data || null
-  xiaobeiDetailCache.set(padded, {at: Date.now(), data: next})
-  return next
+  const pending = xiaobeiDetailInflight.get(padded)
+  if (pending) return pending
+  const task = (async () => {
+    try {
+      const data = await xiaobeiApiPost('get-fund-detail-v310', code)
+      const next = data || null
+      xiaobeiDetailCache.set(padded, {at: Date.now(), data: next})
+      return next
+    } finally {
+      xiaobeiDetailInflight.delete(padded)
+    }
+  })()
+  xiaobeiDetailInflight.set(padded, task)
+  return task
 }
 
-/** dailyYield 为小数（0.0268 → 2.68），与板块热搜 changeRate 同一套 */
+/** dailyYield 为小数（0.0268 → 2.68）；热搜基金 changeRate 开盘常为空，不能当同源 */
 function parseXiaobeiDailyYield(data) {
   const raw = Number(data?.dailyYield ?? data?.changeRate)
   if (!Number.isFinite(raw)) return null
   return Math.round(raw * 10000) / 100
+}
+
+/** 只读详情缓存，不打接口；供板块列表首屏立刻带上已看过的基金涨跌 */
+export function peekXiaobeiRealtimePercents(codes) {
+  const unique = [
+    ...new Set(
+      (codes || [])
+        .map((c) => String(c || '').padStart(6, '0'))
+        .filter((c) => /^\d{6}$/.test(c)),
+    ),
+  ]
+  const map = new Map()
+  const now = Date.now()
+  for (const code of unique) {
+    const hit = xiaobeiDetailCache.get(code)
+    if (!hit || now - hit.at >= XIAOBEI_DETAIL_TTL_MS) continue
+    const pct = parseXiaobeiDailyYield(hit.data)
+    if (pct != null) map.set(code, pct)
+  }
+  return map
+}
+
+/**
+ * 批量实时涨跌（百分数），与详情 realtimePercent 同源：get-fund-detail-v310 dailyYield。
+ */
+export async function getXiaobeiRealtimePercents(codes) {
+  const unique = [
+    ...new Set(
+      (codes || [])
+        .map((c) => String(c || '').padStart(6, '0'))
+        .filter((c) => /^\d{6}$/.test(c)),
+    ),
+  ]
+  const map = new Map()
+  if (!unique.length) return map
+
+  const concurrency = 10
+  for (let i = 0; i < unique.length; i += concurrency) {
+    const chunk = unique.slice(i, i + concurrency)
+    const settled = await Promise.allSettled(chunk.map((code) => loadXiaobeiFundDetail(code)))
+    settled.forEach((s, idx) => {
+      const code = chunk[idx]
+      if (s.status !== 'fulfilled') return
+      const pct = parseXiaobeiDailyYield(s.value)
+      if (pct != null) map.set(code, pct)
+    })
+  }
+  return map
 }
 
 /**

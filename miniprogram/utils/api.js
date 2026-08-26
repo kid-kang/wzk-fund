@@ -94,6 +94,20 @@ async function fetchIndustryFunds({sectorCode, mappingCode} = {}) {
   return data.data
 }
 
+async function fetchIndustryFundYields(codes = []) {
+  const list = (codes || [])
+    .map((c) => String(c || '').padStart(6, '0'))
+    .filter((c) => /^\d{6}$/.test(c))
+  if (!list.length) return {}
+  const data = await request({
+    url: '/api/market/boards/funds/yields',
+    method: 'POST',
+    data: {codes: list},
+  })
+  assertOk(data)
+  return (data && data.data) || {}
+}
+
 async function fetchGold() {
   const gold = store.loadConfig().gold
   const data = await request({
@@ -256,6 +270,7 @@ module.exports = {
   fetchFundQuote,
   fetchMarketOverview,
   fetchIndustryFunds,
+  fetchIndustryFundYields,
   fetchGold,
   fetchGoldHistory,
   resolveFund,
