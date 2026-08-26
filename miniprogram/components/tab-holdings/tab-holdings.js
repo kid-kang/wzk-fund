@@ -4,6 +4,13 @@ const {navigateTo} = require('../../utils/theme')
 const {toSparkSeries, reuseUnchangedSpark} = require('../../utils/spark')
 const Toast = require('@vant/weapp/toast/toast').default
 
+function cardLivePercent(row) {
+  const live = Number(row && row.realtimePercent)
+  if (Number.isFinite(live)) return live
+  const pct = Number(row && row.percent)
+  return Number.isFinite(pct) ? pct : null
+}
+
 function mapHoldRow(row) {
   const name = row.name || row.code || ''
   const sectors = Array.isArray(row.sectors) ? row.sectors : []
@@ -33,9 +40,9 @@ function mapHoldRow(row) {
         ? '--'
         : `${Number(row.weight).toFixed(1)}%`,
     pnlText: formatMoney(row.pnl),
-    pctText: formatPct(row.percent),
+    pctText: formatPct(cardLivePercent(row)),
     pnlClass: pctClass(row.pnl),
-    pctClass: pctClass(row.percent),
+    pctClass: pctClass(cardLivePercent(row)),
     hasCostYield: row.costPnlPercent != null,
     costPctText: formatPct(row.costPnlPercent),
     confirmedUpdated,

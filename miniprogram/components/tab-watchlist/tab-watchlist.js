@@ -13,6 +13,13 @@ function flattenGroupRows(groups) {
   return rows
 }
 
+function cardLivePercent(row) {
+  const live = Number(row && row.realtimePercent)
+  if (Number.isFinite(live)) return live
+  const pct = Number(row && row.percent)
+  return Number.isFinite(pct) ? pct : null
+}
+
 Component({
   options: {
     styleIsolation: 'apply-shared',
@@ -126,8 +133,8 @@ Component({
           const mappedRow = Object.assign({}, row, {
             name,
             codeMark: String(row.code || '').slice(-6) || '······',
-            pctText: formatPct(row.percent),
-            pctClass: pctClass(row.percent),
+            pctText: formatPct(cardLivePercent(row)),
+            pctClass: pctClass(cardLivePercent(row)),
             confirmedUpdated,
             discloseTimeText,
             showDiscloseTime,

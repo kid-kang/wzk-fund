@@ -161,6 +161,8 @@ function calcHoldings(localFunds, quotes) {
         fundKey: q.fundKey || raw.fundKey,
         percent,
         percentSource: q.percentSource || null,
+        realtimePercent:
+          q.realtimePercent == null ? null : Number(q.realtimePercent),
         estimateGrowth: q.estimateGrowth,
         dayGrowth: q.dayGrowth,
         netValueDate: navDay || q.netValueDate || '',
@@ -330,6 +332,8 @@ function mergeWatchlist(localFunds, quotes) {
     return Object.assign({}, f, {
       name,
       percent: q.percent ?? q.estimateGrowth ?? q.dayGrowth ?? null,
+      realtimePercent:
+        q.realtimePercent == null ? null : Number(q.realtimePercent),
       estimateGrowth: q.estimateGrowth,
       dayGrowth: q.dayGrowth,
       percentSource: q.percentSource || null,

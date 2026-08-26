@@ -812,7 +812,7 @@ const HOLDING_NAME_THEME_RULES = [
   [/中国海洋石油|中海油|石油|原油/, '油气'],
 ]
 
-async function xiaobeiApiPost(path, code, {allowCodes = [200]} = {}) {
+async function xiaobeiApiPost(path, code, {allowCodes = [200], extra = {}} = {}) {
   const padded = String(code || '').padStart(6, '0')
   if (!/^\d{6}$/.test(padded)) return null
   try {
@@ -822,6 +822,7 @@ async function xiaobeiApiPost(path, code, {allowCodes = [200]} = {}) {
         code: padded,
         version: '3.8.7.0',
         clientType: 'APP',
+        ...extra,
       },
       {
         httpsAgent: agent,
@@ -1368,6 +1369,10 @@ const xiaobeiSectorCache = new Map()
 const XIAOBEI_DETAIL_TTL_MS = 60 * 1000
 const xiaobeiDetailCache = new Map()
 const xiaobeiDetailInflight = new Map()
+/** 实时估值分时：与 quotes 轮询对齐，短缓存合并并发 */
+const XIAOBEI_NET_WORTH_TTL_MS = 30 * 1000
+const xiaobeiNetWorthCache = new Map()
+const xiaobeiNetWorthInflight = new Map()
 
 async function loadXiaobeiFundDetail(code) {
   const padded = String(code || '').padStart(6, '0')
@@ -1387,6 +1392,86 @@ async function loadXiaobeiFundDetail(code) {
     }
   })()
   xiaobeiDetailInflight.set(padded, task)
+  return task
+}
+
+/** change 为小数（-0.00957 → -0.957） */
+function parseXiaobeiChangeToPct(raw) {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return null
+  return n * 100
+}
+
+/**
+ * 小倍 get-net-worth-es → 当日分时点。
+ * 同一分钟优先带 extra/source 的映射估值，去掉开盘前塞进来的 15:00 收盘快照。
+ */
+function mapXiaobeiNetWorthPoints(rows) {
+  const list = Array.isArray(rows) ? rows : []
+  let latestDate = ''
+  for (const row of list) {
+    const d = String(row?.date || '').slice(0, 10)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > latestDate) latestDate = d
+  }
+  const byTime = new Map()
+  for (const row of list) {
+    const date = String(row?.date || '').slice(0, 10)
+    if (latestDate && date !== latestDate) continue
+    const rawTime = String(row?.update || '')
+    const m = rawTime.match(/^(\d{1,2}):(\d{2})/)
+    if (!m) continue
+    const hh = String(m[1]).padStart(2, '0')
+    const mm = String(m[2]).padStart(2, '0')
+    const time = `${hh}:${mm}`
+    const growth = parseXiaobeiChangeToPct(row?.change)
+    if (growth == null) continue
+    const quote = Number(row?.quote)
+    const mapped = Boolean(row?.extra || row?.source)
+    const prev = byTime.get(time)
+    if (prev && prev.mapped && !mapped) continue
+    byTime.set(time, {
+      time,
+      growth,
+      netValue: Number.isFinite(quote) && quote > 0 ? quote : null,
+      mapped,
+      sort: Number(hh) * 60 + Number(mm),
+    })
+  }
+  const points = [...byTime.values()]
+    .sort((a, b) => a.sort - b.sort)
+    .map(({time, growth, netValue}) => ({time, growth, netValue}))
+  const latest = points.length ? points[points.length - 1] : null
+  return {points, latest}
+}
+
+async function loadXiaobeiNetWorthEs(code) {
+  const padded = String(code || '').padStart(6, '0')
+  const empty = {points: [], latest: null}
+  if (!/^\d{6}$/.test(padded)) return empty
+  const hit = xiaobeiNetWorthCache.get(padded)
+  if (hit && Date.now() - hit.at < XIAOBEI_NET_WORTH_TTL_MS) return hit.data
+  const pending = xiaobeiNetWorthInflight.get(padded)
+  if (pending) return pending
+  const task = (async () => {
+    try {
+      const rows = await xiaobeiApiPost('get-net-worth-es', padded, {
+        extra: {
+          version: '3.8.9.0',
+          dataResources: '4',
+          dataSourceSwitch: true,
+        },
+      })
+      const mapped = mapXiaobeiNetWorthPoints(rows)
+      xiaobeiNetWorthCache.set(padded, {at: Date.now(), data: mapped})
+      return mapped
+    } catch {
+      xiaobeiNetWorthCache.set(padded, {at: Date.now(), data: empty})
+      return empty
+    } finally {
+      xiaobeiNetWorthInflight.delete(padded)
+    }
+  })()
+  xiaobeiNetWorthInflight.set(padded, task)
   return task
 }
 
@@ -2161,12 +2246,25 @@ export async function getFundQuote(fund) {
   let estimateNetValue = null
   let trend = []
   try {
-    const est = await getFundEstimateIntraday(fundKey)
-    estimateGrowth = est.latest?.growth ?? null
-    estimateNetValue = est.latest?.netValue ?? null
-    trend = est.points
+    const xb = await loadXiaobeiNetWorthEs(code)
+    if (xb.points.length) {
+      estimateGrowth =
+        xb.latest?.growth != null ? round2(xb.latest.growth) : null
+      estimateNetValue = xb.latest?.netValue ?? null
+      trend = xb.points
+    }
   } catch {
-    // no estimate outside market hours
+    // fall through to fund123
+  }
+  if (!trend.length) {
+    try {
+      const est = await getFundEstimateIntraday(fundKey)
+      estimateGrowth = est.latest?.growth ?? null
+      estimateNetValue = est.latest?.netValue ?? null
+      trend = est.points
+    } catch {
+      // no estimate outside market hours
+    }
   }
 
   // 用东财历史净值对齐披露值（单位净值），并取真实相邻昨净值
@@ -2257,11 +2355,14 @@ export async function getFundQuote(fund) {
   // 板块标签每次行情请求实时拉取（小倍优先），不再沿用客户端 localStorage 缓存
   let sectors = []
   let sectorItems = []
-  let realtimePercent = null
+  // 迷你图末点与卡片右侧实时涨跌同源：get-net-worth-es
+  let realtimePercent = estimateGrowth != null ? round2(estimateGrowth) : null
   try {
     const next = await fetchFundSectorItemsQueued(code, name)
     const detail = await loadXiaobeiFundDetail(code)
-    realtimePercent = parseXiaobeiDailyYield(detail)
+    if (realtimePercent == null) {
+      realtimePercent = parseXiaobeiDailyYield(detail)
+    }
     if (next.length) {
       sectorItems = next
       sectors = next.map((i) => i.name)
@@ -2276,9 +2377,6 @@ export async function getFundQuote(fund) {
       sectorCode: '',
       mappingCode: '',
     }))
-  }
-  if (realtimePercent == null && estimateGrowth != null) {
-    realtimePercent = round2(estimateGrowth)
   }
 
   return {
@@ -2648,6 +2746,7 @@ export async function getFundsQuotes(funds) {
           netValueDate: '',
           time: null,
           trend: [],
+          realtimePercent: null,
           sectors: f.sectors || [],
           error: String(s.reason?.message || s.reason),
         })
