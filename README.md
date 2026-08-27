@@ -39,35 +39,25 @@
 
 截图目录：[`screenshot/`](./screenshot/)。
 
-> **说明**：项目已迭代多个版本，下方截图多为较早界面存档，**布局、文案与交互以当前代码运行效果为准**（例如行情板块榜、板块热搜基金页、基金详情的重仓前十与阶段数据看板、报头板块标签、点名称进详情等，截图中可能尚未收录）。有新截图时请直接覆盖 `screenshot/` 对应文件。
-
-### 微信小程序 · 亮色
+### 首页 Tab
 
 | 持仓 | 自选 |
 |:---:|:---:|
-| <img src="./screenshot/小程序截图/亮色模式/4e5d42b41fc3c19a931d4a76576d8e48.jpg" width="280" alt="小程序持仓亮色" /> | <img src="./screenshot/小程序截图/亮色模式/77931b123071a4efe63ddae794f7f360.jpg" width="280" alt="小程序自选亮色" /> |
+| <img src="./screenshot/IMG_4198.jpg" width="280" alt="持仓" /> | <img src="./screenshot/IMG_4199.jpg" width="280" alt="自选" /> |
 
-| 行情 | 我的 |
+| 行情 | 板块热搜基金 |
 |:---:|:---:|
-| <img src="./screenshot/小程序截图/亮色模式/95b083d7ab9e8de58776acb8ed0c482c.jpg" width="280" alt="小程序行情亮色" /> | <img src="./screenshot/小程序截图/亮色模式/2148e5a3d9f4f46fc5164a2e47da83c4.jpg" width="280" alt="小程序我的亮色" /> |
+| <img src="./screenshot/IMG_4200.jpg" width="280" alt="行情" /> | <img src="./screenshot/IMG_4201.jpg" width="280" alt="板块热搜基金" /> |
 
-| 基金详情 | 金价走势 |
+### 基金详情
+
+| 净值曲线 · 重仓股 | 规模 |
 |:---:|:---:|
-| <img src="./screenshot/小程序截图/亮色模式/2425bd514d01532307820ee7beb696e5.jpg" width="280" alt="小程序基金详情" /> | <img src="./screenshot/小程序截图/亮色模式/782c4ae2498f6f1a87370cc650e9b148.jpg" width="280" alt="小程序金价走势" /> |
+| <img src="./screenshot/IMG_4202.jpg" width="280" alt="基金详情 · 重仓股" /> | <img src="./screenshot/IMG_4206.jpg" width="280" alt="基金详情 · 规模" /> |
 
-| 指数走势 | 黄金设置 / 编辑持仓 |
+| 历史净值 | 阶段涨跌 |
 |:---:|:---:|
-| <img src="./screenshot/小程序截图/亮色模式/0bdc2c2efcdb82d1b17f64cc92f54800.jpg" width="280" alt="小程序指数走势" /> | <img src="./screenshot/小程序截图/亮色模式/d172a0061be2faad6cd5ced98b377ceb.jpg" width="140" alt="小程序黄金设置" /> <img src="./screenshot/小程序截图/亮色模式/d8506a3a1e9e3da6da12665d978cc4f7.jpg" width="140" alt="小程序编辑持仓" /> |
-
-### 微信小程序 · 深色
-
-| 持仓 | 自选 |
-|:---:|:---:|
-| <img src="./screenshot/小程序截图/深色模式/b6b105f582ab8d9e4290cf84759cf686.jpg" width="280" alt="小程序持仓深色" /> | <img src="./screenshot/小程序截图/深色模式/a42af34326586316b5f7e98bb922195d.jpg" width="280" alt="小程序自选深色" /> |
-
-| 行情 | 我的 |
-|:---:|:---:|
-| <img src="./screenshot/小程序截图/深色模式/18eff4ec0d8f938f778456d6d8d64b63.jpg" width="280" alt="小程序行情深色" /> | <img src="./screenshot/小程序截图/深色模式/19b90fbaf10a68acd3f13c03513c88f2.jpg" width="280" alt="小程序我的深色" /> |
+| <img src="./screenshot/IMG_4203.jpg" width="280" alt="基金详情 · 历史净值" /> | <img src="./screenshot/IMG_4205.jpg" width="280" alt="基金详情 · 阶段涨跌" /> |
 
 ## 计算逻辑（对齐支付宝口径）
 
@@ -251,7 +241,7 @@
 |------|------|
 | `server/` | 行情代理（Koa，默认 :8787） |
 | `miniprogram/` | 微信小程序（用微信开发者工具打开该目录） |
-| `screenshot/` | 界面截图（小程序亮暗色） |
+| `screenshot/` | 界面截图 |
 
 ## 启动
 

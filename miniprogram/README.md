@@ -6,23 +6,15 @@
 
 ## 界面预览
 
-截图目录：[`../screenshot/小程序截图/`](../screenshot/小程序截图/)。
+截图目录：[`../screenshot/`](../screenshot/)。更多说明见根目录 [界面预览](../README.md#界面预览)。
 
-### 亮色
-
-| 持仓 | 自选 | 行情 | 我的 |
+| 持仓 | 自选 | 行情 | 板块热搜基金 |
 |:---:|:---:|:---:|:---:|
-| <img src="../screenshot/小程序截图/亮色模式/4e5d42b41fc3c19a931d4a76576d8e48.jpg" width="160" alt="持仓" /> | <img src="../screenshot/小程序截图/亮色模式/77931b123071a4efe63ddae794f7f360.jpg" width="160" alt="自选" /> | <img src="../screenshot/小程序截图/亮色模式/95b083d7ab9e8de58776acb8ed0c482c.jpg" width="160" alt="行情" /> | <img src="../screenshot/小程序截图/亮色模式/2148e5a3d9f4f46fc5164a2e47da83c4.jpg" width="160" alt="我的" /> |
+| <img src="../screenshot/IMG_4198.jpg" width="160" alt="持仓" /> | <img src="../screenshot/IMG_4199.jpg" width="160" alt="自选" /> | <img src="../screenshot/IMG_4200.jpg" width="160" alt="行情" /> | <img src="../screenshot/IMG_4201.jpg" width="160" alt="板块热搜基金" /> |
 
-| 基金走势 | 金价走势 | 指数走势 | 编辑持仓 |
+| 基金详情 · 重仓股 | 规模 | 历史净值 | 阶段涨跌 |
 |:---:|:---:|:---:|:---:|
-| <img src="../screenshot/小程序截图/亮色模式/2425bd514d01532307820ee7beb696e5.jpg" width="160" alt="基金走势" /> | <img src="../screenshot/小程序截图/亮色模式/782c4ae2498f6f1a87370cc650e9b148.jpg" width="160" alt="金价走势" /> | <img src="../screenshot/小程序截图/亮色模式/0bdc2c2efcdb82d1b17f64cc92f54800.jpg" width="160" alt="指数走势" /> | <img src="../screenshot/小程序截图/亮色模式/d8506a3a1e9e3da6da12665d978cc4f7.jpg" width="160" alt="编辑持仓" /> |
-
-### 深色
-
-| 持仓 | 自选 | 行情 | 我的 |
-|:---:|:---:|:---:|:---:|
-| <img src="../screenshot/小程序截图/深色模式/b6b105f582ab8d9e4290cf84759cf686.jpg" width="160" alt="持仓深色" /> | <img src="../screenshot/小程序截图/深色模式/a42af34326586316b5f7e98bb922195d.jpg" width="160" alt="自选深色" /> | <img src="../screenshot/小程序截图/深色模式/18eff4ec0d8f938f778456d6d8d64b63.jpg" width="160" alt="行情深色" /> | <img src="../screenshot/小程序截图/深色模式/19b90fbaf10a68acd3f13c03513c88f2.jpg" width="160" alt="我的深色" /> |
+| <img src="../screenshot/IMG_4202.jpg" width="160" alt="基金详情 · 重仓股" /> | <img src="../screenshot/IMG_4206.jpg" width="160" alt="基金详情 · 规模" /> | <img src="../screenshot/IMG_4203.jpg" width="160" alt="基金详情 · 历史净值" /> | <img src="../screenshot/IMG_4205.jpg" width="160" alt="基金详情 · 阶段涨跌" /> |
 
 ## 功能模块
 
