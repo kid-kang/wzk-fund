@@ -1,6 +1,6 @@
 # WZK Fund · 微信小程序
 
-原生微信小程序客户端，与 Web 看板共用同一后端代理与计算口径；持仓 / 自选 / 黄金 / 开关保存在本机 `wx.storage`（键名 `wzk-fund-config`，JSON 与 Web localStorage 互通）。
+原生微信小程序客户端，与仓库内行情代理共用同一计算口径；持仓 / 自选 / 黄金 / 开关保存在本机 `wx.storage`（键名 `wzk-fund-config`）。
 
 > 仅供个人体验，默认不发布上架。计算逻辑与免责声明见仓库根目录 [README.md](../README.md)。更多截图见根目录 [界面预览](../README.md#界面预览)。
 
@@ -95,7 +95,7 @@
 
 | 模式 | 入口 | 字段 |
 |------|------|------|
-| `hold` | 持仓 `+` / 左滑编辑 | 代码、金额、金额口径（昨日结算 / 今日结算；非交易日限制同 Web） |
+| `hold` | 持仓 `+` / 左滑编辑 | 代码、金额、金额口径（昨日结算 / 今日结算；非交易日限制同计算逻辑） |
 | `watch` | 自选 FAB | 仅代码 |
 
 满 6 位代码自动 `resolve` 名称；持仓保存时按确认净值反推份额。编辑时代码可锁定。
@@ -165,7 +165,7 @@ main（壳页）
 
 | 键 | 说明 |
 |----|------|
-| `wzk-fund-config` | `settings` / `funds` / `gold`，与 Web 互通 |
+| `wzk-fund-config` | `settings` / `funds` / `gold` |
 | `wzk-fund-api-base` | 代理地址，默认 `http://127.0.0.1:8787` |
 | `wzk-fund-theme` | `light` / `dark` |
 | `holdings_hide_amounts` | 持仓金额是否隐藏 |
@@ -192,7 +192,7 @@ npm install
 |----|------|
 | UI | Vant Weapp（swipe-cell / field / switch / empty / toast 等） |
 | 图表 | ECharts（`components/ec-canvas` + `ec-line`：spark / trend） |
-| 金额精度 | `decimal.js`（与 Web 对齐支付宝口径） |
+| 金额精度 | `decimal.js`（对齐支付宝口径） |
 | 主题 | `utils/theme.js` 同步原生导航栏与窗口底色（无原生 TabBar） |
 | 架构 | 单壳页 `pages/main` + 自定义底栏 + 四个 Tab 组件，页内 `setData` 切换 |
 
