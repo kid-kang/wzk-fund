@@ -1,23 +1,10 @@
 <view class="tab-root theme-{{theme}}">
-  <scroll-view
-    class="page-scroller"
-    scroll-y
-    enhanced
-    bounces="{{false}}"
-    show-scrollbar="{{false}}"
-  >
-    <view
-      class="page theme-{{theme}} watch-page {{loading && !groups.length && !error ? 'is-skeleton' : ''}}"
-      style="min-height: {{contentMinHeight}}px"
-    >
+  <scroll-view class="page-scroller" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="page theme-{{theme}} watch-page {{loading && !groups.length && !error ? 'is-skeleton' : ''}}"
+      style="min-height: {{contentMinHeight}}px">
       <view class="err" wx:if="{{error}}">{{error}}</view>
-      <desk-sync
-        wx:if="{{loading && !groups.length && !error}}"
-        class="desk-sync-fill"
-        theme="{{theme}}"
-        variant="watch"
-        min-height="{{contentMinHeight}}"
-      />
+      <desk-sync wx:if="{{loading && !groups.length && !error}}" class="desk-sync-fill" theme="{{theme}}"
+        variant="watch" min-height="{{contentMinHeight}}" />
       <view class="section-empty" wx:if="{{!loading && !groups.length}}">
         <van-empty image="search" description="暂无自选，点右下角 + 添加" />
       </view>
@@ -37,97 +24,48 @@
                 <view class="dense-row-skin" aria-hidden="true">
                   <text class="card-mark mono">{{item.codeMark}}</text>
                 </view>
-                <view
-                  class="confirm-seal"
-                  wx:if="{{item.confirmedUpdated && !item.showDiscloseTime}}"
-                  catchtap="onOpenQaTips"
-                  data-q="badge-cn"
-                  hover-class="qa-hit-hover"
-                  aria-label="净值已更新，查看说明"
-                >
+                <view class="confirm-seal" wx:if="{{item.confirmedUpdated && !item.showDiscloseTime}}"
+                  catchtap="onOpenQaTips" data-q="badge-cn" hover-class="qa-hit-hover" aria-label="净值已更新，查看说明">
                   <view class="confirm-seal-fold" aria-hidden="true"></view>
                   <view class="confirm-seal-icon">
                     <van-icon name="certificate" size="10px" color="#F5F8FF" />
                   </view>
                 </view>
-                <view
-                  class="dense-asof"
-                  wx:if="{{item.showDiscloseTime}}"
-                  catchtap="onOpenQaTips"
-                  data-q="badge-qdii"
-                  hover-class="qa-hit-hover"
-                  aria-label="官方披露日期，查看说明"
-                >
+                <view class="dense-asof" wx:if="{{item.showDiscloseTime}}" catchtap="onOpenQaTips" data-q="badge-qdii"
+                  hover-class="qa-hit-hover" aria-label="官方披露日期，查看说明">
                   <text>{{item.discloseTimeText}}</text>
                   <view class="dense-asof-icon">
-                    <van-icon
-                      name="certificate"
-                      size="11px"
-                      color="{{theme === 'dark' ? '#8a93a8' : '#8a93a3'}}"
-                    />
+                    <van-icon name="certificate" size="11px" color="{{theme === 'dark' ? '#8a93a8' : '#8a93a3'}}" />
                   </view>
                 </view>
                 <view class="dense-main">
-                  <view
-                    class="name-clip is-link"
-                    data-code="{{item.code}}"
-                    data-name="{{item.name}}"
-                    catchtap="onOpenTrend"
-                  >
+                  <view class="name-clip is-link" data-code="{{item.code}}" data-name="{{item.name}}"
+                    catchtap="onOpenTrend">
                     <text class="dense-name">{{item.name}}</text>
                   </view>
                   <view class="tag-row" wx:if="{{item.hasTags}}">
-                    <text
-                      class="sector-tag is-link"
-                      wx:for="{{item.sectorTags}}"
-                      wx:for-item="tag"
-                      wx:key="name"
-                      data-name="{{tag.name}}"
-                      data-sector="{{tag.sectorCode}}"
-                      data-mapping="{{tag.mappingCode}}"
-                      catchtap="onOpenSector"
-                    >{{tag.name}}</text>
+                    <text class="sector-tag is-link" wx:for="{{item.sectorTags}}" wx:for-item="tag" wx:key="name"
+                      data-name="{{tag.name}}" data-sector="{{tag.sectorCode}}" data-mapping="{{tag.mappingCode}}"
+                      catchtap="onOpenSector">{{tag.name}}</text>
                   </view>
                 </view>
 
-                <view
-                  class="spark"
-                  data-code="{{item.code}}"
-                  data-name="{{item.name}}"
-                  catchtap="onOpenTrend"
-                >
-                  <spark-line
-                    wx:if="{{item.spark.length}}"
-                    values="{{item.spark}}"
-                    theme="{{theme}}"
-                    height="{{40}}"
-                    toneDelta="{{item.percent}}"
-                  />
+                <view class="spark" data-code="{{item.code}}" data-name="{{item.name}}" catchtap="onOpenTrend">
+                  <spark-line wx:if="{{item.spark.length}}" values="{{item.spark}}" breaks="{{item.sparkBreaks}}"
+                    theme="{{theme}}" height="{{40}}" toneDelta="{{item.realtimePercent}}"
+                    label="{{item.trendDateText}}" labelShort="{{item.trendDateShort}}"
+                    labelValue="{{item.trendPctText}}" labelTone="{{item.trendPctTone}}" />
                 </view>
 
                 <view class="dense-right">
-                  <text
-                    class="mono dense-pct {{item.pctClass}}"
-                    catchtap="onOpenQaTips"
-                    data-q="a-share"
-                    hover-class="qa-hit-hover"
-                    aria-label="查看涨跌幅说明"
-                  >{{item.pctText}}</text>
+                  <text class="mono dense-pct {{item.pctClass}}" catchtap="onOpenQaTips" data-q="a-share"
+                    hover-class="qa-hit-hover" aria-label="查看涨跌幅说明">{{item.pctText}}</text>
                 </view>
               </view>
               <view slot="right" class="swipe-actions">
-                <view
-                  class="swipe-btn del"
-                  data-code="{{item.code}}"
-                  data-name="{{item.name}}"
-                  catchtap="onRemove"
-                  aria-label="删除"
-                >
-                  <van-icon
-                    name="delete-o"
-                    size="17px"
-                    color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}"
-                  />
+                <view class="swipe-btn del" data-code="{{item.code}}" data-name="{{item.name}}" catchtap="onRemove"
+                  aria-label="删除">
+                  <van-icon name="delete-o" size="17px" color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}" />
                   <text class="swipe-label">删除</text>
                 </view>
               </view>
@@ -141,12 +79,7 @@
     </view>
   </scroll-view>
 
-  <view
-    class="fab-add"
-    catchtap="onAdd"
-    hover-class="fab-add-hover"
-    aria-label="添加自选"
-  >
+  <view class="fab-add" catchtap="onAdd" hover-class="fab-add-hover" aria-label="添加自选">
     <van-icon name="plus" size="22px" color="{{theme === 'dark' ? '#7b88ff' : '#4f5dff'}}" />
   </view>
 </view>

@@ -1,15 +1,14 @@
 const api = require('../../utils/api')
-const {formatAmount, formatMoney, formatPct, pctClass} = require('../../utils/format')
+const {
+  formatAmount,
+  formatMoney,
+  formatPct,
+  pctClass,
+  cardPercent,
+} = require('../../utils/format')
 const {navigateTo} = require('../../utils/theme')
 const {toSparkSeries, reuseUnchangedSpark} = require('../../utils/spark')
 const Toast = require('@vant/weapp/toast/toast').default
-
-function cardLivePercent(row) {
-  const live = Number(row && row.realtimePercent)
-  if (Number.isFinite(live)) return live
-  const pct = Number(row && row.percent)
-  return Number.isFinite(pct) ? pct : null
-}
 
 function mapHoldRow(row) {
   const name = row.name || row.code || ''
@@ -30,6 +29,9 @@ function mapHoldRow(row) {
   const confirmedUpdated = !!row.confirmedUpdated
   const discloseTimeText = String(row.discloseTimeText || '').trim()
   const showDiscloseTime = !!discloseTimeText
+  const trendDateText = String(row.trendDateText || '').trim()
+  const trendPct = Number(row.realtimePercent)
+  const showTrendPct = !!trendDateText && Number.isFinite(trendPct)
   const sparkSeries = toSparkSeries(row.trend || [], 'growth')
   const mapped = Object.assign({}, row, {
     name,
@@ -40,17 +42,22 @@ function mapHoldRow(row) {
         ? '--'
         : `${Number(row.weight).toFixed(1)}%`,
     pnlText: formatMoney(row.pnl),
-    pctText: formatPct(cardLivePercent(row)),
+    pctText: formatPct(cardPercent(row)),
     pnlClass: pctClass(row.pnl),
-    pctClass: pctClass(cardLivePercent(row)),
+    pctClass: pctClass(cardPercent(row)),
     hasCostYield: row.costPnlPercent != null,
     costPctText: formatPct(row.costPnlPercent),
     confirmedUpdated,
     discloseTimeText,
     showDiscloseTime,
+    trendDateText,
+    trendDateShort: String(row.trendDateShort || '').trim(),
+    trendPctText: showTrendPct ? formatPct(trendPct) : '',
+    trendPctTone: showTrendPct ? trendPct : null,
     sectorTags,
     hasTags: sectorTags.length > 0,
     spark: sparkSeries.spark,
+    sparkBreaks: sparkSeries.sparkBreaks,
     sparkKey: sparkSeries.sparkKey,
   })
   delete mapped.trend

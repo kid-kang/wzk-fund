@@ -3,6 +3,7 @@ const {
   normalizeNetValueDate,
   isDelayedNavFund,
   formatOfficialDiscloseTime,
+  formatTrendSessionDate,
 } = require('./tradingCalendar')
 const {
   Decimal,
@@ -197,12 +198,19 @@ function calcHoldings(localFunds, quotes) {
           }
           const confirmedUpdated = shouldShowConfirmedUpdatedBadge(badgeQuote)
           const delayed = isDelayedNavFund(badgeQuote)
+          const trendSession = formatTrendSessionDate({
+            ...badgeQuote,
+            trendDate: q.trendDate,
+            trend: q.trend,
+          })
           return {
             confirmedUpdated,
             discloseTimeText:
               delayed && confirmedUpdated
                 ? formatOfficialDiscloseTime(badgeQuote.netValueDate, q.time)
                 : '',
+            trendDateText: trendSession.text,
+            trendDateShort: trendSession.short,
           }
         })(),
       }),
@@ -357,12 +365,19 @@ function mergeWatchlist(localFunds, quotes) {
         }
         const confirmedUpdated = shouldShowConfirmedUpdatedBadge(badgeQuote)
         const delayed = isDelayedNavFund(badgeQuote)
+        const trendSession = formatTrendSessionDate({
+          ...badgeQuote,
+          trendDate: q.trendDate,
+          trend: q.trend,
+        })
         return {
           confirmedUpdated,
           discloseTimeText:
             delayed && confirmedUpdated
               ? formatOfficialDiscloseTime(badgeQuote.netValueDate, q.time)
               : '',
+          trendDateText: trendSession.text,
+          trendDateShort: trendSession.short,
         }
       })(),
     })

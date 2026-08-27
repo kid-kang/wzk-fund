@@ -1,5 +1,5 @@
 const api = require('../../utils/api')
-const {formatPct, pctClass} = require('../../utils/format')
+const {formatPct, pctClass, cardPercent} = require('../../utils/format')
 const {groupWatchlistByCategory} = require('../../utils/fundCategory')
 const {navigateTo} = require('../../utils/theme')
 const {toSparkSeries, reuseUnchangedSpark} = require('../../utils/spark')
@@ -7,17 +7,10 @@ const Toast = require('@vant/weapp/toast/toast').default
 
 function flattenGroupRows(groups) {
   const rows = []
-  ;(groups || []).forEach((g) => {
-    ;(g.list || []).forEach((row) => rows.push(row))
-  })
+    ; (groups || []).forEach((g) => {
+      ; (g.list || []).forEach((row) => rows.push(row))
+    })
   return rows
-}
-
-function cardLivePercent(row) {
-  const live = Number(row && row.realtimePercent)
-  if (Number.isFinite(live)) return live
-  const pct = Number(row && row.percent)
-  return Number.isFinite(pct) ? pct : null
 }
 
 Component({
@@ -118,29 +111,37 @@ Component({
           const sectorTags =
             Array.isArray(row.sectorItems) && row.sectorItems.length
               ? row.sectorItems.map((it) => ({
-                  name: String((it && it.name) || '').trim(),
-                  sectorCode: String((it && it.sectorCode) || '').trim(),
-                  mappingCode: String((it && it.mappingCode) || '').trim(),
-                })).filter((it) => it.name)
+                name: String((it && it.name) || '').trim(),
+                sectorCode: String((it && it.sectorCode) || '').trim(),
+                mappingCode: String((it && it.mappingCode) || '').trim(),
+              })).filter((it) => it.name)
               : sectors
-                  .map((s) => String(s || '').trim())
-                  .filter(Boolean)
-                  .map((n) => ({name: n, sectorCode: '', mappingCode: ''}))
+                .map((s) => String(s || '').trim())
+                .filter(Boolean)
+                .map((n) => ({name: n, sectorCode: '', mappingCode: ''}))
           const confirmedUpdated = !!row.confirmedUpdated
           const discloseTimeText = String(row.discloseTimeText || '').trim()
           const showDiscloseTime = !!discloseTimeText
+          const trendDateText = String(row.trendDateText || '').trim()
+          const trendPct = Number(row.realtimePercent)
+          const showTrendPct = !!trendDateText && Number.isFinite(trendPct)
           const sparkSeries = toSparkSeries(row.trend || [], 'growth')
           const mappedRow = Object.assign({}, row, {
             name,
             codeMark: String(row.code || '').slice(-6) || '······',
-            pctText: formatPct(cardLivePercent(row)),
-            pctClass: pctClass(cardLivePercent(row)),
+            pctText: formatPct(cardPercent(row)),
+            pctClass: pctClass(cardPercent(row)),
             confirmedUpdated,
             discloseTimeText,
             showDiscloseTime,
+            trendDateText,
+            trendDateShort: String(row.trendDateShort || '').trim(),
+            trendPctText: showTrendPct ? formatPct(trendPct) : '',
+            trendPctTone: showTrendPct ? trendPct : null,
             sectorTags,
             hasTags: sectorTags.length > 0,
             spark: sparkSeries.spark,
+            sparkBreaks: sparkSeries.sparkBreaks,
             sparkKey: sparkSeries.sparkKey,
           })
           delete mappedRow.trend

@@ -63,6 +63,27 @@ function formatOfficialDiscloseTime(netValueDate, _time, now = new Date()) {
 }
 
 /**
+ * 迷你走势对应的行情时段，如「26 21:30→04:30」。
+ * QDII 跟隔夜外盘，画的既不是今天也未必是官方净值日，标出起止才看得懂这条线。
+ * 净值披露快慢因基金公司而异，标注不跟着净值日走——忽有忽无比偶尔重复更难读。
+ * 迷你图就巴掌大，日期只留日号——看盘时月份从不构成歧义。
+ * short 只剩日号，窄屏放不下时段也要先保住「这是哪天的行情」。
+ * 非 QDII 的走势就是当日、与右侧同源，返回空串不占版面。
+ */
+function formatTrendSessionDate(quote = {}, now = new Date()) {
+  const empty = {text: '', short: ''}
+  if (!isDelayedNavFund(quote)) return empty
+  const day = normalizeNetValueDate(quote.trendDate, now)
+  if (!day) return empty
+  const md = day.slice(8, 10)
+  const points = quote.trend || []
+  const from = points.length ? points[0].time : ''
+  const to = points.length ? points[points.length - 1].time : ''
+  if (!from || !to) return {text: `${md} 行情`, short: md}
+  return {text: `${md} ${from}→${to}`, short: md}
+}
+
+/**
  * 晚间已拉到官方确认涨跌：展示「已更新」。
  * 国内：净值日下一交易日开盘清除。
  * QDII/海外：只要有最新官方披露（净值日+涨跌）即展示，不套会话窗。
@@ -88,5 +109,6 @@ module.exports = {
   normalizeNetValueDate,
   isDelayedNavFund,
   formatOfficialDiscloseTime,
+  formatTrendSessionDate,
   shouldShowConfirmedUpdatedBadge,
 }

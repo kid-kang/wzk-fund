@@ -1402,51 +1402,79 @@ function parseXiaobeiChangeToPct(raw) {
   return n * 100
 }
 
+/** A 股午休：上游会把 11:30 的快照按分钟复制到 12:00–12:59，画出来是条假横线 */
+const LUNCH_START_MIN = 11 * 60 + 30
+const LUNCH_END_MIN = 13 * 60
+
+/** 大于午休（90 分钟）、小于隔夜，用来切分交易时段 */
+const SESSION_GAP_MIN = 4 * 60
+
+function dayNumber(date) {
+  const [y, m, d] = String(date).split('-').map(Number)
+  if (!y || !m || !d) return 0
+  return Math.floor(Date.UTC(y, m - 1, d) / 86400000)
+}
+
 /**
- * 小倍 get-net-worth-es → 当日分时点。
+ * 小倍 get-net-worth-es → 最近一个交易时段的分时点。
  * 同一分钟优先带 extra/source 的映射估值，去掉开盘前塞进来的 15:00 收盘快照。
+ * 午休占位点丢弃，只留 11:30 收盘与 13:00 开盘两端。
+ * 按连续时段而非自然日切分：QDII 跟美股，一段行情跨北京时间两天（21:30 → 次日 04:30）。
  */
 function mapXiaobeiNetWorthPoints(rows) {
   const list = Array.isArray(rows) ? rows : []
-  let latestDate = ''
-  for (const row of list) {
-    const d = String(row?.date || '').slice(0, 10)
-    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > latestDate) latestDate = d
-  }
-  const byTime = new Map()
+  const byStamp = new Map()
   for (const row of list) {
     const date = String(row?.date || '').slice(0, 10)
-    if (latestDate && date !== latestDate) continue
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
     const rawTime = String(row?.update || '')
     const m = rawTime.match(/^(\d{1,2}):(\d{2})/)
     if (!m) continue
     const hh = String(m[1]).padStart(2, '0')
     const mm = String(m[2]).padStart(2, '0')
-    const time = `${hh}:${mm}`
+    const minute = Number(hh) * 60 + Number(mm)
+    if (minute > LUNCH_START_MIN && minute < LUNCH_END_MIN) continue
     const growth = parseXiaobeiChangeToPct(row?.change)
     if (growth == null) continue
     const quote = Number(row?.quote)
     const mapped = Boolean(row?.extra || row?.source)
-    const prev = byTime.get(time)
+    const time = `${hh}:${mm}`
+    const stamp = `${date} ${time}`
+    const prev = byStamp.get(stamp)
     if (prev && prev.mapped && !mapped) continue
-    byTime.set(time, {
+    byStamp.set(stamp, {
+      date,
       time,
       growth,
       netValue: Number.isFinite(quote) && quote > 0 ? quote : null,
       mapped,
-      sort: Number(hh) * 60 + Number(mm),
+      sort: dayNumber(date) * 1440 + minute,
     })
   }
-  const points = [...byTime.values()]
-    .sort((a, b) => a.sort - b.sort)
-    .map(({time, growth, netValue}) => ({time, growth, netValue}))
+  const sorted = [...byStamp.values()].sort((a, b) => a.sort - b.sort)
+  let start = 0
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].sort - sorted[i - 1].sort >= SESSION_GAP_MIN) start = i
+  }
+  const session = sorted.slice(start)
+  const points = session.map(({time, growth, netValue}) => ({
+    time,
+    growth,
+    netValue,
+  }))
   const latest = points.length ? points[points.length - 1] : null
-  return {points, latest}
+  // 时段起始日：A 股即当日，QDII 为对应的美股交易日；结束日用来判断是否跨午夜
+  return {
+    points,
+    latest,
+    sessionDate: session.length ? session[0].date : '',
+    sessionEndDate: session.length ? session[session.length - 1].date : '',
+  }
 }
 
 async function loadXiaobeiNetWorthEs(code) {
   const padded = String(code || '').padStart(6, '0')
-  const empty = {points: [], latest: null}
+  const empty = {points: [], latest: null, sessionDate: '', sessionEndDate: ''}
   if (!/^\d{6}$/.test(padded)) return empty
   const hit = xiaobeiNetWorthCache.get(padded)
   if (hit && Date.now() - hit.at < XIAOBEI_NET_WORTH_TTL_MS) return hit.data
@@ -2205,8 +2233,13 @@ export async function getFundEstimateIntraday(fundKey) {
       time: `${hh}:${mm}`,
       growth: Number.isFinite(growth) ? growth * 100 : null,
       netValue: parseFloat(p.forecastNetValue) || null,
+      sort: t.getHours() * 60 + t.getMinutes(),
     }
-  }).filter((p) => p.growth != null)
+  }).filter(
+    (p) =>
+      p.growth != null &&
+      !(p.sort > LUNCH_START_MIN && p.sort < LUNCH_END_MIN),
+  ).map(({time, growth, netValue}) => ({time, growth, netValue}))
 
   const latest = points.length ? points[points.length - 1] : null
   return {points, latest}
@@ -2245,6 +2278,8 @@ export async function getFundQuote(fund) {
   let estimateGrowth = null
   let estimateNetValue = null
   let trend = []
+  let trendDate = ''
+  let trendEndDate = ''
   try {
     const xb = await loadXiaobeiNetWorthEs(code)
     if (xb.points.length) {
@@ -2252,6 +2287,8 @@ export async function getFundQuote(fund) {
         xb.latest?.growth != null ? round2(xb.latest.growth) : null
       estimateNetValue = xb.latest?.netValue ?? null
       trend = xb.points
+      trendDate = xb.sessionDate || ''
+      trendEndDate = xb.sessionEndDate || ''
     }
   } catch {
     // fall through to fund123
@@ -2262,6 +2299,10 @@ export async function getFundQuote(fund) {
       estimateGrowth = est.latest?.growth ?? null
       estimateNetValue = est.latest?.netValue ?? null
       trend = est.points
+      if (trend.length) {
+        trendDate = todayDateStr()
+        trendEndDate = trendDate
+      }
     } catch {
       // no estimate outside market hours
     }
@@ -2397,6 +2438,8 @@ export async function getFundQuote(fund) {
     ftype,
     time: trend.length ? trend[trend.length - 1].time : null,
     trend,
+    trendDate,
+    trendEndDate,
     sectors,
     sectorItems,
   }

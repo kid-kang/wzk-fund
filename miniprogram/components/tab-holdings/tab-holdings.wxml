@@ -87,8 +87,10 @@
                 </view>
 
                 <view class="spark" data-code="{{item.code}}" data-name="{{item.name}}" catchtap="onOpenTrend">
-                  <spark-line wx:if="{{item.spark.length}}" values="{{item.spark}}" theme="{{theme}}" height="{{56}}"
-                    toneDelta="{{item.percent}}" />
+                  <spark-line wx:if="{{item.spark.length}}" values="{{item.spark}}" breaks="{{item.sparkBreaks}}"
+                    theme="{{theme}}" height="{{56}}" toneDelta="{{item.realtimePercent}}"
+                    label="{{item.trendDateText}}" labelShort="{{item.trendDateShort}}"
+                    labelValue="{{item.trendPctText}}" labelTone="{{item.trendPctTone}}" />
                 </view>
 
                 <view class="dense-right">
@@ -212,8 +214,10 @@
                 </view>
 
                 <view class="spark" data-code="{{item.code}}" data-name="{{item.name}}" catchtap="onOpenTrend">
-                  <spark-line wx:if="{{item.spark.length}}" values="{{item.spark}}" theme="{{theme}}" height="{{56}}"
-                    toneDelta="{{item.percent}}" />
+                  <spark-line wx:if="{{item.spark.length}}" values="{{item.spark}}" breaks="{{item.sparkBreaks}}"
+                    theme="{{theme}}" height="{{56}}" toneDelta="{{item.realtimePercent}}"
+                    label="{{item.trendDateText}}" labelShort="{{item.trendDateShort}}"
+                    labelValue="{{item.trendPctText}}" labelTone="{{item.trendPctTone}}" />
                 </view>
 
                 <view class="dense-right">

@@ -5,6 +5,26 @@ function pctClass(v) {
   return 'flat'
 }
 
+/**
+ * 卡片右侧该显示哪个涨跌。
+ * 官方净值已确认时用它——才和上方徽章的净值日、下方按净值算出的盈亏同一口径；
+ * 否则用实时估值。QDII 的官方净值是 T-1 的，它昨夜的实时行情另由迷你图标签标注。
+ */
+function cardPercent(row) {
+  if (!row) return null
+  if (row.percentSource === 'confirmed' && row.percent != null) {
+    const official = Number(row.percent)
+    if (Number.isFinite(official)) return official
+  }
+  if (row.realtimePercent != null) {
+    const live = Number(row.realtimePercent)
+    if (Number.isFinite(live)) return live
+  }
+  if (row.percent == null) return null
+  const pct = Number(row.percent)
+  return Number.isFinite(pct) ? pct : null
+}
+
 function formatPct(v, digits = 2) {
   if (v == null || Number.isNaN(v)) return '--'
   const sign = v > 0 ? '+' : ''
@@ -46,6 +66,7 @@ function formatTrendAxisDate(date, range) {
 
 module.exports = {
   pctClass,
+  cardPercent,
   formatPct,
   formatMoney,
   formatAmount,
