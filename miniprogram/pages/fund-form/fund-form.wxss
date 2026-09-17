@@ -182,6 +182,60 @@
   border-radius: 999rpx;
 }
 
+.suggest-list {
+  margin: 4rpx 0 8rpx;
+  border-top: 1rpx solid var(--line);
+}
+
+.suggest-status {
+  padding: 18rpx 0 8rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+.suggest-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  min-height: 72rpx;
+  padding: 14rpx 0;
+  border-bottom: 1rpx dashed var(--line);
+}
+
+.suggest-row:last-child {
+  border-bottom: none;
+}
+
+.suggest-code {
+  flex-shrink: 0;
+  width: 132rpx;
+  font-size: 24rpx;
+  font-weight: 740;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.suggest-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  font-weight: 650;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggest-type {
+  flex-shrink: 0;
+  max-width: 180rpx;
+  font-size: 20rpx;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .field-tip {
   display: block;
   margin-top: 4rpx;

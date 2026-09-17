@@ -1,6 +1,7 @@
 import Router from '@koa/router'
 import {
   searchFund,
+  suggestFunds,
   getFundsQuotes,
   getFundQuote,
   getFundMatiaria,
@@ -59,6 +60,22 @@ router.get('/funds/search', async (ctx) => {
       return
     }
     const data = await searchFund(code)
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 400
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+router.get('/funds/suggest', async (ctx) => {
+  try {
+    const q = String(ctx.query.q || ctx.query.query || '').trim()
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {success: false, message: '缺少检索词'}
+      return
+    }
+    const data = await suggestFunds(q)
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 400

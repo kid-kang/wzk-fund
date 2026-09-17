@@ -10,6 +10,13 @@ function isFundCodeReady(code) {
   return /^\d{6}$/.test(String(code || ''))
 }
 
+function shouldSuggest(raw) {
+  const q = String(raw || '').trim()
+  if (!q) return false
+  if (/^\d+$/.test(q)) return q.length >= 2 && q.length < 6
+  return q.length >= 2
+}
+
 const themeView = getThemeViewState()
 syncNavigationBar(themeView.theme)
 
@@ -19,10 +26,15 @@ Page({
     navTitle: '基金',
     mode: 'hold',
     code: '',
+    codeInput: '',
     name: '',
     nameHint: '',
     codeLocked: false,
     codeReady: false,
+    suggests: [],
+    suggestOpen: false,
+    suggesting: false,
+    suggestEmpty: false,
     amount: '',
     cost: '',
     buyDate: '',
@@ -34,7 +46,9 @@ Page({
   },
 
   _resolveTimer: null,
+  _suggestTimer: null,
   _resolveSeq: 0,
+  _suggestSeq: 0,
   _buyDateSeq: 0,
   _prefilledAmount: '',
 
@@ -59,6 +73,7 @@ Page({
       navTitle,
       mode,
       code,
+      codeInput: code,
       name,
       codeLocked: !!code,
       codeReady: isFundCodeReady(code),
@@ -108,7 +123,9 @@ Page({
 
   onUnload() {
     this._buyDateSeq += 1
+    this._suggestSeq += 1
     if (this._resolveTimer) clearTimeout(this._resolveTimer)
+    if (this._suggestTimer) clearTimeout(this._suggestTimer)
   },
 
   async refreshHoldAmount(code) {
@@ -134,32 +151,139 @@ Page({
     }
   },
 
-  onCodeInput(e) {
-    const raw =
-      typeof e.detail === 'object' && e.detail
-        ? e.detail.value
-        : e.detail
-    const code = String(raw || '')
-      .replace(/\D/g, '')
-      .slice(0, 6)
+  clearSuggest() {
+    if (this._suggestTimer) {
+      clearTimeout(this._suggestTimer)
+      this._suggestTimer = null
+    }
+    this._suggestSeq += 1
+    this.setData({
+      suggests: [],
+      suggestOpen: false,
+      suggesting: false,
+      suggestEmpty: false,
+    })
+  },
+
+  applyTypedCode(code) {
     const ready = isFundCodeReady(code)
     this.setData({
       code,
+      codeInput: code,
       error: '',
       nameHint: '',
       codeReady: ready,
       buyDate: ready ? this.data.buyDate : '',
     })
-    if (this.data.codeLocked) return code
-
+    if (this.data.codeLocked) return
     if (this._resolveTimer) clearTimeout(this._resolveTimer)
-    if (code.length === 6) {
+    if (ready) {
       this._resolveTimer = setTimeout(() => this.resolveName(code), 280)
       if (this.data.mode === 'hold') this.warnIfHeld(code)
     } else {
       this.setData({name: '', resolving: false})
     }
-    return code
+  },
+
+  onCodeInput(e) {
+    const raw =
+      typeof e.detail === 'object' && e.detail
+        ? e.detail.value
+        : e.detail
+    if (this.data.codeLocked) {
+      const code = String(raw || '').replace(/\D/g, '').slice(0, 6)
+      return code
+    }
+    const query = String(raw || '').replace(/\s+/g, ' ').slice(0, 24)
+    const compact = query.trim()
+    if (/^\d{6}$/.test(compact)) {
+      this.clearSuggest()
+      this.applyTypedCode(compact)
+      return compact
+    }
+
+    this.setData({
+      codeInput: query,
+      code: '',
+      name: '',
+      nameHint: '',
+      error: '',
+      codeReady: false,
+      buyDate: '',
+      resolving: false,
+    })
+    if (this._resolveTimer) clearTimeout(this._resolveTimer)
+    if (this._suggestTimer) clearTimeout(this._suggestTimer)
+
+    if (!shouldSuggest(compact)) {
+      this.setData({
+        suggests: [],
+        suggestOpen: false,
+        suggesting: false,
+        suggestEmpty: false,
+      })
+      return query
+    }
+
+    this.setData({suggesting: true, suggestOpen: true, suggestEmpty: false})
+    this._suggestTimer = setTimeout(() => this.runSuggest(compact), 280)
+    return query
+  },
+
+  onCodeFocus() {
+    if (this.data.suggests.length || this.data.suggesting) {
+      this.setData({suggestOpen: true})
+    }
+  },
+
+  onCodeConfirm() {
+    const first = (this.data.suggests || [])[0]
+    if (first) this.pickSuggest(first.code, first.name)
+  },
+
+  async runSuggest(query) {
+    const seq = ++this._suggestSeq
+    try {
+      const rows = await api.suggestFunds(query)
+      if (seq !== this._suggestSeq) return
+      const suggests = Array.isArray(rows) ? rows : []
+      this.setData({
+        suggests,
+        suggesting: false,
+        suggestOpen: true,
+        suggestEmpty: suggests.length === 0,
+      })
+    } catch (e) {
+      if (seq !== this._suggestSeq) return
+      this.setData({
+        suggests: [],
+        suggesting: false,
+        suggestOpen: true,
+        suggestEmpty: true,
+        nameHint: (e && e.message) || '检索失败',
+      })
+    }
+  },
+
+  onPickSuggest(e) {
+    const ds = e.currentTarget.dataset || {}
+    this.pickSuggest(ds.code, ds.name)
+  },
+
+  pickSuggest(code, name) {
+    const next = String(code || '').padStart(6, '0')
+    if (!isFundCodeReady(next)) return
+    this.clearSuggest()
+    this.setData({
+      code: next,
+      codeInput: next,
+      name: String(name || '').trim(),
+      nameHint: '',
+      error: '',
+      codeReady: true,
+      resolving: false,
+    })
+    if (this.data.mode === 'hold') this.warnIfHeld(next)
   },
 
   warnIfHeld(code) {
@@ -188,6 +312,7 @@ Page({
         resolving: false,
         nameHint: name ? '' : '未识别到名称，仍可保存',
         code: (meta && meta.code) || code,
+        codeInput: (meta && meta.code) || code,
       })
     } catch (e) {
       if (seq !== this._resolveSeq) return
@@ -290,7 +415,11 @@ Page({
     const mode = this.data.mode
     const code = String(this.data.code || '').padStart(6, '0')
     if (!/^\d{6}$/.test(code)) {
-      this.setData({error: '请输入6位基金代码'})
+      this.setData({
+        error: this.data.suggestOpen || this.data.codeInput
+          ? '请从检索结果中点选一只基金，或输入 6 位代码'
+          : '请输入6位基金代码',
+      })
       return
     }
 

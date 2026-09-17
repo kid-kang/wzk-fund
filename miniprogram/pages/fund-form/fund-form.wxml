@@ -28,13 +28,26 @@
       <view class="rail">
         <view class="rail-head">
           <text class="rail-code mono">01</text>
-          <text class="rail-name">代码</text>
+          <text class="rail-name">代码或名称</text>
         </view>
         <view class="field-row {{codeLocked ? 'is-locked' : ''}}">
-          <input class="field-input mono" type="digit" maxlength="6" value="{{code}}" disabled="{{codeLocked}}"
-            placeholder="6 位基金代码" placeholder-class="field-ph" bindinput="onCodeInput" />
+          <input class="field-input {{codeReady || codeLocked ? 'mono' : ''}}" type="{{codeLocked ? 'digit' : 'text'}}"
+            maxlength="{{codeLocked ? 6 : 24}}" value="{{codeInput}}" disabled="{{codeLocked}}" placeholder="6 位代码或基金名称"
+            placeholder-class="field-ph" confirm-type="search" bindinput="onCodeInput" bindfocus="onCodeFocus"
+            bindconfirm="onCodeConfirm" />
           <text class="field-suffix" wx:if="{{codeLocked}}">已锁定</text>
         </view>
+        <view class="suggest-list" wx:if="{{!codeLocked && suggestOpen}}">
+          <view class="suggest-status" wx:if="{{suggesting}}">检索中…</view>
+          <view class="suggest-status" wx:elif="{{suggestEmpty}}">没有匹配的基金</view>
+          <view class="suggest-row" wx:for="{{suggests}}" wx:key="code" data-code="{{item.code}}"
+            data-name="{{item.name}}" catchtap="onPickSuggest">
+            <text class="suggest-code mono">{{item.code}}</text>
+            <text class="suggest-name">{{item.name}}</text>
+            <text class="suggest-type" wx:if="{{item.ftype}}">{{item.ftype}}</text>
+          </view>
+        </view>
+        <text class="field-tip" wx:if="{{!codeLocked}}">输入名称会出现候选，点选后填入代码</text>
       </view>
 
       <view class="rail" wx:if="{{mode === 'hold'}}">

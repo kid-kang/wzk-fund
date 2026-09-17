@@ -77,6 +77,62 @@ export async function searchFund(code) {
   }
 }
 
+const SUGGEST_TTL_MS = 30 * 1000
+const suggestCache = new Map()
+
+function mapSuggestRow(row) {
+  if (!row || (row.CATEGORY != null && Number(row.CATEGORY) !== 700)) return null
+  const code = String(row.CODE || row._id || '').padStart(6, '0')
+  if (!/^\d{6}$/.test(code)) return null
+  const info = row.FundBaseInfo || {}
+  const name = String(row.NAME || info.SHORTNAME || '').trim()
+  if (!name) return null
+  return {
+    code,
+    name,
+    ftype: String(info.FTYPE || '').trim(),
+  }
+}
+
+/** 按代码片段或名称检索基金（东财联想） */
+export async function suggestFunds(query, {limit = 8} = {}) {
+  const q = String(query || '').trim().slice(0, 24)
+  if (!q) return []
+  const cap = Math.min(20, Math.max(1, Number(limit) || 8))
+  const cacheKey = `${q}\t${cap}`
+  const hit = suggestCache.get(cacheKey)
+  if (hit && Date.now() - hit.at < SUGGEST_TTL_MS) return hit.rows
+
+  const res = await axios.get(
+    'https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx',
+    {
+      httpsAgent: agent,
+      timeout: 10000,
+      params: {m: 1, key: q},
+      headers: {
+        'User-Agent': ua,
+        Referer: 'https://fund.eastmoney.com/',
+        Accept: 'application/json, text/plain, */*',
+      },
+      validateStatus: () => true,
+    },
+  )
+  if (res.status !== 200 || Number(res.data?.ErrCode) !== 0) {
+    throw new Error(res.data?.ErrMsg || '基金检索失败')
+  }
+  const seen = new Set()
+  const rows = []
+  for (const item of Array.isArray(res.data?.Datas) ? res.data.Datas : []) {
+    const mapped = mapSuggestRow(item)
+    if (!mapped || seen.has(mapped.code)) continue
+    seen.add(mapped.code)
+    rows.push(mapped)
+    if (rows.length >= cap) break
+  }
+  suggestCache.set(cacheKey, {at: Date.now(), rows})
+  return rows
+}
+
 const mobileUa =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148'
 
