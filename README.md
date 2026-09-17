@@ -41,7 +41,7 @@
 
 ## 界面预览
 
-截图目录：[`screenshot/`](./screenshot/)。
+截图目录：[`screenshot/`](./screenshot/)。界面以**最新迭代**为准，截图可能滞后于当前功能与布局。
 
 ### 首页 Tab
 
