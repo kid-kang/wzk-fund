@@ -1,0 +1,220 @@
+/* 交易流水：按月装订，买红卖蓝点 */
+
+.trade-page {
+  min-height: 100%;
+  padding: 12rpx 8rpx 80rpx;
+  box-sizing: border-box;
+}
+
+.block-kicker {
+  display: block;
+  font-size: 18rpx;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  margin-bottom: 8rpx;
+}
+
+.block-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 760;
+  color: var(--ink);
+  margin-bottom: 16rpx;
+}
+
+.plan-block {
+  padding: 12rpx 8rpx 20rpx;
+  border-bottom: 1rpx solid var(--line);
+  margin-bottom: 8rpx;
+}
+
+.plan-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  min-height: 88rpx;
+  padding: 8rpx 0;
+}
+
+.plan-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 740;
+  color: var(--ink);
+}
+
+.plan-meta {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+.plan-amt {
+  font-size: 28rpx;
+  font-weight: 760;
+  color: var(--ink);
+}
+
+.trade-month {
+  padding: 20rpx 8rpx 8rpx;
+}
+
+.month-title {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-bottom: 8rpx;
+}
+
+.trade-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  min-height: 96rpx;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.trade-mark {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--rise);
+}
+
+.trade-mark.sell {
+  background: #3d5afe;
+}
+
+.theme-dark .trade-mark.sell {
+  background: #8ea2ff;
+}
+
+.trade-mark.exit {
+  background: #0b6b4f;
+}
+
+.theme-dark .trade-mark.exit {
+  background: #4bb892;
+}
+
+.trade-mark.sip {
+  background: var(--accent);
+}
+
+.trade-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.trade-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+}
+
+.trade-type {
+  font-size: 22rpx;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  color: var(--rise);
+}
+
+.trade-type.sell {
+  color: #3d5afe;
+}
+
+.theme-dark .trade-type.sell {
+  color: #8ea2ff;
+}
+
+.trade-type.exit {
+  color: #0b6b4f;
+}
+
+.theme-dark .trade-type.exit {
+  color: #4bb892;
+}
+
+.trade-type.sip {
+  color: var(--accent);
+}
+
+.trade-mark.pending,
+.trade-type.pending,
+.trade-amt.pending {
+  color: var(--muted);
+}
+
+.trade-mark.pending {
+  background: var(--muted);
+  box-shadow: 0 0 0 4rpx rgba(122, 132, 150, 0.25);
+}
+
+.trade-name {
+  font-size: 28rpx;
+  font-weight: 740;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-meta {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+.trade-amt {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  font-weight: 760;
+  color: var(--ink);
+}
+
+.trade-amt.sell {
+  color: #3d5afe;
+}
+
+.theme-dark .trade-amt.sell {
+  color: #8ea2ff;
+}
+
+.trade-amt.exit {
+  color: #0b6b4f;
+}
+
+.theme-dark .trade-amt.exit {
+  color: #4bb892;
+}
+
+.trade-empty {
+  margin-top: 80rpx;
+  padding: 0 12rpx;
+}
+
+.trade-empty-t {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 760;
+  color: var(--ink);
+}
+
+.trade-empty-d {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--muted);
+  line-height: 1.5;
+}

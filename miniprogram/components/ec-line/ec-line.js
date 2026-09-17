@@ -16,7 +16,10 @@ Component({
     showExtremes: {type: Boolean, value: false},
     /** 历史周期：1y/3y/since 时横轴显示年份 */
     range: {type: String, value: ''},
-    /** 迷你图配色：与卡片涨跌幅一致时传入 percent */
+    /** 持仓买入日，走势图上标红点 */
+    markDate: {type: String, value: ''},
+    /** [{date, kind:'buy'|'sell'}]，卖出点蓝 */
+    markDates: {type: Array, value: []},
     toneDelta: {type: null, value: null},
   },
 
@@ -65,7 +68,7 @@ Component({
   },
 
   observers: {
-    'points, valueKey, mode, theme, valueMode, extraKey, extraLabel, height, showExtremes, range, toneDelta':
+    'points, valueKey, mode, theme, valueMode, extraKey, extraLabel, height, showExtremes, range, markDate, markDates, toneDelta':
       function () {
         if (this.data.ready) this.renderChart()
       },
@@ -90,6 +93,8 @@ Component({
         extraLabel: this.data.extraLabel || undefined,
         showExtremes: !!this.data.showExtremes,
         range: this.data.range || '',
+        markDate: this.data.markDate || '',
+        markDates: this.data.markDates || [],
       })
     },
 

@@ -1,0 +1,44 @@
+<page-meta page-style="background-color: {{pageBg}};" background-color="{{pageBg}}" background-color-top="{{pageBg}}"
+  background-color-bottom="{{pageBg}}" root-background-color="{{pageBg}}" background-text-style="{{bgTextStyle}}" />
+
+<view class="subpage-root theme-{{theme}}">
+  <view class="subpage-nav">
+    <app-nav-bar title="{{navTitle}}" theme="{{theme}}" />
+  </view>
+
+  <scroll-view class="subpage-scroller" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="page theme-{{theme}} pnl-page">
+      <view class="pnl-read">
+        <text class="pnl-k">合计</text>
+        <text class="mono pnl-num {{sumClass}}">{{sumText}}</text>
+      </view>
+
+      <view class="pnl-month" wx:for="{{months}}" wx:key="key">
+        <view class="pnl-month-h">
+          <text class="pnl-month-t">{{item.title}}</text>
+          <text class="mono pnl-month-s {{item.sumClass}}">{{item.sumText}}</text>
+        </view>
+        <scroll-view class="pnl-hscroll" scroll-x enhanced enable-flex bounces="{{true}}" show-scrollbar="{{false}}">
+          <view class="pnl-track" style="width: {{item.trackRpx}}rpx;">
+            <view class="pnl-plot" style="height: {{chartHeight}}px;">
+              <view class="pnl-zero" style="top: {{item.zeroY}}px;"></view>
+              <view class="pnl-col" wx:for="{{item.days}}" wx:for-item="d" wx:key="date">
+                <text class="mono pnl-lab {{d.tone}}" style="top: {{d.labelTop}}px;"
+                  wx:if="{{d.label}}">{{d.label}}</text>
+                <view class="pnl-bar {{d.tone}}" style="top: {{d.barTop}}px; height: {{d.barH}}px;"></view>
+              </view>
+            </view>
+            <view class="pnl-axis">
+              <text class="mono pnl-d" wx:for="{{item.days}}" wx:for-item="d" wx:key="date">{{d.day}}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view class="pnl-empty" wx:if="{{empty}}">
+        <text class="pnl-empty-t">还没有按天记下的收益</text>
+        <text class="pnl-empty-d">打开持仓后，当天盈亏会记在这里。</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>

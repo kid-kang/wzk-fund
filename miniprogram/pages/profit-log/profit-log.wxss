@@ -1,0 +1,164 @@
+/* 收益记录：每月一张表，柱宽固定，超出左右滑 */
+
+.pnl-page {
+  min-height: 100%;
+  padding: 8rpx 0 72rpx;
+  box-sizing: border-box;
+}
+
+.pnl-read {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12rpx;
+  padding: 20rpx 16rpx 12rpx;
+}
+
+.pnl-k {
+  font-size: 24rpx;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.pnl-num {
+  font-size: 48rpx;
+  font-weight: 780;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.pnl-month {
+  margin-top: 28rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid var(--line);
+}
+
+.pnl-month-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 0 16rpx 12rpx;
+}
+
+.pnl-month-t {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.pnl-month-s {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.pnl-hscroll {
+  width: 100%;
+}
+
+.pnl-track {
+  display: flex;
+  flex-direction: column;
+}
+
+.pnl-plot {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.pnl-zero {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(18, 26, 39, 0.16);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.theme-dark .pnl-zero {
+  background: rgba(238, 242, 255, 0.22);
+}
+
+.pnl-col {
+  position: relative;
+  flex: 1 0 74rpx;
+  width: 74rpx;
+  height: 100%;
+  z-index: 1;
+}
+
+.pnl-lab {
+  position: absolute;
+  left: 0;
+  right: 0;
+  font-size: 18rpx;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.pnl-bar {
+  position: absolute;
+  left: 50%;
+  width: 62rpx;
+  margin-left: -31rpx;
+}
+
+.pnl-bar.rise {
+  background: var(--rise);
+  opacity: 0.82;
+  border-radius: 8rpx 8rpx 2rpx 2rpx;
+}
+
+.pnl-bar.fall {
+  background: var(--fall);
+  opacity: 0.82;
+  border-radius: 2rpx 2rpx 8rpx 8rpx;
+}
+
+.pnl-bar.flat {
+  background: var(--muted);
+  opacity: 0.45;
+  border-radius: 4rpx;
+}
+
+.pnl-axis {
+  display: flex;
+  flex-direction: row;
+  padding-top: 8rpx;
+}
+
+.pnl-d {
+  flex: 1 0 74rpx;
+  width: 74rpx;
+  font-size: 18rpx;
+  color: var(--muted);
+  text-align: center;
+}
+
+.pnl-empty {
+  margin-top: 80rpx;
+  padding: 0 16rpx;
+}
+
+.pnl-empty-t {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 760;
+  color: var(--ink);
+}
+
+.pnl-empty-d {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--muted);
+  line-height: 1.5;
+}

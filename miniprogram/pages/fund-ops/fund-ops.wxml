@@ -1,0 +1,185 @@
+<page-meta page-style="background-color: {{pageBg}};" background-color="{{pageBg}}" background-color-top="{{pageBg}}"
+  background-color-bottom="{{pageBg}}" root-background-color="{{pageBg}}" background-text-style="{{bgTextStyle}}" />
+
+<view class="subpage-root theme-{{theme}}">
+  <view class="subpage-nav">
+    <app-nav-bar title="{{navTitle}}" theme="{{theme}}" />
+  </view>
+
+  <scroll-view class="subpage-scroller" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="page theme-{{theme}} fund-ops">
+      <view class="ops-tabs">
+        <view class="ops-tab {{tab === item.key ? 'is-on' : ''}}" wx:for="{{tabs}}" wx:key="key" data-key="{{item.key}}"
+          bindtap="onTab">{{item.label}}</view>
+      </view>
+
+      <view class="ops-fund">
+        <view class="ops-fund-row">
+          <text class="ops-name">{{name || '基金持仓'}}</text>
+          <text class="ops-code mono">{{code}}</text>
+          <text class="ops-sip-tag {{sipStatus}}" wx:if="{{sipStatus !== 'none'}}">{{sipStatusText}}</text>
+        </view>
+      </view>
+
+      <block wx:if="{{tab === 'edit'}}">
+        <view class="ledger">
+          <view class="ledger-cell">
+            <text class="ledger-k">持仓金额</text>
+            <view class="ledger-v {{amountFilled ? '' : 'is-empty'}}">
+              <text class="ledger-yen" wx:if="{{amountFilled}}">¥</text>
+              <text class="ledger-num {{amountFilled ? 'mono' : ''}}">{{amountText}}</text>
+            </view>
+          </view>
+          <view class="ledger-rule" aria-hidden="true"></view>
+          <view class="ledger-cell">
+            <text class="ledger-k">投入成本</text>
+            <view class="ledger-v {{costFilled ? '' : 'is-empty'}}">
+              <text class="ledger-yen" wx:if="{{costFilled}}">¥</text>
+              <text class="ledger-num {{costFilled ? 'mono' : ''}}">{{costText}}</text>
+            </view>
+          </view>
+          <view class="ledger-rule" aria-hidden="true"></view>
+          <view class="ledger-cell">
+            <text class="ledger-k">收益率</text>
+            <view class="ledger-v {{yieldFilled ? '' : 'is-empty'}}">
+              <text class="ledger-num {{yieldFilled ? 'mono' : ''}} {{yieldClass}}">{{yieldText}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="rail">
+          <view class="rail-head">
+            <text class="rail-name">买入日期</text>
+          </view>
+          <view class="field-row">
+            <picker class="field-picker" mode="date" value="{{buyDate || today}}" end="{{buyDatePickerEnd}}"
+              bindchange="onEditBuyDateChange">
+              <view class="field-input {{buyDate ? '' : 'is-ph'}}">{{buyDate || '选填'}}</view>
+            </picker>
+            <text class="field-suffix" wx:if="{{buyDate}}" catchtap="onClearBuyDate">清除</text>
+          </view>
+          <text class="field-tip">用于展示持有天数、买入点位等，请选交易日</text>
+        </view>
+      </block>
+
+      <block wx:elif="{{tab === 'buy'}}">
+        <view class="rail">
+          <view class="rail-head">
+            <text class="rail-name">买入金额</text>
+          </view>
+          <view class="field-row cash-row">
+            <text class="field-prefix">¥</text>
+            <input class="field-input cash-input" type="digit" value="{{buyAmount}}" placeholder="请输入买入金额"
+              placeholder-class="cash-ph" bindinput="onBuyAmountInput" />
+          </view>
+          <view class="fee-line">
+            <text>估算手续费{{buyFeeText}}元（买入费率</text>
+            <input class="fee-input mono" type="digit" value="{{buyFeeRate}}" bindinput="onBuyFeeRateInput" />
+            <text>%）</text>
+          </view>
+        </view>
+
+        <view class="time-row">
+          <text class="time-k">买入时间</text>
+          <picker mode="date" value="{{buyDateVal}}" end="{{buyDatePickerEnd}}" bindchange="onBuyDateChange">
+            <view class="time-v">{{buyDateLabel}} ▾</view>
+          </picker>
+        </view>
+        <view class="sess-row">
+          <view class="sess-chip {{buySession === 'before15' ? 'is-on' : ''}}" data-kind="buy" data-session="before15"
+            bindtap="onSessionTap">下午3点前</view>
+          <view class="sess-chip {{buySession === 'after15' ? 'is-on' : ''}}" data-kind="buy" data-session="after15"
+            bindtap="onSessionTap">下午3点后</view>
+        </view>
+        <text class="field-tip">3点前用当日确认净值；3点后用下一交易日净值。未公布时记录显示待确认，公布后再落账。</text>
+        <text class="field-tip" wx:if="{{isDelayed}}">QDII 同一套 15:00 切点，申请日净值通常次日晚才披露，不会用更早净值顶替。</text>
+      </block>
+
+      <block wx:elif="{{tab === 'sell'}}">
+        <view class="rail">
+          <view class="rail-head">
+            <text class="rail-name">卖出份额</text>
+          </view>
+          <view class="field-row cash-row">
+            <input class="field-input cash-input" type="digit" value="{{sellShares}}"
+              placeholder="最多可卖出{{maxSharesText}}份" placeholder-class="cash-ph" bindinput="onSellSharesInput" />
+          </view>
+          <view class="frac-row">
+            <view class="frac-chip {{sellFrac === item.key ? 'is-on' : ''}}" wx:for="{{fractions}}" wx:key="key"
+              data-key="{{item.key}}" bindtap="onSellFrac">{{item.label}}</view>
+          </view>
+          <view class="fee-line is-sell">
+            <text>卖出费率(%)</text>
+            <text class="fee-caret">▾</text>
+            <input class="fee-input mono" type="digit" value="{{sellFeeRate}}" bindinput="onSellFeeRateInput" />
+            <text>%</text>
+            <text class="fee-caret">▾</text>
+          </view>
+        </view>
+
+        <view class="time-row">
+          <text class="time-k">卖出时间</text>
+          <picker mode="date" value="{{sellDateVal}}" end="{{buyDatePickerEnd}}" bindchange="onSellDateChange">
+            <view class="time-v">{{sellDateLabel}} ▾</view>
+          </picker>
+        </view>
+        <view class="sess-row">
+          <view class="sess-chip {{sellSession === 'before15' ? 'is-on' : ''}}" data-kind="sell" data-session="before15"
+            bindtap="onSessionTap">下午3点前</view>
+          <view class="sess-chip {{sellSession === 'after15' ? 'is-on' : ''}}" data-kind="sell" data-session="after15"
+            bindtap="onSessionTap">下午3点后</view>
+        </view>
+        <text class="field-tip">卖出日期不能早于买入日期。净值规则与加仓相同。</text>
+      </block>
+
+      <block wx:else>
+        <view class="rail">
+          <view class="rail-head">
+            <text class="rail-name">定投金额</text>
+          </view>
+          <view class="field-row cash-row">
+            <text class="field-prefix">¥</text>
+            <input class="field-input cash-input" type="digit" value="{{sipAmount}}" placeholder="请输入定投金额"
+              placeholder-class="cash-ph" bindinput="onSipAmountInput" />
+          </view>
+          <view class="fee-line">
+            <text>估算手续费{{sipFeeText}}元（买入费率</text>
+            <input class="fee-input mono" type="digit" value="{{sipFeeRate}}" bindinput="onSipFeeRateInput" />
+            <text>%）</text>
+          </view>
+        </view>
+
+        <view class="time-row">
+          <text class="time-k">选择定投周期</text>
+          <picker mode="multiSelector" range="{{sipCycleRange}}" value="{{sipCycleValue}}" bindchange="onSipCycleChange"
+            bindcolumnchange="onSipCycleColumnChange">
+            <view class="time-v">{{sipCycleLabel}} ▾</view>
+          </picker>
+        </view>
+        <text class="field-tip" wx:if="{{isDelayed}}">QDII 定投按扣款日净值成交，该净值通常次日晚公布；未公布前显示待确认。</text>
+      </block>
+
+      <view class="err" wx:if="{{error}}">{{error}}</view>
+
+      <view class="save-btn {{saving ? 'is-busy' : ''}}" hover-class="save-btn-hover" bindtap="onSubmit">
+        {{submitLabel}}
+      </view>
+
+      <view class="ops-log" wx:if="{{tab === 'edit'}}">
+        <text class="ops-log-title">操作记录</text>
+        <view class="ops-log-row" wx:for="{{opsTrades}}" wx:key="id">
+          <view class="ops-log-mark {{item.tone}}"></view>
+          <view class="ops-log-copy">
+            <text class="ops-log-type {{item.tone}}">{{item.typeLabel}}</text>
+            <text class="ops-log-meta">{{item.metaText}}</text>
+          </view>
+          <text class="mono ops-log-amt {{item.tone}}">{{item.amountText}}</text>
+        </view>
+        <text class="ops-log-empty" wx:if="{{!opsTrades.length}}">还没有这只基金的操作记录</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>
+
+<van-toast id="van-toast" />
+<van-dialog id="van-dialog" />

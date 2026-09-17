@@ -1,5 +1,5 @@
 const API_BASE_KEY = 'wzk-fund-api-base'
-const DEFAULT_API_BASE = 'http://127.0.0.1:8787'
+const DEFAULT_API_BASE = 'https://wzk-fund.uk'
 
 function getApiBase() {
   try {

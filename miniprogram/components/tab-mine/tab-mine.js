@@ -201,19 +201,29 @@ Component({
     },
 
     confirmClear(scope) {
-      const labels = {
-        hold: '持仓',
-        watch: '自选',
-        all: '全部基金（持仓+自选）',
+      const copy = {
+        hold: {
+          label: '持仓',
+          message: '将删除全部持仓，以及这些基金的交易记录和定投。已清仓转入自选的基金不会被删。此操作不可恢复。',
+        },
+        watch: {
+          label: '自选',
+          message: '将删除全部自选。这些基金的交易记录和买卖点会保留。持仓不受影响。此操作不可恢复。',
+        },
+        all: {
+          label: '全部基金',
+          message: '将清空持仓、自选、交易记录和定投。黄金持仓与收益记录不受影响。此操作不可恢复。',
+        },
       }
-      const label = labels[scope] || '配置'
+      const item = copy[scope]
+      if (!item) return
       Dialog.confirm({
         title: '确认清空',
-        message: `将清空本地${label}配置，此操作不可恢复。是否继续？`,
+        message: item.message,
         confirmButtonText: '清空',
         confirmButtonColor: '#d7263d',
       })
-        .then(() => this.runClear(scope, label))
+        .then(() => this.runClear(scope, item.label))
         .catch(() => {})
     },
 
@@ -225,6 +235,14 @@ Component({
       } catch (e) {
         Toast.fail((e && e.message) || '清空失败')
       }
+    },
+
+    onOpenProfitLog() {
+      navigateTo('/pages/profit-log/profit-log')
+    },
+
+    onOpenTradeLog() {
+      navigateTo('/pages/trade-log/trade-log')
     },
 
     onOpenQa() {

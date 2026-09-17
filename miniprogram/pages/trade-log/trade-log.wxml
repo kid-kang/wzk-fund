@@ -1,0 +1,44 @@
+<page-meta page-style="background-color: {{pageBg}};" background-color="{{pageBg}}" background-color-top="{{pageBg}}"
+  background-color-bottom="{{pageBg}}" root-background-color="{{pageBg}}" background-text-style="{{bgTextStyle}}" />
+
+<view class="subpage-root theme-{{theme}}">
+  <view class="subpage-nav">
+    <app-nav-bar title="{{navTitle}}" theme="{{theme}}" />
+  </view>
+
+  <scroll-view class="subpage-scroller" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="page theme-{{theme}} trade-page">
+      <view class="plan-block" wx:if="{{plans.length}}">
+        <text class="block-kicker mono">SIP</text>
+        <text class="block-title">定投计划</text>
+        <view class="plan-row" wx:for="{{plans}}" wx:key="id">
+          <view class="plan-copy">
+            <text class="plan-name">{{item.name}}</text>
+            <text class="plan-meta">{{item.statusText}} · {{item.cycle}} · 首次 {{item.first}}</text>
+          </view>
+          <text class="mono plan-amt">{{item.amountText}}</text>
+        </view>
+      </view>
+
+      <view class="trade-month" wx:for="{{months}}" wx:key="key">
+        <text class="month-title">{{item.title}}</text>
+        <view class="trade-row" wx:for="{{item.list}}" wx:for-item="row" wx:key="id">
+          <view class="trade-mark {{row.tone}}"></view>
+          <view class="trade-copy">
+            <view class="trade-head">
+              <text class="trade-type {{row.tone}}">{{row.typeLabel}}</text>
+              <text class="trade-name">{{row.name}}</text>
+            </view>
+            <text class="trade-meta">{{row.metaText}}</text>
+          </view>
+          <text class="mono trade-amt {{row.tone}}">{{row.amountText}}</text>
+        </view>
+      </view>
+
+      <view class="trade-empty" wx:if="{{empty}}">
+        <text class="trade-empty-t">还没有交易记录</text>
+        <text class="trade-empty-d">在持仓里打开「操作」，加仓、减仓或定投后会出现在这里。</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>

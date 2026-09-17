@@ -1563,7 +1563,7 @@ export async function getXiaobeiRealtimePercents(codes) {
  * POST /yangji-api/api/get-fund-detail-v310 → relatedIndustryV2
  * @returns {{name:string, sectorCode:string, mappingCode:string}[]}
  */
-async function fetchXiaobeiSectorItems(code) {
+export async function fetchXiaobeiSectorItems(code) {
   const padded = String(code || '').padStart(6, '0')
   const hit = xiaobeiSectorCache.get(padded)
   if (hit && Date.now() - hit.at < XIAOBEI_SECTOR_TTL_MS && Array.isArray(hit.items)) {
@@ -1596,6 +1596,45 @@ async function fetchXiaobeiSectorItems(code) {
   }
   xiaobeiSectorCache.set(padded, {at: Date.now(), items})
   return items.map((i) => ({...i}))
+}
+
+/**
+ * 给榜单行补小倍关联板块（详情 relatedIndustry，内存缓存 3 天）。
+ * 已有 sectorName 的行会跳过请求。
+ */
+export async function attachXiaobeiRelatedSectors(rows, {concurrency = 10} = {}) {
+  const list = Array.isArray(rows) ? rows : []
+  if (!list.length) return list
+  const unique = [
+    ...new Set(
+      list
+        .filter((row) => !String(row?.sectorName || '').trim())
+        .map((row) => String(row?.code || '').padStart(6, '0'))
+        .filter((code) => /^\d{6}$/.test(code)),
+    ),
+  ]
+  const byCode = new Map()
+  const n = Math.max(1, Number(concurrency) || 10)
+  for (let i = 0; i < unique.length; i += n) {
+    const chunk = unique.slice(i, i + n)
+    const settled = await Promise.allSettled(chunk.map((code) => fetchXiaobeiSectorItems(code)))
+    settled.forEach((s, idx) => {
+      if (s.status !== 'fulfilled' || !s.value?.[0]?.name) return
+      byCode.set(chunk[idx], s.value[0])
+    })
+  }
+  if (!byCode.size) return list
+  return list.map((row) => {
+    if (String(row.sectorName || '').trim()) return row
+    const hit = byCode.get(String(row.code || '').padStart(6, '0'))
+    if (!hit?.name) return row
+    return {
+      ...row,
+      sectorName: hit.name,
+      sectorCode: hit.sectorCode || row.sectorCode || '',
+      mappingCode: hit.mappingCode || hit.sectorCode || row.mappingCode || '',
+    }
+  })
 }
 
 /** 用热搜/旧榜按名称补齐 sectorCode（本地推断标签用） */

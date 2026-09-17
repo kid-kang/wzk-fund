@@ -593,6 +593,20 @@ button {
   background: rgba(238, 242, 255, 0.06);
 }
 
+.sector-tag.is-sip {
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: rgba(79, 93, 255, 0.28);
+}
+
+.theme-dark .sector-tag.is-sip {
+  color: #9eb0ff;
+  background: rgba(123, 136, 255, 0.16);
+  border-color: rgba(123, 136, 255, 0.34);
+}
+
 /* QDII 净值日：贴卡片右上角，脱离文档流，不占涨跌纵向空间 */
 .dense-asof {
   position: absolute;
@@ -798,4 +812,14 @@ button {
 
 .theme-dark .fortune-ingot {
   background: linear-gradient(180deg, rgba(232, 201, 122, 0.12), rgba(143, 109, 46, 0.1));
+}
+
+/* Vant Dialog 默认白底；标题未设色会继承页面 --ink（深色近白），看不清 */
+.van-dialog {
+  color: #1c2333;
+}
+
+.van-dialog__header {
+  color: #1c2333;
+  font-weight: 650;
 }

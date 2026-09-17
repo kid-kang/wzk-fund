@@ -44,7 +44,7 @@
 
         <view class="list-gap">
           <view class="swipe-row" wx:for="{{realtimeList}}" wx:key="code">
-            <van-swipe-cell right-width="{{130}}">
+            <van-swipe-cell right-width="{{65}}">
               <view class="glass dense-row tone-{{item.pnlClass}}">
                 <view class="dense-row-skin" aria-hidden="true">
                   <text class="card-mark mono">{{item.codeMark}}</text>
@@ -80,6 +80,7 @@
                     </view>
                   </view>
                   <view class="tag-row" wx:if="{{item.hasTags}}">
+                    <text class="sector-tag is-sip" wx:if="{{item.hasSip}}">定</text>
                     <text class="sector-tag is-link" wx:for="{{item.sectorTags}}" wx:for-item="tag" wx:key="name"
                       data-name="{{tag.name}}" data-sector="{{tag.sectorCode}}" data-mapping="{{tag.mappingCode}}"
                       catchtap="onOpenSector">{{tag.name}}</text>
@@ -103,12 +104,8 @@
               <view slot="right" class="swipe-actions">
                 <view class="swipe-btn edit" data-code="{{item.code}}" data-name="{{item.name}}"
                   data-amount="{{item.amount}}" data-cost="{{item.cost}}" bindtap="onEdit">
-                  <van-icon name="edit" size="17px" color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}" />
-                  <text class="swipe-label">编辑</text>
-                </view>
-                <view class="swipe-btn del" data-code="{{item.code}}" data-name="{{item.name}}" catchtap="onRemove">
-                  <van-icon name="delete-o" size="17px" color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}" />
-                  <text class="swipe-label">删除</text>
+                  <van-icon name="exchange" size="17px" color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}" />
+                  <text class="swipe-label">操作</text>
                 </view>
               </view>
             </van-swipe-cell>
@@ -171,7 +168,7 @@
 
         <view class="list-gap">
           <view class="swipe-row" wx:for="{{delayedList}}" wx:key="code">
-            <van-swipe-cell right-width="{{130}}">
+            <van-swipe-cell right-width="{{65}}">
               <view class="glass dense-row tone-{{item.pnlClass}}">
                 <view class="dense-row-skin" aria-hidden="true">
                   <text class="card-mark mono">{{item.codeMark}}</text>
@@ -207,6 +204,7 @@
                     </view>
                   </view>
                   <view class="tag-row" wx:if="{{item.hasTags}}">
+                    <text class="sector-tag is-sip" wx:if="{{item.hasSip}}">定</text>
                     <text class="sector-tag is-link" wx:for="{{item.sectorTags}}" wx:for-item="tag" wx:key="name"
                       data-name="{{tag.name}}" data-sector="{{tag.sectorCode}}" data-mapping="{{tag.mappingCode}}"
                       catchtap="onOpenSector">{{tag.name}}</text>
@@ -230,12 +228,8 @@
               <view slot="right" class="swipe-actions">
                 <view class="swipe-btn edit" data-code="{{item.code}}" data-name="{{item.name}}"
                   data-amount="{{item.amount}}" data-cost="{{item.cost}}" bindtap="onEdit">
-                  <van-icon name="edit" size="17px" color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}" />
-                  <text class="swipe-label">编辑</text>
-                </view>
-                <view class="swipe-btn del" data-code="{{item.code}}" data-name="{{item.name}}" catchtap="onRemove">
-                  <van-icon name="delete-o" size="17px" color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}" />
-                  <text class="swipe-label">删除</text>
+                  <van-icon name="exchange" size="17px" color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}" />
+                  <text class="swipe-label">操作</text>
                 </view>
               </view>
             </van-swipe-cell>

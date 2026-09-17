@@ -1,23 +1,10 @@
 <view class="tab-root theme-{{theme}}">
-  <scroll-view
-    class="page-scroller"
-    scroll-y
-    enhanced
-    bounces="{{false}}"
-    show-scrollbar="{{false}}"
-  >
-    <view
-      class="page theme-{{theme}} {{loading && !market && !indices.length && !error ? 'is-skeleton' : ''}}"
-      style="min-height: {{contentMinHeight}}px"
-    >
+  <scroll-view class="page-scroller" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="page theme-{{theme}} {{loading && !market && !indices.length && !error ? 'is-skeleton' : ''}}"
+      style="min-height: {{contentMinHeight}}px">
       <view class="err" wx:if="{{error}}">{{error}}</view>
-      <desk-sync
-        wx:if="{{loading && !market && !indices.length && !error}}"
-        class="desk-sync-fill"
-        theme="{{theme}}"
-        variant="market"
-        min-height="{{contentMinHeight}}"
-      />
+      <desk-sync wx:if="{{loading && !market && !indices.length && !error}}" class="desk-sync-fill" theme="{{theme}}"
+        variant="market" min-height="{{contentMinHeight}}" />
 
       <view class="market-stack" wx:if="{{market || indices.length}}">
         <!-- 涨跌温度：独立一行，在指数之上 -->
@@ -39,53 +26,96 @@
 
         <!-- 指数报价板 -->
         <view class="glass index-board" wx:if="{{indices.length}}">
-          <view
-            class="index-cell"
-            wx:for="{{indices}}"
-            wx:key="code"
-            data-code="{{item.code}}"
-            data-name="{{item.name}}"
-            bindtap="onOpenIndex"
-          >
+          <view class="index-cell" wx:for="{{indices}}" wx:key="code" data-code="{{item.code}}"
+            data-name="{{item.name}}" bindtap="onOpenIndex">
             <text class="index-name">{{item.shortName}}</text>
             <text class="mono index-pct {{item.pctClass}}">{{item.pctText}}</text>
           </view>
         </view>
 
-        <!-- 板块榜 -->
-        <view class="glass board-rank" wx:if="{{market}}">
-          <view class="rank-head">
-            <text class="rank-title">今日板块榜</text>
-            <view class="rank-tabs">
-              <view
-                class="rank-tab {{boardTab === 'hot' ? 'is-on' : ''}}"
-                data-tab="hot"
-                bindtap="onBoardTab"
-              >热搜</view>
-              <view
-                class="rank-tab {{boardTab === 'gainers' ? 'is-on' : ''}}"
-                data-tab="gainers"
-                bindtap="onBoardTab"
-              >涨幅</view>
+        <!-- 主力资金：零轴水位，不叠指数 -->
+        <view class="glass flow-board" wx:if="{{flowView}}">
+          <view class="flow-head {{flowRange === 'month' && !flowScrub ? 'is-month' : ''}}">
+            <view class="flow-lead" wx:if="{{flowRange === 'day'}}">
+              <text class="flow-title">净流入</text>
+              <text class="mono flow-n {{flowView.latestClass}}">{{flowView.latestText}}</text>
+              <view wx:if="{{flowView.moodText}}" class="flow-mood {{flowView.moodClass}}" catchtap="onOpenMood">
+                {{flowView.moodText}}</view>
+            </view>
+            <view class="flow-scrub-chip" wx:elif="{{flowScrub}}">
+              <text class="flow-scrub-date">{{flowScrub.label}}</text>
+              <text class="mono flow-scrub-val {{flowScrub.tone}}">{{flowScrub.text}}</text>
+            </view>
+            <view class="flow-tabs">
+              <view class="flow-tab-thumb" style="transform: translateX({{flowIndex * 100}}%);"></view>
+              <view class="flow-tab {{flowRange === item.key ? 'is-on' : ''}}" wx:for="{{flowTabs}}" wx:key="key"
+                data-range="{{item.key}}" bindtap="onFlowRange">{{item.label}}</view>
             </view>
           </view>
-          <view class="rank-list">
-            <view
-              class="rank-row"
-              wx:for="{{boardList}}"
-              wx:key="code"
-              data-name="{{item.name}}"
-              data-mapping="{{item.mappingCode}}"
-              data-sector="{{item.sectorCode || item.code}}"
-              bindtap="onOpenBoard"
-            >
+          <view class="flow-plot">
+            <view class="flow-tape-wrap">
+              <flow-tape values="{{flowView.values}}" breaks="{{flowView.breaks}}" mode="{{flowView.mode}}"
+                theme="{{theme}}" height="{{96}}" cursor="{{flowScrub ? flowScrub.idx : -1}}"
+                cursor-label="{{flowRange === 'day' && flowScrub ? flowScrub.label : ''}}"
+                cursor-text="{{flowRange === 'day' && flowScrub ? flowScrub.text : ''}}"
+                cursor-tone="{{flowScrub ? flowScrub.tone : ''}}" />
+              <view class="flow-scrub" catchtouchstart="onFlowScrubStart" catchtouchmove="onFlowScrubMove"
+                catchtouchend="onFlowScrubEnd" catchtouchcancel="onFlowScrubEnd"></view>
+            </view>
+          </view>
+          <view class="flow-axis">
+            <text class="flow-x" wx:for="{{flowView.xLabels}}" wx:for-item="lab" wx:key="*this">{{lab}}</text>
+          </view>
+        </view>
+
+        <!-- 排行榜 -->
+        <view class="glass board-rank" wx:if="{{market}}">
+          <view class="rank-head">
+            <scroll-view class="rank-tabs-scroller" scroll-x enhanced show-scrollbar="{{false}}" enable-flex
+              scroll-with-animation scroll-into-view="rank-{{rankTab}}">
+              <view class="rank-tabs">
+                <view class="rank-tab-thumb"
+                  style="width: calc((100% - 6rpx) / {{rankTabs.length}}); transform: translateX({{rankIndex * 100}}%);">
+                </view>
+                <view id="rank-{{item.key}}" class="rank-tab {{rankTab === item.key ? 'is-on' : ''}}"
+                  wx:for="{{rankTabs}}" wx:key="key" data-tab="{{item.key}}" bindtap="onRankTab">{{item.label}}</view>
+              </view>
+            </scroll-view>
+          </view>
+          <view class="rank-empty" wx:if="{{!boardList.length}}">暂无榜单</view>
+          <view class="rank-list {{rankSlide}}" wx:else>
+            <view class="rank-row" wx:for="{{boardList}}" wx:key="code" data-code="{{item.code}}"
+              data-name="{{item.name}}" data-mapping="{{item.mappingCode}}"
+              data-sector="{{item.sectorCode || item.code}}" bindtap="onOpenRankRow">
               <text class="rank-no {{item.topClass}}">{{item.rankText}}</text>
-              <text class="rank-name">{{item.name}}</text>
+              <view class="rank-main">
+                <text class="rank-name {{item.isFund ? 'is-fund' : ''}}">{{item.name}}</text>
+                <view class="rank-meta" wx:if="{{item.isFund}}">
+                  <text class="rank-code">{{item.code}}</text>
+                  <text class="rank-sector" wx:if="{{item.hasSector}}">{{item.sectorName}}</text>
+                </view>
+              </view>
               <text class="mono rank-pct {{item.pctClass}}">{{item.pctText}}</text>
+              <view wx:if="{{item.isFund}}" class="rank-add {{item.watched ? 'is-on' : ''}}" data-code="{{item.code}}"
+                data-name="{{item.name}}" catchtap="onToggleWatch">{{item.watched ? '✓' : '+'}}</view>
             </view>
           </view>
         </view>
       </view>
     </view>
   </scroll-view>
+
+  <view wx:if="{{moodOpen}}" class="mood-mask" catchtap="onCloseMood">
+    <view class="mood-sheet" catchtap="onMoodSheet">
+      <text class="mood-sheet-title">情绪解读</text>
+      <view class="mood-scale">
+        <view class="mood-band is-{{item.key}}" wx:for="{{moodBands}}" wx:key="key">{{item.label}}</view>
+      </view>
+      <view class="mood-tip" wx:for="{{moodTips}}" wx:key="key">
+        <text class="mood-tip-k">{{item.k}}</text>
+        <text class="mood-tip-text">{{item.text}}</text>
+      </view>
+      <view class="mood-ok" catchtap="onCloseMood">知道了</view>
+    </view>
+  </view>
 </view>

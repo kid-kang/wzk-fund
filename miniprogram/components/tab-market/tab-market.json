@@ -2,6 +2,7 @@
   "component": true,
   "styleIsolation": "apply-shared",
   "usingComponents": {
-    "desk-sync": "/components/desk-sync/desk-sync"
+    "desk-sync": "/components/desk-sync/desk-sync",
+    "flow-tape": "/components/flow-tape/flow-tape"
   }
 }

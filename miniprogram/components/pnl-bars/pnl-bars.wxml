@@ -1,0 +1,3 @@
+<view class="stave">
+  <canvas type="2d" id="stave" class="stave-canvas" disable-scroll="{{false}}" style="height: {{height}}px;"></canvas>
+</view>

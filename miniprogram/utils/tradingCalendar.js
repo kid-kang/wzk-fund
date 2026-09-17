@@ -105,7 +105,72 @@ function shouldShowConfirmedUpdatedBadge(quote, now = new Date()) {
   return !isTradingDayStarted(next, now)
 }
 
+function isWeekday(d = new Date()) {
+  const day = d.getDay()
+  return day !== 0 && day !== 6
+}
+
+function addCalendarDays(dateStr, n) {
+  const d = parseDateStr(dateStr)
+  d.setDate(d.getDate() + n)
+  return todayDateStr(d)
+}
+
+/** YYYY-MM-DD；非法日期返回空。最多允许未来 14 个自然日（覆盖周五→下周一） */
+function normalizeBuyDate(raw, now = new Date()) {
+  const s = String(raw || '').trim().slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return ''
+  const [y, m, d] = s.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return ''
+  const cap = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  cap.setDate(cap.getDate() + 14)
+  if (dt > cap) return ''
+  return s
+}
+
+/** 买入日到今天的日历天数；未填或非法返回 null；未来买入日按 0 天 */
+function holdDays(buyDate, now = new Date()) {
+  const s = normalizeBuyDate(buyDate, now)
+  if (!s) return null
+  const start = parseDateStr(s)
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.max(0, Math.round((end - start) / 86400000))
+}
+
+/** 周末/长假后的净值日最多向后找这么多天，避免把区间起点误标成买入 */
+const BUY_NAV_LAG_DAYS = 21
+
+function calendarDaysBetween(from, to) {
+  return Math.round((parseDateStr(to) - parseDateStr(from)) / 86400000)
+}
+
+/** 买入日对应的净值日：当天有净值用当天，否则用之后最近一个交易日 */
+function matchBuyNavDate(dates, buyDate, now = new Date()) {
+  const want = normalizeBuyDate(buyDate, now)
+  if (!want) return ''
+  const keys = (dates || [])
+    .map((d) => String(d || '').slice(0, 10))
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+  if (keys.indexOf(want) >= 0) return want
+  let best = ''
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i] < want) continue
+    if (!best || keys[i] < best) best = keys[i]
+  }
+  if (!best) return ''
+  const lag = calendarDaysBetween(want, best)
+  if (lag < 0 || lag > BUY_NAV_LAG_DAYS) return ''
+  return best
+}
+
 module.exports = {
+  todayDateStr,
+  isWeekday,
+  addCalendarDays,
+  normalizeBuyDate,
+  holdDays,
+  matchBuyNavDate,
   normalizeNetValueDate,
   isDelayedNavFund,
   formatOfficialDiscloseTime,

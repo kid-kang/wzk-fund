@@ -141,6 +141,11 @@
   line-height: 1;
 }
 
+.field-picker {
+  flex: 1;
+  min-width: 0;
+}
+
 .field-input {
   flex: 1;
   min-width: 0;
@@ -150,6 +155,14 @@
   letter-spacing: -0.02em;
   color: var(--ink);
   background: transparent;
+  display: flex;
+  align-items: center;
+}
+
+.field-input.is-ph {
+  color: var(--muted);
+  opacity: 0.65;
+  font-weight: 500;
 }
 
 .field-ph {

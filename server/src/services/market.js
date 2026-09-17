@@ -1,6 +1,7 @@
 import axios from 'axios'
 import https from 'https'
 import {
+  attachXiaobeiRelatedSectors,
   getFundsLatestScales,
   getXiaobeiRealtimePercents,
   peekXiaobeiRealtimePercents,
@@ -38,6 +39,45 @@ const RANGE_FETCH_LIMIT = {
   '6m': 200,
   '1y': 320,
   '3y': 900,
+}
+
+/** 深交所官网交易日历（含法定休市，可查当月/历史月） */
+const SZSE_MONTH_TTL_MS = 12 * 60 * 60 * 1000
+const szseMonthCache = new Map()
+
+export async function getSzseTradingMonth(month) {
+  const key = String(month || '').trim()
+  if (!/^\d{4}-\d{2}$/.test(key)) throw new Error('月份格式应为 YYYY-MM')
+  const hit = szseMonthCache.get(key)
+  if (hit && Date.now() - hit.at < SZSE_MONTH_TTL_MS) return hit.data
+
+  const res = await axios.get(
+    'https://www.szse.cn/api/report/exchange/onepersistenthour/monthList',
+    {
+      timeout: 12000,
+      httpsAgent: agent,
+      headers: {
+        'User-Agent': ua,
+        Referer: 'https://www.szse.cn/aboutus/calendar/',
+      },
+      params: {month: key},
+    },
+  )
+  const rows = Array.isArray(res.data?.data) ? res.data.data : []
+  if (!rows.length) throw new Error('暂无该月交易日历')
+  const days = {}
+  for (const row of rows) {
+    const d = String((row && row.jyrq) || '').slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue
+    days[d] = String(row.jybz) === '1'
+  }
+  const data = {
+    month: key,
+    nowdate: res.data && res.data.nowdate ? String(res.data.nowdate) : '',
+    days,
+  }
+  szseMonthCache.set(key, {at: Date.now(), data})
+  return data
 }
 
 async function eastmoneyGet(url, params, hosts) {
@@ -167,10 +207,14 @@ export async function getUpDownStats() {
   }
 }
 
-/** 小倍板块榜缓存，避免行情轮询打爆 */
+/** 小倍板块榜 / 基金榜缓存，避免行情轮询打爆 */
 const XIAOBEI_BOARD_TTL_MS = 60 * 1000
 let xiaobeiHeatBoardCache = null
 let xiaobeiLegacyBoardCache = null
+let xiaobeiFundHeatCache = null
+let xiaobeiFundUpCache = null
+const xiaobeiFundAccountCache = {pick: null, hold: null}
+let xiaobeiMoneyFlowCache = null
 
 function round2(n) {
   return Math.round(Number(n) * 100) / 100
@@ -299,6 +343,345 @@ async function fetchXiaobeiBoardsForOverview() {
   const heat = await fetchXiaobeiHeatBoards()
   if (heat?.list?.length) return heat
   return fetchXiaobeiIndustryBoards()
+}
+
+/** App 基金热搜榜 accFundHeatTop；涨跌展示的是关联板块涨幅 */
+function mapXiaobeiFundHeatItem(row = {}) {
+  const code = String(row.fundCode || row.code || '').padStart(6, '0')
+  const name = String(row.fundName || row.name || '').trim()
+  if (!/^\d{6}$/.test(code) || !name) return null
+  const sectorChange = Number(row.sectorChangeRate ?? row.changeRate ?? row.change)
+  const heat = Number(row.heat ?? row.pickCount ?? row.holdCount)
+  const sectorName = String(row.sectorName || '').trim()
+  return {
+    code,
+    name,
+    percent: Number.isFinite(sectorChange) ? round2(sectorChange * 100) : null,
+    heat: Number.isFinite(heat) ? heat : null,
+    sectorName,
+    sectorCode: String(row.sectorCode || '').trim(),
+    mappingCode: String(row.sectorCode || '').trim(),
+  }
+}
+
+function mapXiaobeiFundUpItem(row = {}) {
+  const code = String(row.code || row.fundCode || '').padStart(6, '0')
+  const name = String(row.name || row.fundName || '').trim()
+  if (!/^\d{6}$/.test(code) || !name) return null
+  const change = Number(row.change ?? row.changeRate ?? row.dailyYield)
+  const sectorName = String(row.sectorName || row.themeName || '').trim()
+  const sectorCode = String(row.sectorCode || '').trim()
+  return {
+    code,
+    name,
+    percent: Number.isFinite(change) ? round2(change * 100) : null,
+    heat: null,
+    sectorName,
+    sectorCode,
+    mappingCode: String(row.mappingCode || row.extraCode || sectorCode).trim(),
+  }
+}
+
+function sliceFunds(list, size = 0) {
+  const rows = Array.isArray(list) ? list : []
+  const sliced = size > 0 ? rows.slice(0, size) : rows
+  return sliced.map((row) => ({
+    code: row.code,
+    name: row.name,
+    percent: row.percent ?? null,
+    heat: row.heat ?? null,
+    sectorName: row.sectorName || '',
+    sectorCode: row.sectorCode || '',
+    mappingCode: row.mappingCode || '',
+  }))
+}
+
+/**
+ * 小倍 App 基金热搜榜（与「今日基金热搜榜」同源）。
+ * POST https://apiv2.xiaobeiyangji.com/api/app/account/accFundHeatTop
+ * 无需登录；percent 为关联板块涨跌，不是基金本身日涨幅。
+ */
+export async function fetchXiaobeiFundHeatTop() {
+  const hit = xiaobeiFundHeatCache
+  if (hit && Date.now() - hit.at < XIAOBEI_BOARD_TTL_MS) return hit.data
+
+  try {
+    const res = await axios.post(
+      'https://apiv2.xiaobeiyangji.com/api/app/account/accFundHeatTop',
+      xiaobeiApiv2Body({fundType: 'all'}),
+      {
+        httpsAgent: agent,
+        timeout: 12000,
+        headers: xiaobeiApiv2Headers(),
+        validateStatus: () => true,
+      },
+    )
+    if (res.status !== 200 || res.data?.code !== 200) return null
+    const rawList = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
+    const list = rawList.map(mapXiaobeiFundHeatItem).filter(Boolean)
+    if (!list.length) return null
+    const data = {list, source: 'xiaobei-fund-heat'}
+    xiaobeiFundHeatCache = {at: Date.now(), data}
+    return data
+  } catch {
+    return null
+  }
+}
+
+async function fetchXiaobeiFundAccountTop(kind) {
+  const key = kind === 'hold' ? 'hold' : 'pick'
+  const hit = xiaobeiFundAccountCache[key]
+  if (hit && Date.now() - hit.at < XIAOBEI_BOARD_TTL_MS) return hit.data
+
+  try {
+    const res = await axios.post(
+      `https://apiv2.xiaobeiyangji.com/api/app/account/${key === 'hold' ? 'accFundHoldTop' : 'accFundPickTop'}`,
+      xiaobeiApiv2Body({fundType: 'all', limit: 100}),
+      {
+        httpsAgent: agent,
+        timeout: 12000,
+        headers: xiaobeiApiv2Headers(),
+        validateStatus: () => true,
+      },
+    )
+    if (res.status !== 200 || res.data?.code !== 200) return null
+    const rawList = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
+    const list = rawList.map(mapXiaobeiFundHeatItem).filter(Boolean)
+    if (!list.length) return null
+    const data = {list, source: `xiaobei-fund-${key}`}
+    xiaobeiFundAccountCache[key] = {at: Date.now(), data}
+    return data
+  } catch {
+    return null
+  }
+}
+
+/** 小倍 App 自选榜 accFundPickTop；涨跌为关联板块涨幅 */
+export async function fetchXiaobeiFundPickTop() {
+  return fetchXiaobeiFundAccountTop('pick')
+}
+
+/** 小倍 App 持有榜 accFundHoldTop；涨跌为关联板块涨幅 */
+export async function fetchXiaobeiFundHoldTop() {
+  return fetchXiaobeiFundAccountTop('hold')
+}
+
+function roundYi(yuan) {
+  const yi = Number(yuan) / 1e8
+  if (!Number.isFinite(yi)) return null
+  return Math.round(yi * 100) / 100
+}
+
+function formatYiText(yi, {sign = false} = {}) {
+  if (yi == null || !Number.isFinite(yi)) return '--'
+  const abs = Math.abs(yi)
+  const body = abs >= 10000 ? abs.toFixed(0) : abs.toFixed(2)
+  if (sign) {
+    if (yi > 0) return `+${body}亿`
+    if (yi < 0) return `-${body}亿`
+    return `${body}亿`
+  }
+  return yi < 0 ? `-${body}亿` : `${body}亿`
+}
+
+function minuteOf(t) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || ''))
+  if (!m) return null
+  return Number(m[1]) * 60 + Number(m[2])
+}
+
+function dateLabel(t) {
+  const s = String(t || '').trim()
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(5, 10) : s
+}
+
+function dayEdgeLabel(t, edge) {
+  const s = String(t || '').trim()
+  if (edge === 'start' && /^09:3[01]$/.test(s)) return '09:30'
+  if (edge === 'end' && /^15:0[0-5]$/.test(s)) return '15:00'
+  return s
+}
+
+function lunchBreaks(points) {
+  const breaks = []
+  for (let i = 1; i < points.length; i++) {
+    const prev = minuteOf(points[i - 1].t)
+    const cur = minuteOf(points[i].t)
+    if (prev == null || cur == null) continue
+    if (cur - prev >= 20) breaks.push(i - 1)
+  }
+  return breaks
+}
+
+function mapMoneyFlowSeries(rows = [], {daily = false} = {}) {
+  const points = (Array.isArray(rows) ? rows : [])
+    .map((row) => {
+      const yi = roundYi(row?.money)
+      const t = String(row?.val || '').trim()
+      if (!t || yi == null) return null
+      return {t, yi}
+    })
+    .filter(Boolean)
+  if (!points.length) return null
+  const values = points.map((p) => p.yi)
+  const latest = values[values.length - 1]
+  const minYi = Math.min(...values)
+  const maxYi = Math.max(...values)
+  const first = points[0].t
+  const last = points[points.length - 1].t
+  const mid = points[Math.floor((points.length - 1) / 2)].t
+  const xLabels = daily
+    ? [dayEdgeLabel(first, 'start'), '11:30/13:00', dayEdgeLabel(last, 'end')]
+    : [dateLabel(first), dateLabel(mid), dateLabel(last)]
+  return {
+    latest,
+    latestText: formatYiText(latest, {sign: true}),
+    minYi,
+    maxYi,
+    minText: formatYiText(minYi),
+    maxText: formatYiText(maxYi),
+    values,
+    labels: points.map((p) => (daily ? p.t : dateLabel(p.t))),
+    breaks: daily ? lunchBreaks(points) : [],
+    xLabels,
+  }
+}
+
+/**
+ * 小倍市场情绪：6 等分色带，0 轴在微热/微冷交界。
+ * 当日收盘 1.22 落在过热；8-17 的 2.04 贴沸点下沿；8-19 的 -2.45 在冰点。
+ */
+function mapEmotion(score) {
+  const y = Number(score)
+  if (!Number.isFinite(y)) return null
+  if (y >= 2) return {text: '沸点', tone: 'rise'}
+  if (y >= 1) return {text: '过热', tone: 'rise'}
+  if (y >= 0) return {text: '微热', tone: 'rise'}
+  if (y >= -1) return {text: '微冷', tone: 'fall'}
+  if (y >= -2) return {text: '过冷', tone: 'fall'}
+  return {text: '冰点', tone: 'fall'}
+}
+
+/** 小倍主力资金：isDaily=true 当日累计分钟；否则近一月逐日。单位原值元。 */
+export async function fetchXiaobeiMoneyFlow() {
+  const hit = xiaobeiMoneyFlowCache
+  if (hit && Date.now() - hit.at < XIAOBEI_BOARD_TTL_MS) return hit.data
+
+  const post = (path, body) =>
+    axios.post(`https://api.xiaobeiyangji.com/yangji-api/api/${path}`, body, {
+      httpsAgent: agent,
+      timeout: 12000,
+      headers: {
+        'User-Agent': ua,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      validateStatus: () => true,
+    })
+  const body = {version: '3.8.8.0', clientType: 'APP'}
+
+  try {
+    const [dayRes, monthRes, overviewRes] = await Promise.all([
+      post('get-money-flow', {...body, isDaily: true}),
+      post('get-money-flow', body),
+      post('get-market-overview', body),
+    ])
+    const pickMarket = (res) => {
+      const payload = res?.data
+      if (Array.isArray(payload?.market)) return payload.market
+      if (Array.isArray(payload?.data?.market)) return payload.data.market
+      return []
+    }
+    const pickEmotion = (res) => {
+      const payload = res?.data
+      const raw = payload?.data?.emotion ?? payload?.emotion
+      return mapEmotion(raw)
+    }
+    const day = mapMoneyFlowSeries(pickMarket(dayRes), {daily: true})
+    const month = mapMoneyFlowSeries(pickMarket(monthRes), {daily: false})
+    if (!day && !month) return null
+    const data = {
+      day,
+      month,
+      emotion: pickEmotion(overviewRes),
+      source: 'xiaobei-money-flow',
+    }
+    xiaobeiMoneyFlowCache = {at: Date.now(), data}
+    return data
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 小倍 App 基金涨幅榜（与「今日基金涨幅榜」同源）。
+ * POST https://api.xiaobeiyangji.com/yangji-api/api/get-up-ranking
+ * 无需登录；upList 已按当日涨幅降序。
+ */
+export async function fetchXiaobeiFundUpRanking() {
+  const hit = xiaobeiFundUpCache
+  if (hit && Date.now() - hit.at < XIAOBEI_BOARD_TTL_MS) return hit.data
+
+  try {
+    const res = await axios.post(
+      'https://api.xiaobeiyangji.com/yangji-api/api/get-up-ranking',
+      {version: '3.8.8.0', clientType: 'APP'},
+      {
+        httpsAgent: agent,
+        timeout: 15000,
+        headers: {
+          'User-Agent': ua,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        validateStatus: () => true,
+      },
+    )
+    if (res.status !== 200 || res.data?.code !== 200) return null
+    const rawUp = Array.isArray(res.data?.data?.upList) ? res.data.data.upList : []
+    const rawDown = Array.isArray(res.data?.data?.downList) ? res.data.data.downList : []
+    const mappedUp = rawUp.map(mapXiaobeiFundUpItem).filter(Boolean)
+    const mappedDown = rawDown.map(mapXiaobeiFundUpItem).filter(Boolean)
+    if (!mappedUp.length && !mappedDown.length) return null
+    const attached = await attachXiaobeiRelatedSectors([...mappedUp, ...mappedDown])
+    const list = attached.slice(0, mappedUp.length)
+    const downList = attached.slice(mappedUp.length)
+    const data = {list, downList, source: 'xiaobei-fund-up'}
+    xiaobeiFundUpCache = {at: Date.now(), data}
+    return data
+  } catch {
+    return null
+  }
+}
+
+/** 基金榜：tab=hot|gainers|losers|pick|hold */
+export async function getMarketFunds({tab = 'hot', size = 0} = {}) {
+  const key = String(tab || 'hot').toLowerCase()
+  const rawSize = Number(size)
+  const n = Number.isFinite(rawSize) && rawSize > 0 ? Math.min(rawSize, 200) : 0
+  if (key === 'gainers' || key === 'losers') {
+    const up = await fetchXiaobeiFundUpRanking()
+    const items = key === 'losers' ? up?.downList || [] : up?.list || []
+    return {
+      tab: key,
+      source: up?.source || 'xiaobei-fund-up',
+      items: sliceFunds(items, n),
+    }
+  }
+  if (key === 'pick' || key === 'hold') {
+    const ranked = await fetchXiaobeiFundAccountTop(key)
+    return {
+      tab: key,
+      source: ranked?.source || `xiaobei-fund-${key}`,
+      items: sliceFunds(ranked?.list || [], n),
+    }
+  }
+  const heat = await fetchXiaobeiFundHeatTop()
+  return {
+    tab: 'hot',
+    source: heat?.source || 'xiaobei-fund-heat',
+    items: sliceFunds(heat?.list || [], n),
+  }
 }
 
 function sliceBoards(list, sort, size = 0) {
@@ -522,10 +905,21 @@ export async function getMarketBoards({tab = 'gainers', size = 0} = {}) {
 }
 
 export async function getMarketOverview() {
-  const [upDown, xiaobei] = await Promise.all([
+  const [upDown, xiaobei, fundHeat, fundUp, fundPick, fundHold, moneyFlow] = await Promise.all([
     getUpDownStats(),
     fetchXiaobeiBoardsForOverview(),
+    fetchXiaobeiFundHeatTop(),
+    fetchXiaobeiFundUpRanking(),
+    fetchXiaobeiFundPickTop(),
+    fetchXiaobeiFundHoldTop(),
+    fetchXiaobeiMoneyFlow(),
   ])
+
+  const fundHotSearch = sliceFunds(fundHeat?.list || [], 0)
+  const fundGainers = sliceFunds(fundUp?.list || [], 0)
+  const fundLosers = sliceFunds(fundUp?.downList || [], 0)
+  const fundPickSearch = sliceFunds(fundPick?.list || [], 0)
+  const fundHoldSearch = sliceFunds(fundHold?.list || [], 0)
 
   if (xiaobei?.list?.length) {
     return {
@@ -535,6 +929,12 @@ export async function getMarketOverview() {
       boardGainers: sliceBoards(xiaobei.list, 'desc', 0),
       boardUpdateTime: xiaobei.updateTime,
       boardSource: xiaobei.source || 'xiaobei',
+      fundHotSearch,
+      fundGainers,
+      fundLosers,
+      fundPickSearch,
+      fundHoldSearch,
+      moneyFlow: moneyFlow || null,
     }
   }
 
@@ -545,6 +945,12 @@ export async function getMarketOverview() {
     boardGainers: boardGainers.map((i) => ({...i, heat: null})),
     boardUpdateTime: upDown.time,
     boardSource: 'eastmoney',
+    fundHotSearch,
+    fundGainers,
+    fundLosers,
+    fundPickSearch,
+    fundHoldSearch,
+    moneyFlow: moneyFlow || null,
   }
 }
 

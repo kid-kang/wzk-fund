@@ -48,6 +48,17 @@ function formatScaleYi(v, digits = 2) {
   return `${Number(v).toFixed(digits)}亿`
 }
 
+/** 主力资金净流入（亿元，带符号） */
+function formatSignedYi(v) {
+  if (v == null || Number.isNaN(Number(v))) return '--'
+  const n = Number(v)
+  const abs = Math.abs(n)
+  const body = abs >= 10000 ? abs.toFixed(0) : abs.toFixed(2)
+  if (n > 0) return `+${body}亿`
+  if (n < 0) return `-${body}亿`
+  return `${body}亿`
+}
+
 /**
  * 走势图横轴日期标签（天级点距时用）。
  * 近3月等：MM-DD；更长周期由 chartOptions 抽稀后另标。
@@ -71,5 +82,6 @@ module.exports = {
   formatMoney,
   formatAmount,
   formatScaleYi,
+  formatSignedYi,
   formatTrendAxisDate,
 }

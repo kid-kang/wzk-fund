@@ -17,12 +17,17 @@ function round2(n) {
   return toDecimal(n).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber()
 }
 
+/** 份额四舍五入到 4 位小数 */
+function roundShares(n) {
+  return toDecimal(n).toDecimalPlaces(4, Decimal.ROUND_HALF_UP).toNumber()
+}
+
 /** 份额：金额 ÷ 净值，四舍五入到 4 位小数 */
 function sharesFromAmount(amount, netValue) {
   const a = toDecimal(amount)
   const nav = toDecimal(netValue)
   if (a.lte(0) || nav.lte(0)) return 0
-  return a.div(nav).toDecimalPlaces(4, Decimal.ROUND_HALF_UP).toNumber()
+  return roundShares(a.div(nav))
 }
 
 /** 份额 × 净值 → 金额（分） */
@@ -42,7 +47,9 @@ function pnlFromShares(shares, currNav, prevNav) {
 
 module.exports = {
   Decimal,
+  toDecimal,
   round2,
+  roundShares,
   sharesFromAmount,
   amountFromShares,
   pnlFromShares,

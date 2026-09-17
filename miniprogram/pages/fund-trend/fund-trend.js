@@ -9,6 +9,7 @@ const {
   isRangeAvailable,
 } = require('../../utils/fundRanges')
 const {getThemeViewState, syncNavigationBar, navigateTo} = require('../../utils/theme')
+const {holdDays, matchBuyNavDate} = require('../../utils/tradingCalendar')
 
 function mapSectorTags(quote) {
   const items = Array.isArray(quote && quote.sectorItems) ? quote.sectorItems : []
@@ -107,6 +108,9 @@ Page({
     held: false,
     watchLabel: '+ 自选',
     watchBusy: false,
+    buyDate: '',
+    tradeMarks: [],
+    showChartLegend: false,
     scaleLoading: true,
     scaleError: '',
     scaleLatest: null,
@@ -137,8 +141,8 @@ Page({
       holdingsLoading: true,
       stageLoading: true,
       scaleLoading: true,
+      ...this.watchMeta(code),
     })
-    this.syncWatchState()
     this.bootstrap()
     this.loadHoldings({silent: false})
     this.loadStageStats()
@@ -269,14 +273,36 @@ Page({
       return
     }
     const all = this.stageSourceList()
+    const buyDate = this.watchMeta(this.data.code).buyDate || this.data.buyDate
+    const marks = this.watchMeta(this.data.code).tradeMarks || this.data.tradeMarks || []
+    const dates = all.map((item) => item.date)
+    const buyNavDates = new Set()
+    const sellNavDates = new Set()
+    const exitNavDates = new Set()
+    const seedDates = marks.length
+      ? marks
+      : buyDate
+        ? [{date: buyDate, kind: 'buy'}]
+        : []
+    seedDates.forEach((m) => {
+      const hit = matchBuyNavDate(dates, m.date)
+      if (!hit) return
+      if (m.kind === 'exit') exitNavDates.add(hit)
+      else if (m.kind === 'sell') sellNavDates.add(hit)
+      else buyNavDates.add(hit)
+    })
     const n = limit != null ? limit : this.data.stageLimit
     const rows = all.slice(0, n).map((item) => {
       if (tab === 'nav') {
+        const isExit = exitNavDates.has(item.date)
         return {
           key: item.date,
           label: item.dateLabel,
           valueText: item.dayChangeText,
           valueClass: item.dayChangeClass,
+          isBuy: buyNavDates.has(item.date),
+          isSell: !isExit && sellNavDates.has(item.date),
+          isExit,
         }
       }
       return {
@@ -363,15 +389,29 @@ Page({
     const fund = store.getFund(code || this.data.code)
     const held = !!(fund && fund.type === 'hold')
     const watched = !!(fund && (fund.type === 'watch' || fund.type === 'hold'))
+    const days = held ? holdDays(fund && fund.buyDate) : null
+    const buyDate = held ? String((fund && fund.buyDate) || '') : ''
+    const tradeMarks = store.listTradeMarks(code || this.data.code)
     return {
       held,
       watched,
-      watchLabel: held ? '已持有' : watched ? '已自选' : '+ 自选',
+      buyDate,
+      tradeMarks,
+      showChartLegend: held || tradeMarks.length > 0,
+      watchLabel:
+        held && days != null
+          ? `已持有 ${days}天`
+          : held
+            ? '已持有'
+            : watched
+              ? '已自选'
+              : '+ 自选',
     }
   },
 
   syncWatchState() {
     this.setData(this.watchMeta(this.data.code))
+    if (this._stageStats && this.data.stageTab === 'nav') this.refreshStageRows()
   },
 
   async onAddWatch() {

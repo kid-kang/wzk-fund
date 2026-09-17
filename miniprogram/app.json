@@ -7,7 +7,10 @@
     "pages/fund-trend/fund-trend",
     "pages/index-trend/index-trend",
     "pages/sector-funds/sector-funds",
-    "pages/fund-qa/fund-qa"
+    "pages/fund-qa/fund-qa",
+    "pages/profit-log/profit-log",
+    "pages/fund-ops/fund-ops",
+    "pages/trade-log/trade-log"
   ],
   "window": {
     "navigationBarTitleText": "WZK Fund",

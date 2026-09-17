@@ -1,4 +1,5 @@
 const api = require('../../utils/api')
+const store = require('../../utils/portfolioStore')
 const {
   formatAmount,
   formatMoney,
@@ -8,9 +9,19 @@ const {
 } = require('../../utils/format')
 const {navigateTo} = require('../../utils/theme')
 const {toSparkSeries, reuseUnchangedSpark} = require('../../utils/spark')
-const Toast = require('@vant/weapp/toast/toast').default
+const {backfillProfitLog} = require('../../utils/profitSync')
 
-function mapHoldRow(row) {
+function activeSipCodes() {
+  const set = Object.create(null)
+  const plans = store.listSipPlans()
+  for (let i = 0; i < plans.length; i++) {
+    const p = plans[i]
+    if (p && p.active && p.code) set[p.code] = true
+  }
+  return set
+}
+
+function mapHoldRow(row, sipCodes) {
   const name = row.name || row.code || ''
   const sectors = Array.isArray(row.sectors) ? row.sectors : []
   const sectorTags =
@@ -33,6 +44,7 @@ function mapHoldRow(row) {
   const trendPct = Number(row.realtimePercent)
   const showTrendPct = !!trendDateText && Number.isFinite(trendPct)
   const sparkSeries = toSparkSeries(row.trend || [], 'growth')
+  const hasSip = !!(sipCodes && sipCodes[row.code])
   const mapped = Object.assign({}, row, {
     name,
     codeMark: String(row.code || '').slice(-6) || '······',
@@ -54,8 +66,9 @@ function mapHoldRow(row) {
     trendDateShort: String(row.trendDateShort || '').trim(),
     trendPctText: showTrendPct ? formatPct(trendPct) : '',
     trendPctTone: showTrendPct ? trendPct : null,
+    hasSip,
     sectorTags,
-    hasTags: sectorTags.length > 0,
+    hasTags: hasSip || sectorTags.length > 0,
     spark: sparkSeries.spark,
     sparkBreaks: sparkSeries.sparkBreaks,
     sparkKey: sparkSeries.sparkKey,
@@ -72,9 +85,10 @@ function pctOfTotal(part, total) {
 }
 
 function withPortfolioWeight(rows, grandTotal) {
+  const sipCodes = activeSipCodes()
   return (rows || []).map((row) => {
     const weight = pctOfTotal(row.amount, grandTotal)
-    return mapHoldRow(Object.assign({}, row, {weight}))
+    return mapHoldRow(Object.assign({}, row, {weight}), sipCodes)
   })
 }
 
@@ -287,6 +301,8 @@ Component({
             ? `${pctOfTotal(goldInPortfolio, grandTotal).toFixed(1)}%`
             : ''
 
+        backfillProfitLog().catch(() => {})
+
         if (results.every((r) => r.status === 'rejected')) {
           const failed = results[0]
           patch.error =
@@ -312,15 +328,12 @@ Component({
     onEdit(e) {
       const ds = e.currentTarget.dataset || {}
       const code = ds.code
-      const parts = [`mode=hold`, `code=${code}`]
+      const parts = [`code=${code}`]
       if (ds.name) parts.push(`name=${encodeURIComponent(ds.name)}`)
       if (ds.amount != null && ds.amount !== '') {
         parts.push(`amount=${encodeURIComponent(String(ds.amount))}`)
       }
-      if (ds.cost != null && Number(ds.cost) > 0) {
-        parts.push(`cost=${encodeURIComponent(String(ds.cost))}`)
-      }
-      navigateTo(`/pages/fund-form/fund-form?${parts.join('&')}`)
+      navigateTo(`/pages/fund-ops/fund-ops?${parts.join('&')}`)
     },
 
     onOpenTrend(e) {
@@ -359,43 +372,6 @@ Component({
     onOpenQaTips(e) {
       const q = (e.currentTarget.dataset && e.currentTarget.dataset.q) || 'qdii-pnl'
       navigateTo(`/pages/fund-qa/fund-qa?q=${encodeURIComponent(q)}`)
-    },
-
-    dropHoldRow(code) {
-      const key = String(code || '').padStart(6, '0')
-      const realtimeList = (this.data.realtimeList || []).filter((r) => r.code !== key)
-      const delayedList = (this.data.delayedList || []).filter((r) => r.code !== key)
-      this.setData({
-        realtimeList,
-        delayedList,
-        hasRealtime: realtimeList.length > 0,
-        hasDelayed: delayedList.length > 0,
-        hasPortfolio:
-          realtimeList.length > 0 ||
-          delayedList.length > 0 ||
-          (this.data.showGold && this.data.hasGold),
-      })
-    },
-
-    onRemove(e) {
-      const code = e.currentTarget.dataset.code
-      const name = e.currentTarget.dataset.name || code
-      wx.showModal({
-        title: '删除持仓',
-        content: `确认删除 ${name}？`,
-        confirmText: '删除',
-        confirmColor: '#ff3b45',
-        success: async (res) => {
-          if (!res.confirm) return
-          try {
-            await api.removeFund(code)
-            this.dropHoldRow(code)
-            this.load(true)
-          } catch (err) {
-            Toast.fail((err && err.message) || '删除失败')
-          }
-        },
-      })
     },
   },
 })

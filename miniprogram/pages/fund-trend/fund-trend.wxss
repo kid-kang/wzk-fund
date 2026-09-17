@@ -233,6 +233,64 @@
   font-weight: 780;
 }
 
+.chart-legend {
+  position: absolute;
+  z-index: 2;
+  top: 8rpx;
+  right: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  pointer-events: none;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 20rpx;
+  font-weight: 620;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.chart-legend-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2rpx rgba(16, 20, 28, 0.06);
+}
+
+.chart-legend-dot.is-buy {
+  background: #d7263d;
+}
+
+.chart-legend-dot.is-sell {
+  background: #3d5afe;
+}
+
+.chart-legend-dot.is-exit {
+  background: #0b6b4f;
+}
+
+.theme-dark .chart-legend-dot {
+  box-shadow: 0 0 0 2rpx rgba(11, 16, 24, 0.55);
+}
+
+.theme-dark .chart-legend-dot.is-buy {
+  background: #ff6b7a;
+}
+
+.theme-dark .chart-legend-dot.is-sell {
+  background: #8ea2ff;
+}
+
+.theme-dark .chart-legend-dot.is-exit {
+  background: #4bb892;
+}
+
 .err {
   margin: 8rpx 0;
   padding: 14rpx 18rpx;
@@ -243,6 +301,7 @@
 }
 
 .chart-stage {
+  position: relative;
   margin-top: 4rpx;
   margin-left: -8rpx;
   margin-right: -8rpx;
@@ -606,9 +665,173 @@
 .stage-row-label {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
   font-size: 26rpx;
   font-weight: 680;
   color: var(--ft-ink);
+}
+
+.stage-row.is-buy {
+  border-radius: 14rpx;
+  background: rgba(215, 38, 61, 0.07);
+  border-top-color: transparent;
+}
+
+.theme-dark .stage-row.is-buy {
+  background: rgba(255, 107, 122, 0.12);
+}
+
+.stage-row.is-buy .stage-row-label {
+  color: var(--rise);
+  font-weight: 760;
+}
+
+.stage-buy-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: var(--rise);
+  box-shadow: 0 0 0 3rpx rgba(215, 38, 61, 0.18);
+  flex-shrink: 0;
+}
+
+.theme-dark .stage-buy-dot {
+  box-shadow: 0 0 0 3rpx rgba(255, 107, 122, 0.22);
+}
+
+.stage-buy-tag {
+  flex-shrink: 0;
+  font-size: 18rpx;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+  color: var(--rise);
+  line-height: 1.2;
+}
+
+.stage-row.is-sell {
+  border-radius: 14rpx;
+  background: rgba(61, 90, 254, 0.07);
+  border-top-color: transparent;
+}
+
+.theme-dark .stage-row.is-sell {
+  background: rgba(142, 162, 255, 0.12);
+}
+
+.stage-row.is-buy.is-sell {
+  background: linear-gradient(
+    90deg,
+    rgba(215, 38, 61, 0.07),
+    rgba(61, 90, 254, 0.07)
+  );
+}
+
+.theme-dark .stage-row.is-buy.is-sell {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 107, 122, 0.12),
+    rgba(142, 162, 255, 0.12)
+  );
+}
+
+.stage-row.is-sell .stage-row-label {
+  color: #3d5afe;
+  font-weight: 760;
+}
+
+.theme-dark .stage-row.is-sell .stage-row-label {
+  color: #8ea2ff;
+}
+
+.stage-sell-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #3d5afe;
+  box-shadow: 0 0 0 3rpx rgba(61, 90, 254, 0.18);
+  flex-shrink: 0;
+}
+
+.theme-dark .stage-sell-dot {
+  background: #8ea2ff;
+  box-shadow: 0 0 0 3rpx rgba(142, 162, 255, 0.22);
+}
+
+.stage-sell-tag {
+  flex-shrink: 0;
+  font-size: 18rpx;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+  color: #3d5afe;
+  line-height: 1.2;
+}
+
+.theme-dark .stage-sell-tag {
+  color: #8ea2ff;
+}
+
+.stage-row.is-exit {
+  border-radius: 14rpx;
+  background: rgba(11, 107, 79, 0.07);
+  border-top-color: transparent;
+}
+
+.theme-dark .stage-row.is-exit {
+  background: rgba(75, 184, 146, 0.12);
+}
+
+.stage-row.is-buy.is-exit {
+  background: linear-gradient(
+    90deg,
+    rgba(215, 38, 61, 0.07),
+    rgba(11, 107, 79, 0.07)
+  );
+}
+
+.theme-dark .stage-row.is-buy.is-exit {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 107, 122, 0.12),
+    rgba(75, 184, 146, 0.12)
+  );
+}
+
+.stage-row.is-exit .stage-row-label {
+  color: #0b6b4f;
+  font-weight: 760;
+}
+
+.theme-dark .stage-row.is-exit .stage-row-label {
+  color: #4bb892;
+}
+
+.stage-exit-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #0b6b4f;
+  box-shadow: 0 0 0 3rpx rgba(11, 107, 79, 0.18);
+  flex-shrink: 0;
+}
+
+.theme-dark .stage-exit-dot {
+  background: #4bb892;
+  box-shadow: 0 0 0 3rpx rgba(75, 184, 146, 0.22);
+}
+
+.stage-exit-tag {
+  flex-shrink: 0;
+  font-size: 18rpx;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+  color: #0b6b4f;
+  line-height: 1.2;
+}
+
+.theme-dark .stage-exit-tag {
+  color: #4bb892;
 }
 
 .stage-row-value,

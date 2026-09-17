@@ -12,6 +12,13 @@ function assertOk(data) {
 }
 
 async function fetchHoldings() {
+  try {
+    const tradeOps = require('./tradeOps')
+    await tradeOps.settlePendingTrades()
+    await tradeOps.applyDueSips()
+  } catch (e) {
+    // 定投补记 / 待确认落账失败不挡持仓刷新
+  }
   const funds = store.listFunds('hold')
   const data = await request({
     url: '/api/funds/quotes',
@@ -55,6 +62,15 @@ async function fetchIndexHistory(code, range = '1m') {
   const data = await request({
     url: `/api/indices/${encodeURIComponent(code)}/history`,
     data: {range},
+  })
+  assertOk(data)
+  return data.data
+}
+
+async function fetchTradingDays(month) {
+  const data = await request({
+    url: '/api/market/trading-days',
+    data: month ? {month} : {},
   })
   assertOk(data)
   return data.data
@@ -168,6 +184,11 @@ async function createFund(payload) {
     name: payload.name,
     sectors: payload.sectors,
   })
+  const existing = store.getFund(meta.code)
+  if (existing && existing.type === 'hold') {
+    throw new Error('该基金已在持仓中，请到持仓页操作')
+  }
+
   const amount = payload.amount != null ? payload.amount : 0
 
   let shares = 0
@@ -184,6 +205,7 @@ async function createFund(payload) {
     type: payload.type || 'watch',
     shares,
     cost: payload.type === 'hold' ? payload.cost : 0,
+    buyDate: payload.type === 'hold' ? payload.buyDate : '',
     sectors: payload.sectors && payload.sectors.length ? payload.sectors : meta.sectors,
     ftype,
     fundType: classifyFundType(ftype, name),
@@ -266,6 +288,7 @@ module.exports = {
   fetchWatchlist,
   fetchIndices,
   fetchIndexHistory,
+  fetchTradingDays,
   fetchFundHistory,
   fetchFundQuote,
   fetchMarketOverview,

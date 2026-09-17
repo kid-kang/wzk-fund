@@ -1,0 +1,6 @@
+.tape-canvas {
+  width: 100%;
+  display: block;
+  position: relative;
+  z-index: 0;
+}

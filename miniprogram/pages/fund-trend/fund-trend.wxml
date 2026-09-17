@@ -32,7 +32,8 @@
             <text class="sector-tag is-link" wx:for="{{sectorTags}}" wx:for-item="tag" wx:key="name"
               data-name="{{tag.name}}" data-sector="{{tag.sectorCode}}" data-mapping="{{tag.mappingCode}}"
               catchtap="onOpenSector">{{tag.name}}</text>
-            <text class="sector-tag realtime-tag {{realtimePctClass}}" wx:if="{{hasRealtimePct}}">{{realtimePctText}}</text>
+            <text class="sector-tag realtime-tag {{realtimePctClass}}"
+              wx:if="{{hasRealtimePct}}">{{realtimePctText}}</text>
           </view>
           <view class="ticket-rule" aria-hidden="true"></view>
         </view>
@@ -50,8 +51,23 @@
         <van-empty wx:elif="{{!loading && !chartPoints.length}}" description="暂无该周期数据" />
 
         <view class="chart-stage" wx:if="{{!loading && chartPoints.length}}">
+          <view class="chart-legend" wx:if="{{showChartLegend}}" aria-hidden="true">
+            <view class="chart-legend-item">
+              <view class="chart-legend-dot is-buy"></view>
+              <text>买入</text>
+            </view>
+            <view class="chart-legend-item">
+              <view class="chart-legend-dot is-sell"></view>
+              <text>卖出</text>
+            </view>
+            <view class="chart-legend-item">
+              <view class="chart-legend-dot is-exit"></view>
+              <text>清仓</text>
+            </view>
+          </view>
           <ec-line points="{{chartPoints}}" valueKey="value" mode="trend" theme="{{theme}}" valueMode="percent"
-            extraKey="netValue" extraLabel="净值" showExtremes="{{true}}" range="{{range}}" height="{{chartHeight}}" />
+            extraKey="netValue" extraLabel="净值" showExtremes="{{true}}" range="{{range}}" markDate="{{buyDate}}"
+            markDates="{{tradeMarks}}" height="{{chartHeight}}" />
         </view>
 
         <view class="stage-block">
@@ -148,8 +164,18 @@
                 <view class="stage-err" wx:elif="{{stageError && !stageRows.length}}">{{stageError}}</view>
 
                 <view class="stage-list" wx:if="{{!stageLoading && stageRows.length}}">
-                  <view class="stage-row {{stageShowDd ? 'has-dd' : ''}}" wx:for="{{stageRows}}" wx:key="key">
-                    <text class="stage-row-label">{{item.label}}</text>
+                  <view
+                    class="stage-row {{item.isBuy ? 'is-buy' : ''}} {{item.isSell ? 'is-sell' : ''}} {{item.isExit ? 'is-exit' : ''}} {{stageShowDd ? 'has-dd' : ''}}"
+                    wx:for="{{stageRows}}" wx:key="key">
+                    <view class="stage-row-label">
+                      <view class="stage-buy-dot" wx:if="{{item.isBuy}}"></view>
+                      <view class="stage-sell-dot" wx:if="{{item.isSell}}"></view>
+                      <view class="stage-exit-dot" wx:if="{{item.isExit}}"></view>
+                      <text>{{item.label}}</text>
+                      <text class="stage-buy-tag" wx:if="{{item.isBuy}}">买入</text>
+                      <text class="stage-sell-tag" wx:if="{{item.isSell}}">卖出</text>
+                      <text class="stage-exit-tag" wx:if="{{item.isExit}}">清仓</text>
+                    </view>
                     <text class="stage-row-value mono {{item.valueClass}}">{{item.valueText}}</text>
                     <text class="stage-row-dd mono {{item.ddClass}}" wx:if="{{stageShowDd}}">{{item.ddText}}</text>
                   </view>

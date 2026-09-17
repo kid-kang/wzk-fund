@@ -1,0 +1,7 @@
+<canvas
+  type="2d"
+  id="tape"
+  class="tape-canvas"
+  disable-scroll="{{true}}"
+  style="height: {{height}}px;"
+></canvas>

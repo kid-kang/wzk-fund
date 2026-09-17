@@ -1,0 +1,11 @@
+{
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "backgroundColor": "#0B1018",
+  "backgroundColorTop": "#0B1018",
+  "backgroundColorBottom": "#0B1018",
+  "initialRenderingCache": "static",
+  "usingComponents": {
+    "app-nav-bar": "/components/app-nav-bar/app-nav-bar"
+  }
+}

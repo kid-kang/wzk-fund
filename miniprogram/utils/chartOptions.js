@@ -1,5 +1,6 @@
 const {formatTrendAxisDate} = require('./format')
 const {getTone, PALETTE} = require('./palette')
+const {matchBuyNavDate} = require('./tradingCalendar')
 
 const RISE = PALETTE.light.rise
 const FALL = PALETTE.light.fall
@@ -72,22 +73,62 @@ function resolveSamplePlan(range, points) {
 
 /**
  * 按周期抽稀走势点（保证首尾点）。
+ * 买入/卖出日即使被步长跳过，也从原始序列里单独加回去。
  */
-function sampleTrendPoints(points, range) {
+function sampleTrendPoints(points, range, keepDates) {
   const list = (points || []).filter(Boolean)
-  if (list.length <= 2) return list
-  const plan = resolveSamplePlan(range, list)
-  if (plan.mode === 'day') return list
+  if (!list.length) return list
 
-  const stride = Math.max(2, plan.stride || 2)
-  const picked = [list[0]]
-  for (let i = stride; i < list.length - 1; i += stride) {
-    picked.push(list[i])
+  const keepList = Array.isArray(keepDates)
+    ? keepDates
+    : keepDates
+      ? [keepDates]
+      : []
+
+  const keepIdx = new Set()
+  const plan = resolveSamplePlan(range, list)
+  if (list.length <= 2 || plan.mode === 'day') {
+    for (let i = 0; i < list.length; i++) keepIdx.add(i)
+  } else {
+    const stride = Math.max(2, plan.stride || 2)
+    keepIdx.add(0)
+    keepIdx.add(list.length - 1)
+    for (let i = stride; i < list.length - 1; i += stride) keepIdx.add(i)
   }
-  if (picked[picked.length - 1] !== list[list.length - 1]) {
-    picked.push(list[list.length - 1])
+
+  for (let k = 0; k < keepList.length; k++) {
+    const hit = findBuyPoint(list, keepList[k])
+    const keepKey = hit ? pointDateKey(hit) : ''
+    if (!keepKey) continue
+    for (let i = 0; i < list.length; i++) {
+      if (pointDateKey(list[i]) === keepKey) {
+        keepIdx.add(i)
+        break
+      }
+    }
+  }
+
+  if (keepIdx.size === list.length) return list
+  const picked = []
+  for (let i = 0; i < list.length; i++) {
+    if (keepIdx.has(i)) picked.push(list[i])
   }
   return picked
+}
+
+function findBuyPoint(points, buyDate) {
+  const key = matchBuyNavDate((points || []).map(pointDateKey), buyDate)
+  if (!key) return null
+  const list = points || []
+  for (let i = 0; i < list.length; i++) {
+    if (pointDateKey(list[i]) === key) return list[i]
+  }
+  return null
+}
+
+function buyDateKey(points, buyDate) {
+  const hit = findBuyPoint(points, buyDate)
+  return hit ? pointDateKey(hit) : ''
 }
 
 /** 稀疏刻度：idxs 为有标签的下标，始终保留首尾 */
@@ -128,8 +169,50 @@ function buildBoundaryLabels(fullDates, unit, maxTicks) {
   return labels.map((l, i) => (keep.has(i) ? l : ''))
 }
 
-function extractSeries(points, valueKey, range) {
-  const sampled = sampleTrendPoints(points, range)
+function collectKeepDates(markDate, markDates) {
+  const keep = []
+  if (markDate) keep.push(markDate)
+  const list = Array.isArray(markDates) ? markDates : []
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i]
+    if (!item) continue
+    if (typeof item === 'string') keep.push(item)
+    else if (item.date) keep.push(item.date)
+  }
+  return keep
+}
+
+function collectMarkKeys(sampled, markDate, markDates) {
+  const byDate = new Map()
+  const rank = {buy: 1, sell: 2, exit: 3}
+  function add(date, kind) {
+    const key = buyDateKey(sampled, date)
+    if (!key) return
+    const next = rank[kind] ? kind : 'buy'
+    const prev = byDate.get(key)
+    if (!prev || rank[next] > rank[prev]) byDate.set(key, next)
+  }
+  if (markDate) add(markDate, 'buy')
+  const list = Array.isArray(markDates) ? markDates : []
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i]
+    if (!item) continue
+    if (typeof item === 'string') add(item, 'buy')
+    else add(item.date, item.kind === 'exit' ? 'exit' : item.kind === 'sell' ? 'sell' : 'buy')
+  }
+  const buyKeys = new Set()
+  const sellKeys = new Set()
+  const exitKeys = new Set()
+  byDate.forEach((kind, key) => {
+    if (kind === 'exit') exitKeys.add(key)
+    else if (kind === 'sell') sellKeys.add(key)
+    else buyKeys.add(key)
+  })
+  return {buyKeys, sellKeys, exitKeys}
+}
+
+function extractSeries(points, valueKey, range, keepDates) {
+  const sampled = sampleTrendPoints(points, range, keepDates)
   const plan = resolveSamplePlan(range, points)
   const labels = []
   const values = []
@@ -278,13 +361,17 @@ function buildTrendOption({
   extraLabel,
   showExtremes = false,
   range = '',
+  markDate = '',
+  markDates = [],
 }) {
   const muted = theme === 'dark' ? '#8b93a7' : '#7a8494'
   const axisLine = theme === 'dark' ? 'rgba(238,242,255,0.12)' : 'rgba(16,20,28,0.1)'
+  const keepDates = collectKeepDates(markDate, markDates)
   const {labels, values, full, sparseAxis, sampled} = extractSeries(
     points,
     valueKey,
     range,
+    keepDates,
   )
   if (!values.length) return null
 
@@ -339,6 +426,11 @@ function buildTrendOption({
       ? `${last > 0 ? '+' : ''}${last.toFixed(2)}%`
       : last.toFixed(valueMode === 'netValue' ? 4 : 2)
 
+  const {buyKeys, sellKeys, exitKeys} = collectMarkKeys(sampled, markDate, markDates)
+  const buyDot = theme === 'dark' ? '#ff6b7a' : '#d7263d'
+  const sellDot = theme === 'dark' ? '#8ea2ff' : '#3d5afe'
+  const exitDot = theme === 'dark' ? '#4bb892' : '#0b6b4f'
+
   const yFormatter =
     valueMode === 'percent'
       ? (v) => `${v > 0 ? '+' : ''}${Number(v).toFixed(1)}%`
@@ -375,18 +467,29 @@ function buildTrendOption({
         if (extraLabel && extras[idx] != null && Number.isFinite(extras[idx])) {
           extra = `\n${extraLabel} ${Number(extras[idx]).toFixed(4)}`
         }
+        if (buyKeys.has(pointDateKey({date})) && sellKeys.has(pointDateKey({date}))) {
+          extra += '\n买入 / 卖出'
+        } else if (buyKeys.has(pointDateKey({date}))) {
+          extra += '\n买入'
+        } else if (sellKeys.has(pointDateKey({date}))) {
+          extra += '\n卖出'
+        }
         return `${date}\n${head}${extra}`
       },
     },
     xAxis: {
       type: 'category',
-      data: labels,
+      data: full,
       boundaryGap: false,
       axisLine: {lineStyle: {color: axisLine}},
       axisTick: {show: false},
       axisLabel: {
         color: muted,
         fontSize: 10,
+        formatter(value) {
+          const idx = full.indexOf(value)
+          return idx >= 0 ? labels[idx] || '' : ''
+        },
         // 周/月轴标签已按边界稀疏；天轴等距抽样
         interval: sparseAxis
           ? 0
@@ -410,7 +513,7 @@ function buildTrendOption({
         data: values,
         showSymbol: false,
         smooth: 0.2,
-        lineStyle: {width: 2, color},
+        lineStyle: {width: 1.4, color},
         areaStyle: {
           color: {
             type: 'linear',
@@ -445,14 +548,14 @@ function buildTrendOption({
               label: {show: false},
             }
             : undefined,
-        markPoint: showExtremes
-          ? {
-            symbol: 'circle',
-            symbolSize: 6,
-            data: [
+        markPoint: (() => {
+          const data = []
+          if (showExtremes) {
+            data.push(
               {
                 type: 'max',
                 name: '高',
+                symbolSize: 4,
                 itemStyle: {color: extremeColor || fundTitle || ink},
                 label: {
                   show: true,
@@ -461,8 +564,8 @@ function buildTrendOption({
                   align: maxLabelLayout.align,
                   offset: maxLabelLayout.offset,
                   color: extremeColor || fundTitle || ink,
-                  fontSize: 11,
-                  fontWeight: 700,
+                  fontSize: 9,
+                  fontWeight: 500,
                   backgroundColor: 'transparent',
                   formatter(p) {
                     return formatExtreme(Number(p.value))
@@ -472,6 +575,7 @@ function buildTrendOption({
               {
                 type: 'min',
                 name: '低',
+                symbolSize: 4,
                 itemStyle: {color: extremeColor || fundTitle || ink},
                 label: {
                   show: true,
@@ -480,17 +584,73 @@ function buildTrendOption({
                   align: minLabelLayout.align,
                   offset: minLabelLayout.offset,
                   color: extremeColor || fundTitle || ink,
-                  fontSize: 11,
-                  fontWeight: 700,
+                  fontSize: 9,
+                  fontWeight: 500,
                   backgroundColor: 'transparent',
                   formatter(p) {
                     return formatExtreme(Number(p.value))
                   },
                 },
               },
-            ],
+            )
           }
-          : undefined,
+          const tradeMarks = []
+          buyKeys.forEach((key) => {
+            const idx = full.findIndex((d) => pointDateKey({date: d}) === key)
+            if (idx < 0 || values[idx] == null || !full[idx]) return
+            tradeMarks.push({
+              name: '买入',
+              xAxis: full[idx],
+              yAxis: values[idx],
+              symbolSize: 5,
+              itemStyle: {
+                color: buyDot,
+                borderColor: theme === 'dark' ? '#0b1018' : '#ffffff',
+                borderWidth: 1,
+              },
+              label: {show: false},
+            })
+          })
+          sellKeys.forEach((key) => {
+            const idx = full.findIndex((d) => pointDateKey({date: d}) === key)
+            if (idx < 0 || values[idx] == null || !full[idx]) return
+            tradeMarks.push({
+              name: '卖出',
+              xAxis: full[idx],
+              yAxis: values[idx],
+              symbolSize: 5,
+              itemStyle: {
+                color: sellDot,
+                borderColor: theme === 'dark' ? '#0b1018' : '#ffffff',
+                borderWidth: 1,
+              },
+              label: {show: false},
+            })
+          })
+          exitKeys.forEach((key) => {
+            const idx = full.findIndex((d) => pointDateKey({date: d}) === key)
+            if (idx < 0 || values[idx] == null || !full[idx]) return
+            tradeMarks.push({
+              name: '清仓',
+              xAxis: full[idx],
+              yAxis: values[idx],
+              symbolSize: 6,
+              itemStyle: {
+                color: exitDot,
+                borderColor: theme === 'dark' ? '#0b1018' : '#ffffff',
+                borderWidth: 1,
+              },
+              label: {show: false},
+            })
+          })
+          data.push.apply(data, tradeMarks)
+          if (!data.length) return undefined
+          return {
+            symbol: 'circle',
+            symbolSize: 4,
+            data,
+          }
+        })(),
       },
     ],
   }

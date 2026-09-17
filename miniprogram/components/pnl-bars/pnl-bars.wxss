@@ -1,0 +1,8 @@
+.stave {
+  width: 100%;
+}
+
+.stave-canvas {
+  width: 100%;
+  display: block;
+}

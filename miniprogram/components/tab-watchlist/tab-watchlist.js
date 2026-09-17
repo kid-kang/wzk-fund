@@ -220,7 +220,7 @@ Component({
       const name = e.currentTarget.dataset.name || code
       wx.showModal({
         title: '删除自选',
-        content: `确认删除 ${name}？`,
+        content: `确认将 ${name} 移出自选？交易记录和买卖点会保留。`,
         confirmText: '删除',
         confirmColor: '#ff3b45',
         success: async (res) => {

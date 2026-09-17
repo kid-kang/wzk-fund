@@ -54,12 +54,35 @@
       <view class="rail">
         <view class="rail-head">
           <text class="rail-code mono">02</text>
+          <text class="rail-name">账本</text>
+        </view>
+
+        <view class="xfer" hover-class="xfer-hover" bindtap="onOpenProfitLog">
+          <view class="xfer-text">
+            <text class="row-title">收益记录</text>
+            <text class="row-desc">按天看盈亏差距</text>
+          </view>
+          <text class="xfer-arrow mono">›</text>
+        </view>
+
+        <view class="xfer" hover-class="xfer-hover" bindtap="onOpenTradeLog">
+          <view class="xfer-text">
+            <text class="row-title">交易记录</text>
+            <text class="row-desc">加仓、减仓与定投流水</text>
+          </view>
+          <text class="xfer-arrow mono">›</text>
+        </view>
+      </view>
+
+      <view class="rail">
+        <view class="rail-head">
+          <text class="rail-code mono">03</text>
           <text class="rail-name">接口</text>
         </view>
 
         <view class="endpoint">
           <text class="endpoint-prompt mono">$</text>
-          <input class="endpoint-input mono" value="{{apiBase}}" placeholder="http://127.0.0.1:8787"
+          <input class="endpoint-input mono" value="{{apiBase}}" placeholder="https://wzk-fund.uk"
             placeholder-class="endpoint-ph" confirm-type="done" bindinput="onApiInput" />
         </view>
 
@@ -75,7 +98,7 @@
 
       <view class="rail">
         <view class="rail-head">
-          <text class="rail-code mono">03</text>
+          <text class="rail-code mono">04</text>
           <text class="rail-name">配置</text>
         </view>
 
@@ -98,7 +121,7 @@
         <view class="xfer" hover-class="xfer-hover" bindtap="onClearConfig">
           <view class="xfer-text">
             <text class="row-title">一键清空</text>
-            <text class="row-desc">清空持仓、自选或全部基金配置</text>
+            <text class="row-desc">清空持仓、自选或全部。删自选会保留交易记录</text>
           </view>
           <text class="xfer-arrow mono">⌫</text>
         </view>
@@ -106,7 +129,7 @@
 
       <view class="rail">
         <view class="rail-head">
-          <text class="rail-code mono">04</text>
+          <text class="rail-code mono">05</text>
           <text class="rail-name">使用说明</text>
         </view>
 

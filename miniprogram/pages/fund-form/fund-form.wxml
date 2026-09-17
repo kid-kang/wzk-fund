@@ -58,16 +58,28 @@
         </view>
         <view class="field-row">
           <text class="field-prefix">¥</text>
-          <input class="field-input mono" type="digit" value="{{cost}}" placeholder="选填" placeholder-class="field-ph"
-            bindinput="onCostInput" />
+          <input class="field-input mono" type="digit" value="{{cost}}" placeholder="请填写投入成本"
+            placeholder-class="field-ph" bindinput="onCostInput" />
         </view>
-        <view class="field-tip is-inline">
-          <text>不填则列表不显示收益率</text>
-          <view class="field-tip-mark">
-            <van-icon custom-class="field-tip-icon" name="gold-coin-o" size="11px"
-              color="{{theme === 'dark' ? '#7a8496' : '#8a93a3'}}" />
+        <text class="field-tip">用于计算持仓收益率</text>
+      </view>
+
+      <view class="rail" wx:if="{{mode === 'hold'}}">
+        <view class="rail-head">
+          <text class="rail-code mono">04</text>
+          <text class="rail-name">买入日期</text>
+        </view>
+        <view class="field-row {{codeReady ? '' : 'is-locked'}}">
+          <picker wx:if="{{codeReady}}" class="field-picker" mode="date" value="{{buyDate || today}}"
+            end="{{buyDatePickerEnd}}" bindchange="onBuyDateChange">
+            <view class="field-input {{buyDate ? '' : 'is-ph'}}">{{buyDate || '选填'}}</view>
+          </picker>
+          <view wx:else class="field-picker" bindtap="onBuyDateBlocked">
+            <view class="field-input is-ph">请先填写基金代码</view>
           </view>
+          <text class="field-suffix" wx:if="{{buyDate}}" catchtap="onClearBuyDate">清除</text>
         </view>
+        <text class="field-tip">用于展示持有天数、买入点位等，请选交易日</text>
       </view>
 
       <view class="err" wx:if="{{error}}">{{error}}</view>

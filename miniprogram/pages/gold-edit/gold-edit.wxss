@@ -75,6 +75,18 @@
   width: 100%;
 }
 
+.gold-ops-note {
+  display: block;
+  margin: 16rpx 12rpx 0;
+  font-size: 22rpx;
+  color: rgba(122, 84, 24, 0.72);
+  line-height: 1.45;
+}
+
+.theme-dark .gold-ops-note {
+  color: rgba(232, 201, 122, 0.72);
+}
+
 .gold-save {
   height: 80rpx !important;
   border: none !important;

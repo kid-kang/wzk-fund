@@ -20,7 +20,10 @@ import {
   getIndustryFunds,
   getIndustryFundYields,
   getMarketBoards,
+  getMarketFunds,
   getMarketOverview,
+  getSzseTradingMonth,
+  fetchXiaobeiMoneyFlow,
 } from './services/market.js'
 import {getGoldRealtime, getGoldHistory} from './services/gold.js'
 import {getGoldAlertStatus} from './services/goldAlert.js'
@@ -202,6 +205,19 @@ router.get('/funds/:code/quote', async (ctx) => {
   }
 })
 
+router.get('/market/trading-days', async (ctx) => {
+  try {
+    const now = new Date()
+    const fallback = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const month = String(ctx.query.month || fallback).trim()
+    const data = await getSzseTradingMonth(month)
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 400
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
 router.get('/indices', async (ctx) => {
   try {
     const data = await getIndices()
@@ -267,6 +283,30 @@ router.get('/funds/:code/scale', async (ctx) => {
 router.get('/market/overview', async (ctx) => {
   try {
     const data = await getMarketOverview()
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+/** 主力资金：当日累计分钟 + 近一月逐日 */
+router.get('/market/money-flow', async (ctx) => {
+  try {
+    const data = await fetchXiaobeiMoneyFlow()
+    ctx.body = {success: true, data}
+  } catch (e) {
+    ctx.status = 500
+    ctx.body = {success: false, message: e.message}
+  }
+})
+
+/** 基金榜：?tab=hot|gainers|losers|pick|hold&size=（可选，默认全量） */
+router.get('/market/funds', async (ctx) => {
+  try {
+    const tab = String(ctx.query.tab || 'hot')
+    const size = ctx.query.size != null && ctx.query.size !== '' ? Number(ctx.query.size) : 0
+    const data = await getMarketFunds({tab, size})
     ctx.body = {success: true, data}
   } catch (e) {
     ctx.status = 500
