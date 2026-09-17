@@ -279,12 +279,14 @@
 
 .frac-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 12rpx;
   margin: 18rpx 0 8rpx;
 }
 
 .frac-chip {
-  flex: 1;
+  flex: 1 0 calc((100% - 24rpx) / 3);
+  box-sizing: border-box;
   height: 64rpx;
   display: flex;
   align-items: center;

@@ -14,7 +14,7 @@ const {
 } = require('../../utils/tradeMath')
 const {todayDateStr, addCalendarDays, isDelayedNavFund} = require('../../utils/tradingCalendar')
 const {formatPct, pctClass, formatAmount} = require('../../utils/format')
-const {round2, toDecimal} = require('../../utils/money')
+const {round2, toDecimal, sanitizeDecimalInput} = require('../../utils/money')
 const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
 const Toast = require('@vant/weapp/toast/toast').default
 const Dialog = require('@vant/weapp/dialog/dialog').default
@@ -30,7 +30,9 @@ const FRACTIONS = [
   {key: 'q', n: 1, d: 4, label: '1/4'},
   {key: 't', n: 1, d: 3, label: '1/3'},
   {key: 'h', n: 1, d: 2, label: '1/2'},
-  {key: 'all', n: 1, d: 1, label: '全部'},
+  {key: 'tt', n: 2, d: 3, label: '2/3'},
+  {key: 'tq', n: 3, d: 4, label: '3/4'},
+  {key: 'all', n: 1, d: 1, label: '清仓'},
 ]
 
 const defaultPicker = pickerStateFromCycle('daily')
@@ -331,13 +333,15 @@ Page({
   },
 
   onBuyAmountInput(e) {
-    const buyAmount = this.inputValue(e)
+    const buyAmount = sanitizeDecimalInput(this.inputValue(e), 2)
     this.setData(Object.assign({buyAmount}, this.buyFeePatch(buyAmount, this.data.buyFeeRate)))
+    return buyAmount
   },
 
   onBuyFeeRateInput(e) {
-    const buyFeeRate = this.inputValue(e)
+    const buyFeeRate = sanitizeDecimalInput(this.inputValue(e), 4)
     this.setData(Object.assign({buyFeeRate}, this.buyFeePatch(this.data.buyAmount, buyFeeRate)))
+    return buyFeeRate
   },
 
   buyFeePatch(amount, rate) {
@@ -346,11 +350,15 @@ Page({
   },
 
   onSellSharesInput(e) {
-    this.setData({sellShares: this.inputValue(e), sellFrac: ''})
+    const sellShares = sanitizeDecimalInput(this.inputValue(e), 4)
+    this.setData({sellShares, sellFrac: ''})
+    return sellShares
   },
 
   onSellFeeRateInput(e) {
-    this.setData({sellFeeRate: this.inputValue(e)})
+    const sellFeeRate = sanitizeDecimalInput(this.inputValue(e), 4)
+    this.setData({sellFeeRate})
+    return sellFeeRate
   },
 
   onSellFrac(e) {
@@ -369,13 +377,15 @@ Page({
   },
 
   onSipAmountInput(e) {
-    const sipAmount = this.inputValue(e)
+    const sipAmount = sanitizeDecimalInput(this.inputValue(e), 2)
     this.setData(Object.assign({sipAmount}, this.sipFeePatch(sipAmount, this.data.sipFeeRate)))
+    return sipAmount
   },
 
   onSipFeeRateInput(e) {
-    const sipFeeRate = this.inputValue(e)
+    const sipFeeRate = sanitizeDecimalInput(this.inputValue(e), 4)
     this.setData(Object.assign({sipFeeRate}, this.sipFeePatch(this.data.sipAmount, sipFeeRate)))
+    return sipFeeRate
   },
 
   sipFeePatch(amount, rate) {
@@ -511,10 +521,10 @@ Page({
   confirmIrreversible(tab) {
     const delayed = this.data.isDelayed
       ? 'QDII 按申请日净值成交，该净值通常次日晚公布，公布前显示待确认，不会用旧净值落账。'
-      : '净值尚未公布时交易记录显示待确认，公布后再落账。'
+      : ''
     const messages = {
-      buy: `加仓确认后无法撤销。下午3点前按当日净值，3点后按下一交易日净值。${delayed}`,
-      sell: `减仓确认后无法撤销。下午3点前按当日净值，3点后按下一交易日净值。${delayed}`,
+      buy: `加仓确认后无法撤销！下午3点前按当日净值，3点后按下一交易日净值。${delayed}`,
+      sell: `减仓确认后无法撤销！下午3点前按当日净值，3点后按下一交易日净值。${delayed}`,
       sip: `定投确认后无法撤销单笔扣款。按扣款日 15:00 前规则等待当日净值公布后落账。${delayed}`,
     }
     return Dialog.confirm({
