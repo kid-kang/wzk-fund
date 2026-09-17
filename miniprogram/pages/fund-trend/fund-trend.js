@@ -110,7 +110,6 @@ Page({
     watchBusy: false,
     buyDate: '',
     tradeMarks: [],
-    showChartLegend: false,
     scaleLoading: true,
     scaleError: '',
     scaleLatest: null,
@@ -397,7 +396,6 @@ Page({
       watched,
       buyDate,
       tradeMarks,
-      showChartLegend: held || tradeMarks.length > 0,
       watchLabel:
         held && days != null
           ? `已持有 ${days}天`

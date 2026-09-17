@@ -263,6 +263,28 @@ function extremeLabelLayout(idx, total, role) {
   }
 }
 
+function buildMarkLabel(color, layout, text) {
+  if (text == null || text === '') return {show: false}
+  return {
+    show: true,
+    position: layout.position,
+    distance: layout.distance,
+    align: layout.align,
+    offset: layout.offset,
+    color,
+    fontSize: 9,
+    fontWeight: 500,
+    backgroundColor: 'transparent',
+    formatter: text,
+  }
+}
+
+/** 基金高低点同色深褐（与买卖色错开）；金价仍用金色 */
+function extremeDotColor(theme, isPrice) {
+  if (isPrice) return theme === 'dark' ? '#e0c07a' : '#b08a48'
+  return theme === 'dark' ? '#8a6840' : '#4a3014'
+}
+
 /** 列表迷你折线；toneDelta 传入时与卡片涨跌幅同色 */
 function buildSparkOption(points, valueKey, theme, toneDelta) {
   const {values} = extractSeries(points, valueKey)
@@ -377,19 +399,15 @@ function buildTrendOption({
 
   const last = values[values.length - 1]
   const first = values[0]
-  const {rise, fall} = getTone(theme)
   const isPrice = valueMode === 'price'
   const goldInk = theme === 'dark' ? '#e0c07a' : '#b08a48'
   const ink = theme === 'dark' ? '#eef2ff' : '#10141c'
-  // 与基金名称 .ticket-name 同色（muted）
-  const fundTitle = theme === 'dark' ? '#8b93a7' : '#7a8494'
   const color = isPrice
     ? goldInk
     : valueMode === 'percent'
       ? toneByDelta(last, theme)
       : toneByDelta(last - first, theme)
-  // 高低点：金价用金色，基金用名称同色
-  const extremeColor = showExtremes ? (isPrice ? goldInk : fundTitle) : null
+  const extremeColor = extremeDotColor(theme, isPrice)
   const hideEndLabel = isPrice || showExtremes
   const formatExtreme = (n) => {
     if (!Number.isFinite(n)) return ''
@@ -409,6 +427,8 @@ function buildTrendOption({
   let max = Math.max.apply(null, values)
   const maxIdx = values.indexOf(max)
   const minIdx = values.indexOf(min)
+  const highVal = max
+  const lowVal = min
   const maxLabelLayout = extremeLabelLayout(maxIdx, values.length, 'max')
   const minLabelLayout = extremeLabelLayout(minIdx, values.length, 'min')
   if (min === max) {
@@ -467,13 +487,12 @@ function buildTrendOption({
         if (extraLabel && extras[idx] != null && Number.isFinite(extras[idx])) {
           extra = `\n${extraLabel} ${Number(extras[idx]).toFixed(4)}`
         }
-        if (buyKeys.has(pointDateKey({date})) && sellKeys.has(pointDateKey({date}))) {
-          extra += '\n买入 / 卖出'
-        } else if (buyKeys.has(pointDateKey({date}))) {
-          extra += '\n买入'
-        } else if (sellKeys.has(pointDateKey({date}))) {
-          extra += '\n卖出'
-        }
+        const markKey = pointDateKey({date})
+        if (exitKeys.has(markKey)) extra += '\n清仓'
+        else if (sellKeys.has(markKey)) extra += '\n卖出'
+        else if (buyKeys.has(markKey)) extra += '\n买入'
+        if (showExtremes && idx === maxIdx) extra += '\n高点'
+        else if (showExtremes && idx === minIdx) extra += '\n低点'
         return `${date}\n${head}${extra}`
       },
     },
@@ -550,100 +569,47 @@ function buildTrendOption({
             : undefined,
         markPoint: (() => {
           const data = []
+          const ring = theme === 'dark' ? '#0b1018' : '#ffffff'
+          const ringStyle = (fill) => ({
+            color: fill,
+            borderColor: ring,
+            borderWidth: 1,
+          })
           if (showExtremes) {
             data.push(
               {
                 type: 'max',
                 name: '高',
-                symbolSize: 4,
-                itemStyle: {color: extremeColor || fundTitle || ink},
-                label: {
-                  show: true,
-                  position: maxLabelLayout.position,
-                  distance: maxLabelLayout.distance,
-                  align: maxLabelLayout.align,
-                  offset: maxLabelLayout.offset,
-                  color: extremeColor || fundTitle || ink,
-                  fontSize: 9,
-                  fontWeight: 500,
-                  backgroundColor: 'transparent',
-                  formatter(p) {
-                    return formatExtreme(Number(p.value))
-                  },
-                },
+                symbolSize: 5,
+                itemStyle: ringStyle(extremeColor || ink),
+                label: buildMarkLabel(extremeColor || ink, maxLabelLayout, formatExtreme(highVal)),
               },
               {
                 type: 'min',
                 name: '低',
-                symbolSize: 4,
-                itemStyle: {color: extremeColor || fundTitle || ink},
-                label: {
-                  show: true,
-                  position: minLabelLayout.position,
-                  distance: minLabelLayout.distance,
-                  align: minLabelLayout.align,
-                  offset: minLabelLayout.offset,
-                  color: extremeColor || fundTitle || ink,
-                  fontSize: 9,
-                  fontWeight: 500,
-                  backgroundColor: 'transparent',
-                  formatter(p) {
-                    return formatExtreme(Number(p.value))
-                  },
-                },
+                symbolSize: 5,
+                itemStyle: ringStyle(extremeColor || ink),
+                label: buildMarkLabel(extremeColor || ink, minLabelLayout, formatExtreme(lowVal)),
               },
             )
           }
-          const tradeMarks = []
-          buyKeys.forEach((key) => {
-            const idx = full.findIndex((d) => pointDateKey({date: d}) === key)
-            if (idx < 0 || values[idx] == null || !full[idx]) return
-            tradeMarks.push({
-              name: '买入',
-              xAxis: full[idx],
-              yAxis: values[idx],
-              symbolSize: 5,
-              itemStyle: {
-                color: buyDot,
-                borderColor: theme === 'dark' ? '#0b1018' : '#ffffff',
-                borderWidth: 1,
-              },
-              label: {show: false},
+          function pushTradeMark(keys, name, dotColor, size) {
+            keys.forEach((key) => {
+              const idx = full.findIndex((d) => pointDateKey({date: d}) === key)
+              if (idx < 0 || values[idx] == null || !full[idx]) return
+              data.push({
+                name,
+                xAxis: full[idx],
+                yAxis: values[idx],
+                symbolSize: size,
+                itemStyle: ringStyle(dotColor),
+                label: {show: false},
+              })
             })
-          })
-          sellKeys.forEach((key) => {
-            const idx = full.findIndex((d) => pointDateKey({date: d}) === key)
-            if (idx < 0 || values[idx] == null || !full[idx]) return
-            tradeMarks.push({
-              name: '卖出',
-              xAxis: full[idx],
-              yAxis: values[idx],
-              symbolSize: 5,
-              itemStyle: {
-                color: sellDot,
-                borderColor: theme === 'dark' ? '#0b1018' : '#ffffff',
-                borderWidth: 1,
-              },
-              label: {show: false},
-            })
-          })
-          exitKeys.forEach((key) => {
-            const idx = full.findIndex((d) => pointDateKey({date: d}) === key)
-            if (idx < 0 || values[idx] == null || !full[idx]) return
-            tradeMarks.push({
-              name: '清仓',
-              xAxis: full[idx],
-              yAxis: values[idx],
-              symbolSize: 6,
-              itemStyle: {
-                color: exitDot,
-                borderColor: theme === 'dark' ? '#0b1018' : '#ffffff',
-                borderWidth: 1,
-              },
-              label: {show: false},
-            })
-          })
-          data.push.apply(data, tradeMarks)
+          }
+          pushTradeMark(buyKeys, '买入', buyDot, 5)
+          pushTradeMark(sellKeys, '卖出', sellDot, 5)
+          pushTradeMark(exitKeys, '清仓', exitDot, 6)
           if (!data.length) return undefined
           return {
             symbol: 'circle',

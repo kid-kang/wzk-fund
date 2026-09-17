@@ -234,13 +234,14 @@
 }
 
 .chart-legend {
-  position: absolute;
+  position: relative;
   z-index: 2;
-  top: 8rpx;
-  right: 16rpx;
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12rpx 16rpx;
+  padding: 0 16rpx 8rpx;
   pointer-events: none;
 }
 
@@ -260,7 +261,11 @@
   height: 10rpx;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 0 0 2rpx rgba(16, 20, 28, 0.06);
+  box-shadow: 0 0 0 2rpx #ffffff;
+}
+
+.chart-legend-dot.is-extreme {
+  background: #4a3014;
 }
 
 .chart-legend-dot.is-buy {
@@ -276,7 +281,11 @@
 }
 
 .theme-dark .chart-legend-dot {
-  box-shadow: 0 0 0 2rpx rgba(11, 16, 24, 0.55);
+  box-shadow: 0 0 0 2rpx #0b1018;
+}
+
+.theme-dark .chart-legend-dot.is-extreme {
+  background: #8a6840;
 }
 
 .theme-dark .chart-legend-dot.is-buy {

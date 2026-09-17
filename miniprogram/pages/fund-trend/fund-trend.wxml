@@ -51,7 +51,11 @@
         <van-empty wx:elif="{{!loading && !chartPoints.length}}" description="暂无该周期数据" />
 
         <view class="chart-stage" wx:if="{{!loading && chartPoints.length}}">
-          <view class="chart-legend" wx:if="{{showChartLegend}}" aria-hidden="true">
+          <view class="chart-legend" aria-hidden="true">
+            <view class="chart-legend-item">
+              <view class="chart-legend-dot is-extreme"></view>
+              <text>高低点</text>
+            </view>
             <view class="chart-legend-item">
               <view class="chart-legend-dot is-buy"></view>
               <text>买入</text>
