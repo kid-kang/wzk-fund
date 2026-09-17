@@ -336,6 +336,30 @@ function removeFund(code) {
 }
 
 /**
+ * 持仓侧滑删除：清掉该基金交易/定投/买卖点并转入自选。
+ * 收益记录按日独立存放，不随单只基金删除。
+ */
+function removeHoldingToWatch(code) {
+  const config = loadConfig()
+  const key = String(code).padStart(6, '0')
+  const fund = config.funds[key]
+  if (!fund) throw new Error('基金不存在')
+  if (fund.type !== 'hold') throw new Error('仅持仓可这样删除')
+  dropLedgerForCodes(config, [key])
+  config.funds[key] = normalizeFund(
+    Object.assign({}, fund, {
+      type: 'watch',
+      shares: 0,
+      cost: 0,
+      buyDate: '',
+    }),
+    fund,
+  )
+  saveConfig(config)
+  return config.funds[key]
+}
+
+/**
  * 一键清空本地基金配置。
  * hold：删持仓及这些基金的交易/定投。
  * watch：删自选和定投，保留交易流水与买卖点。
@@ -673,6 +697,7 @@ module.exports = {
   getFund,
   updateFund,
   removeFund,
+  removeHoldingToWatch,
   clearFunds,
   updateGold,
   getSettings,

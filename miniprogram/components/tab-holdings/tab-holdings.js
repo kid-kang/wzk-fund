@@ -10,6 +10,7 @@ const {
 const {navigateTo} = require('../../utils/theme')
 const {toSparkSeries, reuseUnchangedSpark} = require('../../utils/spark')
 const {backfillProfitLog} = require('../../utils/profitSync')
+const Toast = require('@vant/weapp/toast/toast').default
 
 function activeSipCodes() {
   const set = Object.create(null)
@@ -334,6 +335,27 @@ Component({
         parts.push(`amount=${encodeURIComponent(String(ds.amount))}`)
       }
       navigateTo(`/pages/fund-ops/fund-ops?${parts.join('&')}`)
+    },
+
+    onRemove(e) {
+      const code = e.currentTarget.dataset.code
+      const name = e.currentTarget.dataset.name || code
+      wx.showModal({
+        title: '删除持仓',
+        content: `将删除 ${name} 的所有数据，删除后将自动转入自选。已产生的收益记录会保留。`,
+        confirmText: '删除',
+        confirmColor: '#ff3b45',
+        success: async (res) => {
+          if (!res.confirm) return
+          try {
+            await api.removeHoldingToWatch(code)
+            Toast.success('已转入自选')
+            this.load()
+          } catch (err) {
+            Toast.fail((err && err.message) || '删除失败')
+          }
+        },
+      })
     },
 
     onOpenTrend(e) {

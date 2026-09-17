@@ -44,7 +44,7 @@
 
         <view class="list-gap">
           <view class="swipe-row" wx:for="{{realtimeList}}" wx:key="code">
-            <van-swipe-cell right-width="{{65}}">
+            <van-swipe-cell right-width="{{136}}">
               <view class="glass dense-row tone-{{item.pnlClass}}">
                 <view class="dense-row-skin" aria-hidden="true">
                   <text class="card-mark mono">{{item.codeMark}}</text>
@@ -106,6 +106,11 @@
                   data-amount="{{item.amount}}" data-cost="{{item.cost}}" bindtap="onEdit">
                   <van-icon name="exchange" size="17px" color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}" />
                   <text class="swipe-label">操作</text>
+                </view>
+                <view class="swipe-btn del" data-code="{{item.code}}" data-name="{{item.name}}" catchtap="onRemove"
+                  aria-label="删除持仓">
+                  <van-icon name="delete-o" size="17px" color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}" />
+                  <text class="swipe-label">删除</text>
                 </view>
               </view>
             </van-swipe-cell>
@@ -168,7 +173,7 @@
 
         <view class="list-gap">
           <view class="swipe-row" wx:for="{{delayedList}}" wx:key="code">
-            <van-swipe-cell right-width="{{65}}">
+            <van-swipe-cell right-width="{{136}}">
               <view class="glass dense-row tone-{{item.pnlClass}}">
                 <view class="dense-row-skin" aria-hidden="true">
                   <text class="card-mark mono">{{item.codeMark}}</text>
@@ -230,6 +235,11 @@
                   data-amount="{{item.amount}}" data-cost="{{item.cost}}" bindtap="onEdit">
                   <van-icon name="exchange" size="17px" color="{{theme === 'dark' ? '#C5D0E6' : '#243552'}}" />
                   <text class="swipe-label">操作</text>
+                </view>
+                <view class="swipe-btn del" data-code="{{item.code}}" data-name="{{item.name}}" catchtap="onRemove"
+                  aria-label="删除持仓">
+                  <van-icon name="delete-o" size="17px" color="{{theme === 'dark' ? '#FF6B7A' : '#D7263D'}}" />
+                  <text class="swipe-label">删除</text>
                 </view>
               </view>
             </van-swipe-cell>

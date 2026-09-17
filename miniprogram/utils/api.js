@@ -159,6 +159,16 @@ async function resolveFund(payload) {
   return assertOk(data).data
 }
 
+async function suggestFunds(query) {
+  const q = String(query || '').trim()
+  if (!q) return []
+  const data = await request({
+    url: '/api/funds/suggest',
+    data: {q},
+  })
+  return assertOk(data).data || []
+}
+
 /**
  * 按最新官方公布净值反推份额（不用盘中估值）。
  * 金额口径 = 份额 × 最新披露单位净值。
@@ -231,6 +241,10 @@ async function removeFund(code) {
   store.removeFund(code)
 }
 
+async function removeHoldingToWatch(code) {
+  return store.removeHoldingToWatch(code)
+}
+
 async function clearFunds(scope) {
   return store.clearFunds(scope)
 }
@@ -297,9 +311,11 @@ module.exports = {
   fetchGold,
   fetchGoldHistory,
   resolveFund,
+  suggestFunds,
   createFund,
   updateFund,
   removeFund,
+  removeHoldingToWatch,
   clearFunds,
   fetchFundHoldings,
   fetchFundStageStats,
