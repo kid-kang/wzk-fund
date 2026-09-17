@@ -45,6 +45,33 @@ function pnlFromShares(shares, currNav, prevNav) {
   return round2(s.mul(toDecimal(currNav).minus(toDecimal(prevNav))))
 }
 
+function eventText(e) {
+  if (e == null) return ''
+  if (typeof e.detail === 'string' || typeof e.detail === 'number') return String(e.detail)
+  if (e.detail && e.detail.value != null) return String(e.detail.value)
+  return ''
+}
+
+/**
+ * 金额/份额/费率输入：只留数字和一个小数点。
+ * type=digit 在开发者工具、粘贴时仍可能带入字母，需在 bindinput 里过滤并 return。
+ */
+function sanitizeDecimalInput(raw, maxDecimals) {
+  let s = String(raw == null ? '' : raw)
+  s = s.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 65248))
+  s = s.replace(/[。．]/g, '.')
+  s = s.replace(/[^\d.]/g, '')
+  const dot = s.indexOf('.')
+  if (dot >= 0) {
+    s = s.slice(0, dot + 1) + s.slice(dot + 1).replace(/\./g, '')
+    if (maxDecimals != null && maxDecimals >= 0) {
+      s = s.slice(0, dot + 1 + maxDecimals)
+    }
+  }
+  if (s.startsWith('.')) s = `0${s}`
+  return s
+}
+
 module.exports = {
   Decimal,
   toDecimal,
@@ -53,4 +80,6 @@ module.exports = {
   sharesFromAmount,
   amountFromShares,
   pnlFromShares,
+  eventText,
+  sanitizeDecimalInput,
 }

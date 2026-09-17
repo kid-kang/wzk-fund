@@ -31,7 +31,7 @@
           <text class="rail-name">代码</text>
         </view>
         <view class="field-row {{codeLocked ? 'is-locked' : ''}}">
-          <input class="field-input mono" type="number" maxlength="6" value="{{code}}" disabled="{{codeLocked}}"
+          <input class="field-input mono" type="digit" maxlength="6" value="{{code}}" disabled="{{codeLocked}}"
             placeholder="6 位基金代码" placeholder-class="field-ph" bindinput="onCodeInput" />
           <text class="field-suffix" wx:if="{{codeLocked}}">已锁定</text>
         </view>

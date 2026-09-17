@@ -1,5 +1,6 @@
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
+const {sanitizeDecimalInput} = require('../../utils/money')
 const {todayDateStr, addCalendarDays} = require('../../utils/tradingCalendar')
 const navTradingDays = require('../../utils/navTradingDays')
 const {getThemeViewState, syncNavigationBar, navigateTo} = require('../../utils/theme')
@@ -149,7 +150,7 @@ Page({
       codeReady: ready,
       buyDate: ready ? this.data.buyDate : '',
     })
-    if (this.data.codeLocked) return
+    if (this.data.codeLocked) return code
 
     if (this._resolveTimer) clearTimeout(this._resolveTimer)
     if (code.length === 6) {
@@ -158,6 +159,7 @@ Page({
     } else {
       this.setData({name: '', resolving: false})
     }
+    return code
   },
 
   warnIfHeld(code) {
@@ -201,7 +203,9 @@ Page({
       typeof e.detail === 'object' && e.detail
         ? e.detail.value
         : e.detail
-    this.setData({amount: raw})
+    const amount = sanitizeDecimalInput(raw, 2)
+    this.setData({amount})
+    return amount
   },
 
   onCostInput(e) {
@@ -209,7 +213,9 @@ Page({
       typeof e.detail === 'object' && e.detail
         ? e.detail.value
         : e.detail
-    this.setData({cost: raw})
+    const cost = sanitizeDecimalInput(raw, 2)
+    this.setData({cost})
+    return cost
   },
 
   async latestNavDate(code) {

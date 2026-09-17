@@ -1,5 +1,6 @@
 const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
+const {sanitizeDecimalInput, eventText} = require('../../utils/money')
 const {getThemeViewState, syncNavigationBar} = require('../../utils/theme')
 const Toast = require('@vant/weapp/toast/toast').default
 
@@ -38,19 +39,19 @@ Page({
   },
 
   onHolding(e) {
-    this.setData({holding: e.detail})
+    this.setData({holding: sanitizeDecimalInput(eventText(e), 4)})
   },
 
   onAvgPrice(e) {
-    this.setData({avgPrice: e.detail})
+    this.setData({avgPrice: sanitizeDecimalInput(eventText(e), 2)})
   },
 
   onBuyFeeRate(e) {
-    this.setData({buyFeeRate: e.detail})
+    this.setData({buyFeeRate: sanitizeDecimalInput(eventText(e), 4)})
   },
 
   onSellFeeRate(e) {
-    this.setData({sellFeeRate: e.detail})
+    this.setData({sellFeeRate: sanitizeDecimalInput(eventText(e), 4)})
   },
 
   async onSubmit() {
