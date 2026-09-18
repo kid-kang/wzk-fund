@@ -1,4 +1,5 @@
 const {hexAlpha, toneByDelta} = require('../../utils/spark')
+const {MOOD_BANDS, MOOD_AXIS_W, MOOD_RAIL_W, MOOD_PLOT_LEFT, moodHalf} = require('../../utils/flowMood')
 
 let canvasSeq = 0
 
@@ -24,6 +25,7 @@ Component({
     cursorLabel: {type: String, value: ''},
     cursorText: {type: String, value: ''},
     cursorTone: {type: String, value: ''},
+    showMood: {type: Boolean, value: false},
   },
 
   data: {
@@ -50,7 +52,7 @@ Component({
   },
 
   observers: {
-    'values, breaks, mode, height, theme, cursor, cursorLabel, cursorText, cursorTone'() {
+    'values, breaks, mode, height, theme, cursor, cursorLabel, cursorText, cursorTone, showMood'() {
       this._drawSoon()
     },
   },
@@ -75,6 +77,7 @@ Component({
         this.data.theme,
         this.data.mode,
         this.data.height,
+        this.data.showMood ? 'mood' : 'plain',
         values.join(','),
         breaks.join('-'),
         this.data.cursor,
@@ -116,18 +119,22 @@ Component({
           ctx.clearRect(0, 0, width, height)
 
           const theme = this.data.theme
+          const showMood = !!(this.data.showMood && this.data.mode === 'bar')
           const padY = 4
+          const railX = showMood ? MOOD_AXIS_W : 0
+          const padL = showMood ? MOOD_PLOT_LEFT : 0
           const plotH = Math.max(1, height - padY * 2)
+          const plotW = Math.max(1, width - padL)
           const zeroLine = theme === 'dark' ? 'rgba(238,242,255,0.34)' : 'rgba(18,26,39,0.28)'
           const gapLine = theme === 'dark' ? 'rgba(238,242,255,0.22)' : 'rgba(36,53,82,0.18)'
 
-          const strokeWaterline = (y) => {
+          const strokeWaterline = (y, x0 = 0) => {
             ctx.save()
             ctx.strokeStyle = zeroLine
             ctx.lineWidth = 1
             ctx.setLineDash([3, 3])
             ctx.beginPath()
-            ctx.moveTo(0, y)
+            ctx.moveTo(x0, y)
             ctx.lineTo(width, y)
             ctx.stroke()
             ctx.restore()
@@ -138,30 +145,51 @@ Component({
             return
           }
 
-          let min = Math.min.apply(null, values)
-          let max = Math.max.apply(null, values)
-          if (min > 0) min = 0
-          if (max < 0) max = 0
-          if (min === max) {
-            min -= 1
-            max += 1
+          let min
+          let max
+          const half = moodHalf(values)
+          if (showMood) {
+            max = half * 1.08
+            min = -max
+          } else {
+            min = Math.min.apply(null, values)
+            max = Math.max.apply(null, values)
+            if (min > 0) min = 0
+            if (max < 0) max = 0
+            if (min === max) {
+              min -= 1
+              max += 1
+            }
+            const pad = (max - min) * 0.1
+            min -= pad
+            max += pad
           }
-          const pad = (max - min) * 0.1
-          min -= pad
-          max += pad
           const span = max - min || 1
           const yAt = (v) => padY + ((max - v) / span) * plotH
           const y0 = yAt(0)
           const n = values.length
-          const slot = width / Math.max(n, 1)
+          const slot = plotW / Math.max(n, 1)
           const mode = this.data.mode === 'bar' ? 'bar' : 'area'
           const barW = mode === 'bar' ? Math.max(2.5, slot * 0.56) : Math.max(1, slot)
-          const fillA = theme === 'dark' ? (mode === 'bar' ? 0.55 : 0.38) : mode === 'bar' ? 0.48 : 0.32
+          const fillA = theme === 'dark' ? (mode === 'bar' ? 0.62 : 0.38) : mode === 'bar' ? 0.55 : 0.32
+
+          if (showMood) {
+            this._drawMoodBands(ctx, {
+              yAt,
+              unit: half / 3,
+              railX,
+              x0: padL,
+              width,
+              height,
+              padY,
+              theme,
+            })
+          }
 
           for (let i = 0; i < n; i++) {
             const v = values[i]
             const y = yAt(v)
-            const x = mode === 'bar' ? i * slot + (slot - barW) / 2 : i * slot
+            const x = padL + (mode === 'bar' ? i * slot + (slot - barW) / 2 : i * slot)
             const top = Math.min(y, y0)
             const h = Math.max(0.6, Math.abs(y - y0))
             ctx.fillStyle = hexAlpha(toneByDelta(v, theme), fillA)
@@ -185,9 +213,9 @@ Component({
               const to = segments[s][1]
               if (to < from) continue
               ctx.beginPath()
-              ctx.moveTo(from * slot + slot / 2, yAt(values[from]))
+              ctx.moveTo(padL + from * slot + slot / 2, yAt(values[from]))
               for (let i = from + 1; i <= to; i++) {
-                ctx.lineTo(i * slot + slot / 2, yAt(values[i]))
+                ctx.lineTo(padL + i * slot + slot / 2, yAt(values[i]))
               }
               ctx.strokeStyle = hexAlpha(
                 toneByDelta(values[to], theme),
@@ -201,7 +229,7 @@ Component({
               ctx.lineWidth = 1
               ctx.setLineDash([2, 3])
               for (let c = 0; c < cuts.length; c++) {
-                const x = (cuts[c] + 1) * slot
+                const x = padL + (cuts[c] + 1) * slot
                 ctx.beginPath()
                 ctx.moveTo(x, padY)
                 ctx.lineTo(x, height - padY)
@@ -211,12 +239,12 @@ Component({
             }
           }
 
-          strokeWaterline(y0)
+          strokeWaterline(y0, showMood ? railX : 0)
 
           const cursor = Number(this.data.cursor)
           if (Number.isInteger(cursor) && cursor >= 0 && cursor < n) {
             this._drawCursor(ctx, {
-              x: cursor * slot + slot / 2,
+              x: padL + cursor * slot + slot / 2,
               width,
               height,
               label: String(this.data.cursorLabel || ''),
@@ -226,6 +254,48 @@ Component({
             })
           }
         })
+    },
+
+    _drawMoodBands(ctx, {yAt, unit, railX, x0, width, height, padY, theme}) {
+      const fillA = theme === 'dark' ? 0.28 : 0.2
+      const labelFill = theme === 'dark' ? 'rgba(198,210,228,0.92)' : 'rgba(36,53,82,0.72)'
+      const edge = theme === 'dark' ? 'rgba(238,242,255,0.12)' : 'rgba(18,26,39,0.08)'
+      ctx.save()
+      for (let i = 0; i < MOOD_BANDS.length; i++) {
+        const band = MOOD_BANDS[i]
+        const yTop = yAt(band.to * unit)
+        const yBot = yAt(band.from * unit)
+        const top = Math.min(yTop, yBot)
+        const h = Math.max(1, Math.abs(yBot - yTop))
+        ctx.fillStyle = hexAlpha(band.hex, fillA)
+        ctx.fillRect(railX, top, Math.max(0, width - railX), h)
+        ctx.fillStyle = hexAlpha(band.hex, theme === 'dark' ? 0.92 : 0.88)
+        ctx.fillRect(railX, top, MOOD_RAIL_W, h)
+      }
+      ctx.strokeStyle = edge
+      ctx.lineWidth = 1
+      ctx.setLineDash([])
+      for (const at of [2, 1, 0, -1, -2]) {
+        const y = yAt(at * unit)
+        ctx.beginPath()
+        ctx.moveTo(x0, y)
+        ctx.lineTo(width, y)
+        ctx.stroke()
+      }
+      ctx.font = '10px sans-serif'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = labelFill
+      const minY = padY + 7
+      const maxY = height - padY - 7
+      for (let i = 0; i < MOOD_BANDS.length; i++) {
+        const band = MOOD_BANDS[i]
+        const yTop = yAt(band.to * unit)
+        const yBot = yAt(band.from * unit)
+        const mid = Math.min(maxY, Math.max(minY, (yTop + yBot) / 2))
+        ctx.fillText(band.label, 0, mid)
+      }
+      ctx.restore()
     },
 
     _drawCursor(ctx, {x, width, height, label, text, tone, theme}) {

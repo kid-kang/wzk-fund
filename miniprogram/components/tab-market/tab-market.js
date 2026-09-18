@@ -2,16 +2,19 @@ const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
 const {formatPct, formatSignedYi, pctClass} = require('../../utils/format')
 const {navigateTo} = require('../../utils/theme')
+const {moodHalf, moodFromYi, MOOD_BANDS, MOOD_PLOT_LEFT} = require('../../utils/flowMood')
 
 const RANK_TABS = [
-  {key: 'boardHot', label: '热搜板块'},
   {key: 'boardGainers', label: '板块涨幅'},
+  {key: 'boardHot', label: '热搜板块'},
   {key: 'fundHot', label: '热搜基金'},
   {key: 'fundGainers', label: '基金涨幅'},
   {key: 'fundLosers', label: '基金跌幅'},
   {key: 'fundPick', label: '自选榜'},
   {key: 'fundHold', label: '持有榜'},
 ]
+
+const DEFAULT_RANK_TAB = 'boardGainers'
 
 const FLOW_TABS = [
   {key: 'day', label: '当日'},
@@ -31,15 +34,6 @@ const MOOD_TIPS = [
   },
 ]
 
-const MOOD_BANDS = [
-  {key: 'boil', label: '沸点'},
-  {key: 'hot', label: '过热'},
-  {key: 'warm', label: '微热'},
-  {key: 'cool', label: '微冷'},
-  {key: 'cold', label: '过冷'},
-  {key: 'ice', label: '冰点'},
-]
-
 function flowToneClass(yi) {
   if (!(yi > 0) && !(yi < 0)) return 'flat'
   return yi > 0 ? 'rise' : 'fall'
@@ -48,16 +42,21 @@ function flowToneClass(yi) {
 function buildFlowView(moneyFlow, range) {
   const series = range === 'month' ? moneyFlow && moneyFlow.month : moneyFlow && moneyFlow.day
   if (!series || !series.values || !series.values.length) return null
+  const isMonth = range === 'month'
+  const half = isMonth ? moodHalf(series.values) : 0
+  const lastMood = isMonth ? null : moneyFlow && moneyFlow.emotion
   return {
     latestText: series.latestText,
     latestClass: flowToneClass(series.latest),
-    moodText: (range === 'day' && moneyFlow && moneyFlow.emotion && moneyFlow.emotion.text) || '',
-    moodClass: (range === 'day' && moneyFlow && moneyFlow.emotion && moneyFlow.emotion.tone) || 'flat',
+    moodText: (lastMood && lastMood.text) || '',
+    moodClass: (lastMood && lastMood.tone) || 'flat',
     values: series.values,
     labels: series.labels || [],
     breaks: series.breaks || [],
-    mode: range === 'month' ? 'bar' : 'area',
+    mode: isMonth ? 'bar' : 'area',
     xLabels: series.xLabels || [],
+    showMood: isMonth,
+    moodHalf: half,
   }
 }
 
@@ -67,12 +66,19 @@ function makeFlowScrub(view, idx) {
   const i = Math.max(0, Math.min(n - 1, Number(idx) || 0))
   const yi = view.values[i]
   const leftPct = n <= 1 ? 50 : ((i + 0.5) / n) * 100
+  const mood =
+    view.showMood && view.moodHalf
+      ? moodFromYi(yi, view.moodHalf)
+      : null
+  const yiText = formatSignedYi(yi)
   return {
     idx: i,
     leftPct,
     tipSide: leftPct > 72 ? 'is-right' : leftPct < 28 ? 'is-left' : '',
     label: (view.labels && view.labels[i]) || '',
-    text: formatSignedYi(yi),
+    text: yiText,
+    moodText: (mood && mood.text) || '',
+    moodClass: (mood && mood.tone) || 'flat',
     tone: flowToneClass(yi),
   }
 }
@@ -132,7 +138,7 @@ Component({
     indices: [],
     market: null,
     rankTabs: RANK_TABS,
-    rankTab: 'boardHot',
+    rankTab: DEFAULT_RANK_TAB,
     rankIndex: 0,
     rankSlide: '',
     boardList: [],
@@ -262,7 +268,7 @@ Component({
           }
           patch.boardList = this.buildRankList(
             patch.market,
-            this.data.rankTab || 'boardHot',
+            this.data.rankTab || DEFAULT_RANK_TAB,
           )
           const flowRange = this.data.flowRange || 'day'
           patch.moneyFlow = market.moneyFlow || null
@@ -287,7 +293,7 @@ Component({
     },
 
     buildRankList(market, tab) {
-      const key = tab || 'boardHot'
+      const key = tab || DEFAULT_RANK_TAB
       const isFund = isFundTab(key)
       let rows
       if (key === 'fundHot') rows = market.fundHotSearch || []
@@ -336,9 +342,12 @@ Component({
       if (!view || !rect || !(rect.width > 0)) return
       const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
       if (!touch) return
+      const gutter = view.showMood ? MOOD_PLOT_LEFT : 0
       const x = Math.max(0, Math.min(rect.width, touch.clientX - rect.left))
+      const plotW = Math.max(1, rect.width - gutter)
+      const xPlot = Math.max(0, Math.min(plotW, x - gutter))
       const n = view.values.length
-      const idx = n <= 1 ? 0 : Math.round((x / rect.width) * (n - 1))
+      const idx = n <= 1 ? 0 : Math.round((xPlot / plotW) * (n - 1))
       const prev = this.data.flowScrub
       if (prev && prev.idx === idx) return
       this.setData({flowScrub: makeFlowScrub(view, idx)})
@@ -397,7 +406,7 @@ Component({
     },
 
     onOpenRankRow(e) {
-      if (isFundTab(this.data.rankTab || 'boardHot')) {
+      if (isFundTab(this.data.rankTab || DEFAULT_RANK_TAB)) {
         this.onOpenFund(e)
         return
       }

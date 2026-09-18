@@ -45,6 +45,8 @@
             <view class="flow-scrub-chip" wx:elif="{{flowScrub}}">
               <text class="flow-scrub-date">{{flowScrub.label}}</text>
               <text class="mono flow-scrub-val {{flowScrub.tone}}">{{flowScrub.text}}</text>
+              <view wx:if="{{flowScrub.moodText}}" class="flow-mood is-plain {{flowScrub.moodClass}}"
+                catchtap="onOpenMood">{{flowScrub.moodText}}</view>
             </view>
             <view class="flow-tabs">
               <view class="flow-tab-thumb" style="transform: translateX({{flowIndex * 100}}%);"></view>
@@ -55,16 +57,14 @@
           <view class="flow-plot">
             <view class="flow-tape-wrap">
               <flow-tape values="{{flowView.values}}" breaks="{{flowView.breaks}}" mode="{{flowView.mode}}"
-                theme="{{theme}}" height="{{96}}" cursor="{{flowScrub ? flowScrub.idx : -1}}"
+                theme="{{theme}}" height="{{136}}" show-mood="{{flowView.showMood}}"
+                cursor="{{flowScrub ? flowScrub.idx : -1}}"
                 cursor-label="{{flowRange === 'day' && flowScrub ? flowScrub.label : ''}}"
                 cursor-text="{{flowRange === 'day' && flowScrub ? flowScrub.text : ''}}"
                 cursor-tone="{{flowScrub ? flowScrub.tone : ''}}" />
               <view class="flow-scrub" catchtouchstart="onFlowScrubStart" catchtouchmove="onFlowScrubMove"
                 catchtouchend="onFlowScrubEnd" catchtouchcancel="onFlowScrubEnd"></view>
             </view>
-          </view>
-          <view class="flow-axis">
-            <text class="flow-x" wx:for="{{flowView.xLabels}}" wx:for-item="lab" wx:key="*this">{{lab}}</text>
           </view>
         </view>
 

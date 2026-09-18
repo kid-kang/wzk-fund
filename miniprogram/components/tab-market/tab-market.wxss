@@ -162,7 +162,6 @@
 
 .flow-head.is-month {
   justify-content: flex-end;
-  margin-bottom: 10rpx;
 }
 
 .flow-lead {
@@ -174,22 +173,27 @@
 
 .flow-scrub-chip {
   display: flex;
-  align-items: baseline;
-  gap: 10rpx;
-  min-width: 0;
-  padding: 8rpx 14rpx;
+  align-items: center;
+  align-self: stretch;
+  flex: 0 0 auto;
+  gap: 8rpx;
+  width: auto;
+  max-width: 100%;
+  padding: 0 10rpx;
   border-radius: 12rpx;
   background: rgba(120, 130, 150, 0.12);
+  box-sizing: border-box;
 }
 
 .flow-scrub-date {
-  font-size: 22rpx;
+  font-size: 20rpx;
   font-weight: 650;
+  line-height: 1;
   color: var(--muted);
 }
 
 .flow-scrub-val {
-  font-size: 26rpx;
+  font-size: 22rpx;
   font-weight: 720;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -239,6 +243,16 @@
 
 .theme-dark .flow-mood.fall {
   background: rgba(75, 184, 146, 0.16);
+}
+
+.flow-mood.is-plain,
+.flow-mood.is-plain.rise,
+.flow-mood.is-plain.fall,
+.theme-dark .flow-mood.is-plain.rise,
+.theme-dark .flow-mood.is-plain.fall {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .mood-mask {
@@ -404,6 +418,7 @@
 .flow-tape-wrap {
   position: relative;
   z-index: 0;
+  min-height: 136px;
 }
 
 .flow-scrub {
@@ -413,29 +428,6 @@
   bottom: 0;
   left: 0;
   z-index: 2;
-}
-
-.flow-axis {
-  display: flex;
-  justify-content: space-between;
-  gap: 8rpx;
-  padding: 8rpx 4rpx 0;
-}
-
-.flow-x {
-  flex: 1;
-  min-width: 0;
-  font-size: 18rpx;
-  color: var(--muted);
-  letter-spacing: 0.01em;
-}
-
-.flow-x:nth-child(2) {
-  text-align: center;
-}
-
-.flow-x:last-child {
-  text-align: right;
 }
 
 /* —— 板块榜 —— */
