@@ -55,16 +55,19 @@
             </view>
           </view>
           <view class="flow-plot">
-            <view class="flow-tape-wrap">
+            <view class="flow-tape-wrap {{flowRange === 'month' ? 'is-month' : ''}}">
               <flow-tape values="{{flowView.values}}" breaks="{{flowView.breaks}}" mode="{{flowView.mode}}"
-                theme="{{theme}}" height="{{136}}" show-mood="{{flowView.showMood}}"
-                cursor="{{flowScrub ? flowScrub.idx : -1}}"
+                theme="{{theme}}" height="{{flowRange === 'month' ? 136 : 120}}" show-mood="{{flowView.showMood}}"
+                mood-half="{{flowView.moodHalf}}" cursor="{{flowScrub ? flowScrub.idx : -1}}"
                 cursor-label="{{flowRange === 'day' && flowScrub ? flowScrub.label : ''}}"
                 cursor-text="{{flowRange === 'day' && flowScrub ? flowScrub.text : ''}}"
                 cursor-tone="{{flowScrub ? flowScrub.tone : ''}}" />
               <view class="flow-scrub" catchtouchstart="onFlowScrubStart" catchtouchmove="onFlowScrubMove"
                 catchtouchend="onFlowScrubEnd" catchtouchcancel="onFlowScrubEnd"></view>
             </view>
+          </view>
+          <view class="flow-axis" wx:if="{{flowRange === 'day'}}">
+            <text class="flow-x" wx:for="{{flowView.xLabels}}" wx:for-item="lab" wx:key="*this">{{lab}}</text>
           </view>
         </view>
 

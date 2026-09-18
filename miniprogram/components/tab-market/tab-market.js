@@ -2,7 +2,7 @@ const api = require('../../utils/api')
 const store = require('../../utils/portfolioStore')
 const {formatPct, formatSignedYi, pctClass} = require('../../utils/format')
 const {navigateTo} = require('../../utils/theme')
-const {moodHalf, moodFromYi, MOOD_BANDS, MOOD_PLOT_LEFT} = require('../../utils/flowMood')
+const {moodFromYi, moodHalfFromOfficial, MOOD_BANDS, MOOD_PLOT_LEFT} = require('../../utils/flowMood')
 
 const RANK_TABS = [
   {key: 'boardGainers', label: '板块涨幅'},
@@ -43,8 +43,9 @@ function buildFlowView(moneyFlow, range) {
   const series = range === 'month' ? moneyFlow && moneyFlow.month : moneyFlow && moneyFlow.day
   if (!series || !series.values || !series.values.length) return null
   const isMonth = range === 'month'
-  const half = isMonth ? moodHalf(series.values) : 0
-  const lastMood = isMonth ? null : moneyFlow && moneyFlow.emotion
+  const official = moneyFlow && moneyFlow.emotion
+  const half = isMonth ? moodHalfFromOfficial(series.values, official) : 0
+  const lastMood = isMonth ? null : official
   return {
     latestText: series.latestText,
     latestClass: flowToneClass(series.latest),
@@ -60,16 +61,21 @@ function buildFlowView(moneyFlow, range) {
   }
 }
 
-function makeFlowScrub(view, idx) {
+function makeFlowScrub(view, idx, officialEmotion) {
   if (!view || !view.values || !view.values.length) return null
   const n = view.values.length
   const i = Math.max(0, Math.min(n - 1, Number(idx) || 0))
   const yi = view.values[i]
   const leftPct = n <= 1 ? 50 : ((i + 0.5) / n) * 100
-  const mood =
-    view.showMood && view.moodHalf
-      ? moodFromYi(yi, view.moodHalf)
-      : null
+  let mood = null
+  if (view.showMood) {
+    const isToday = i === n - 1 && officialEmotion && officialEmotion.text
+    mood = isToday
+      ? {text: officialEmotion.text, tone: officialEmotion.tone}
+      : view.moodHalf
+        ? moodFromYi(yi, view.moodHalf)
+        : null
+  }
   const yiText = formatSignedYi(yi)
   return {
     idx: i,
@@ -275,7 +281,9 @@ Component({
           patch.flowView = buildFlowView(patch.moneyFlow, flowRange)
           const scrubIdx = this.data.flowScrub && this.data.flowScrub.idx
           patch.flowScrub =
-            scrubIdx == null ? null : makeFlowScrub(patch.flowView, scrubIdx)
+            scrubIdx == null
+              ? null
+              : makeFlowScrub(patch.flowView, scrubIdx, patch.moneyFlow && patch.moneyFlow.emotion)
         }
         if (results.every((r) => r.status === 'rejected')) {
           patch.error =
@@ -350,7 +358,9 @@ Component({
       const idx = n <= 1 ? 0 : Math.round((xPlot / plotW) * (n - 1))
       const prev = this.data.flowScrub
       if (prev && prev.idx === idx) return
-      this.setData({flowScrub: makeFlowScrub(view, idx)})
+      this.setData({
+        flowScrub: makeFlowScrub(view, idx, this.data.moneyFlow && this.data.moneyFlow.emotion),
+      })
     },
 
     onFlowScrubStart(e) {

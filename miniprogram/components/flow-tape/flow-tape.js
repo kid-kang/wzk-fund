@@ -1,5 +1,5 @@
 const {hexAlpha, toneByDelta} = require('../../utils/spark')
-const {MOOD_BANDS, MOOD_AXIS_W, MOOD_RAIL_W, MOOD_PLOT_LEFT, moodHalf} = require('../../utils/flowMood')
+const {MOOD_AXIS_W, MOOD_RAIL_W, MOOD_PLOT_LEFT, moodHalf, moodOccupiedView} = require('../../utils/flowMood')
 
 let canvasSeq = 0
 
@@ -26,6 +26,7 @@ Component({
     cursorText: {type: String, value: ''},
     cursorTone: {type: String, value: ''},
     showMood: {type: Boolean, value: false},
+    moodHalf: {type: Number, value: 0},
   },
 
   data: {
@@ -52,7 +53,7 @@ Component({
   },
 
   observers: {
-    'values, breaks, mode, height, theme, cursor, cursorLabel, cursorText, cursorTone, showMood'() {
+    'values, breaks, mode, height, theme, cursor, cursorLabel, cursorText, cursorTone, showMood, moodHalf'() {
       this._drawSoon()
     },
   },
@@ -78,6 +79,7 @@ Component({
         this.data.mode,
         this.data.height,
         this.data.showMood ? 'mood' : 'plain',
+        String(this.data.moodHalf || 0),
         values.join(','),
         breaks.join('-'),
         this.data.cursor,
@@ -147,10 +149,18 @@ Component({
 
           let min
           let max
-          const half = moodHalf(values)
-          if (showMood) {
-            max = half * 1.08
-            min = -max
+          const dataHalf = moodHalf(values)
+          const officialHalf = Number(this.data.moodHalf)
+          const bandHalf =
+            showMood && Number.isFinite(officialHalf) && officialHalf > 0 ? officialHalf : dataHalf
+          const moodView = showMood ? moodOccupiedView(values, bandHalf) : null
+          if (moodView) {
+            min = moodView.minYi
+            max = moodView.maxYi
+            if (min === max) {
+              min -= bandHalf / 3 || 1
+              max += bandHalf / 3 || 1
+            }
           } else {
             min = Math.min.apply(null, values)
             max = Math.max.apply(null, values)
@@ -172,11 +182,14 @@ Component({
           const mode = this.data.mode === 'bar' ? 'bar' : 'area'
           const barW = mode === 'bar' ? Math.max(2.5, slot * 0.56) : Math.max(1, slot)
           const fillA = theme === 'dark' ? (mode === 'bar' ? 0.62 : 0.38) : mode === 'bar' ? 0.55 : 0.32
+          const clipTop = padY
+          const clipBot = height - padY
 
-          if (showMood) {
+          if (moodView) {
             this._drawMoodBands(ctx, {
               yAt,
-              unit: half / 3,
+              bands: moodView.bands,
+              unit: moodView.unit,
               railX,
               x0: padL,
               width,
@@ -190,8 +203,9 @@ Component({
             const v = values[i]
             const y = yAt(v)
             const x = padL + (mode === 'bar' ? i * slot + (slot - barW) / 2 : i * slot)
-            const top = Math.min(y, y0)
-            const h = Math.max(0.6, Math.abs(y - y0))
+            const top = Math.max(clipTop, Math.min(y, y0))
+            const bot = Math.min(clipBot, Math.max(y, y0))
+            const h = Math.max(0.6, bot - top)
             ctx.fillStyle = hexAlpha(toneByDelta(v, theme), fillA)
             ctx.fillRect(x, top, barW, h)
           }
@@ -239,7 +253,9 @@ Component({
             }
           }
 
-          strokeWaterline(y0, showMood ? railX : 0)
+          if (y0 >= clipTop - 0.5 && y0 <= clipBot + 0.5) {
+            strokeWaterline(y0, showMood ? railX : 0)
+          }
 
           const cursor = Number(this.data.cursor)
           if (Number.isInteger(cursor) && cursor >= 0 && cursor < n) {
@@ -256,15 +272,19 @@ Component({
         })
     },
 
-    _drawMoodBands(ctx, {yAt, unit, railX, x0, width, height, padY, theme}) {
+    _drawMoodBands(ctx, {yAt, bands, unit, railX, x0, width, height, padY, theme}) {
+      const list = bands || []
+      if (!list.length) return
       const fillA = theme === 'dark' ? 0.28 : 0.2
       const labelFill = theme === 'dark' ? 'rgba(198,210,228,0.92)' : 'rgba(36,53,82,0.72)'
       const edge = theme === 'dark' ? 'rgba(238,242,255,0.12)' : 'rgba(18,26,39,0.08)'
+      const yTopOf = (band, idx) => (idx === 0 ? padY : yAt(band.to * unit))
+      const yBotOf = (band, idx) => (idx === list.length - 1 ? height - padY : yAt(band.from * unit))
       ctx.save()
-      for (let i = 0; i < MOOD_BANDS.length; i++) {
-        const band = MOOD_BANDS[i]
-        const yTop = yAt(band.to * unit)
-        const yBot = yAt(band.from * unit)
+      for (let i = 0; i < list.length; i++) {
+        const band = list[i]
+        const yTop = yTopOf(band, i)
+        const yBot = yBotOf(band, i)
         const top = Math.min(yTop, yBot)
         const h = Math.max(1, Math.abs(yBot - yTop))
         ctx.fillStyle = hexAlpha(band.hex, fillA)
@@ -275,8 +295,9 @@ Component({
       ctx.strokeStyle = edge
       ctx.lineWidth = 1
       ctx.setLineDash([])
-      for (const at of [2, 1, 0, -1, -2]) {
-        const y = yAt(at * unit)
+      for (let i = 1; i < list.length; i++) {
+        const y = yAt(list[i].to * unit)
+        if (y <= padY + 0.5 || y >= height - padY - 0.5) continue
         ctx.beginPath()
         ctx.moveTo(x0, y)
         ctx.lineTo(width, y)
@@ -288,10 +309,11 @@ Component({
       ctx.fillStyle = labelFill
       const minY = padY + 7
       const maxY = height - padY - 7
-      for (let i = 0; i < MOOD_BANDS.length; i++) {
-        const band = MOOD_BANDS[i]
-        const yTop = yAt(band.to * unit)
-        const yBot = yAt(band.from * unit)
+      for (let i = 0; i < list.length; i++) {
+        const band = list[i]
+        const yTop = yTopOf(band, i)
+        const yBot = yBotOf(band, i)
+        if (Math.abs(yBot - yTop) < 14) continue
         const mid = Math.min(maxY, Math.max(minY, (yTop + yBot) / 2))
         ctx.fillText(band.label, 0, mid)
       }

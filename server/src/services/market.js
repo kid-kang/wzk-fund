@@ -554,12 +554,19 @@ function mapMoneyFlowSeries(rows = [], {daily = false} = {}) {
 function mapEmotion(score) {
   const y = Number(score)
   if (!Number.isFinite(y)) return null
-  if (y >= 2) return {text: '沸点', tone: 'rise'}
-  if (y >= 1) return {text: '过热', tone: 'rise'}
-  if (y >= 0) return {text: '微热', tone: 'rise'}
-  if (y >= -1) return {text: '微冷', tone: 'fall'}
-  if (y >= -2) return {text: '过冷', tone: 'fall'}
-  return {text: '冰点', tone: 'fall'}
+  const band =
+    y >= 2
+      ? {text: '沸点', tone: 'rise'}
+      : y >= 1
+        ? {text: '过热', tone: 'rise'}
+        : y >= 0
+          ? {text: '微热', tone: 'rise'}
+          : y >= -1
+            ? {text: '微冷', tone: 'fall'}
+            : y >= -2
+              ? {text: '过冷', tone: 'fall'}
+              : {text: '冰点', tone: 'fall'}
+  return {...band, score: y}
 }
 
 /** 小倍主力资金：isDaily=true 当日累计分钟；否则近一月逐日。单位原值元。 */

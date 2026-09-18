@@ -418,7 +418,34 @@
 .flow-tape-wrap {
   position: relative;
   z-index: 0;
+  min-height: 120px;
+}
+
+.flow-tape-wrap.is-month {
   min-height: 136px;
+}
+
+.flow-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 8rpx;
+  padding: 8rpx 4rpx 0;
+}
+
+.flow-x {
+  flex: 1;
+  min-width: 0;
+  font-size: 18rpx;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+.flow-x:nth-child(2) {
+  text-align: center;
+}
+
+.flow-x:last-child {
+  text-align: right;
 }
 
 .flow-scrub {
