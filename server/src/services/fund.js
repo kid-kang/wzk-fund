@@ -1559,14 +1559,21 @@ async function loadXiaobeiNetWorthEs(code) {
   return task
 }
 
-/** dailyYield 为小数（0.0268 → 2.68）；热搜基金 changeRate 开盘常为空，不能当同源 */
+/** dailyYield / changeRate / lastYield 为小数（0.0268 → 2.68）；开盘后前两者常为空 */
 function parseXiaobeiDailyYield(data) {
-  const raw = Number(data?.dailyYield ?? data?.changeRate)
+  const raw = Number(data?.dailyYield ?? data?.changeRate ?? data?.lastYield)
   if (!Number.isFinite(raw)) return null
   return Math.round(raw * 10000) / 100
 }
 
-/** 只读详情缓存，不打接口；供板块列表首屏立刻带上已看过的基金涨跌 */
+/** 与持仓卡片实时涨跌同源：get-net-worth-es 末点 change 已是百分数 */
+function percentFromNetWorthLatest(mapped) {
+  const g = mapped && mapped.latest && mapped.latest.growth
+  if (g == null || !Number.isFinite(Number(g))) return null
+  return round2(Number(g))
+}
+
+/** 只读缓存，不打接口；供板块列表首屏立刻带上已看过的基金涨跌 */
 export function peekXiaobeiRealtimePercents(codes) {
   const unique = [
     ...new Set(
@@ -1578,6 +1585,14 @@ export function peekXiaobeiRealtimePercents(codes) {
   const map = new Map()
   const now = Date.now()
   for (const code of unique) {
+    const nw = xiaobeiNetWorthCache.get(code)
+    if (nw && now - nw.at < XIAOBEI_NET_WORTH_TTL_MS) {
+      const live = percentFromNetWorthLatest(nw.data)
+      if (live != null) {
+        map.set(code, live)
+        continue
+      }
+    }
     const hit = xiaobeiDetailCache.get(code)
     if (!hit || now - hit.at >= XIAOBEI_DETAIL_TTL_MS) continue
     const pct = parseXiaobeiDailyYield(hit.data)
@@ -1587,7 +1602,8 @@ export function peekXiaobeiRealtimePercents(codes) {
 }
 
 /**
- * 批量实时涨跌（百分数），与详情 realtimePercent 同源：get-fund-detail-v310 dailyYield。
+ * 批量实时涨跌（百分数），与持仓 realtimePercent 同源：优先 get-net-worth-es；
+ * 无估值时再退回详情 lastYield（小倍已不再返回 dailyYield）。
  */
 export async function getXiaobeiRealtimePercents(codes) {
   const unique = [
@@ -1603,6 +1619,17 @@ export async function getXiaobeiRealtimePercents(codes) {
   const concurrency = 10
   for (let i = 0; i < unique.length; i += concurrency) {
     const chunk = unique.slice(i, i + concurrency)
+    const settled = await Promise.allSettled(chunk.map((code) => loadXiaobeiNetWorthEs(code)))
+    settled.forEach((s, idx) => {
+      const code = chunk[idx]
+      if (s.status !== 'fulfilled') return
+      const pct = percentFromNetWorthLatest(s.value)
+      if (pct != null) map.set(code, pct)
+    })
+  }
+  const missing = unique.filter((code) => !map.has(code))
+  for (let i = 0; i < missing.length; i += concurrency) {
+    const chunk = missing.slice(i, i + concurrency)
     const settled = await Promise.allSettled(chunk.map((code) => loadXiaobeiFundDetail(code)))
     settled.forEach((s, idx) => {
       const code = chunk[idx]

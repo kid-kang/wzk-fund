@@ -18,6 +18,25 @@ function makeSubtitle(name) {
   return n ? `${n}板块相关热搜基金` : '板块相关热搜基金'
 }
 
+function pickLivePercent(row) {
+  if (!row) return NaN
+  const cands = [
+    row.percent,
+    row.realtimePercent,
+    row.estimateGrowth,
+    row.dailyYield,
+    row.changeRate,
+    row.lastYield,
+  ]
+  for (let i = 0; i < cands.length; i++) {
+    const v = cands[i]
+    if (v == null || v === '') continue
+    const n = Number(v)
+    if (Number.isFinite(n)) return n
+  }
+  return NaN
+}
+
 const themeView = getSfThemeViewState()
 syncNavigationBar(themeView.theme)
 
@@ -79,13 +98,13 @@ Page({
       const fund = store.getFund(row.code)
       const watched = !!(fund && (fund.type === 'watch' || fund.type === 'hold'))
       const rank = idx + 1
-      const percent = row.percent == null ? NaN : Number(row.percent)
+      const percent = pickLivePercent(row)
       const hasPct = Number.isFinite(percent)
       return Object.assign({}, row, {
         rankText: String(rank),
         scaleText: formatScaleYi(row.scale),
         hasPct,
-        pctText: hasPct ? formatPct(percent) : '',
+        pctText: hasPct ? formatPct(percent) : '--',
         pctClass: hasPct ? pctClass(percent) : 'flat',
         watched,
       })

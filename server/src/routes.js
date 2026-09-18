@@ -344,8 +344,8 @@ router.get('/market/boards', async (ctx) => {
   }
 })
 
-/** 板块基金实时涨跌（详情 dailyYield）；POST {codes:['011452']} */
-router.post('/market/boards/funds/yields', async (ctx) => {
+/** 板块基金实时涨跌（估值分时末点，同持仓卡片）；POST {codes} 或 GET ?codes= */
+async function handleIndustryFundYields(ctx) {
   try {
     const raw = ctx.request.body?.codes
     const list = Array.isArray(raw)
@@ -362,7 +362,9 @@ router.post('/market/boards/funds/yields', async (ctx) => {
     ctx.status = 500
     ctx.body = {success: false, message: e.message}
   }
-})
+}
+router.post('/market/boards/funds/yields', handleIndustryFundYields)
+router.get('/market/boards/funds/yields', handleIndustryFundYields)
 
 /** 板块下热搜基金：?sectorCode=XB1128（优先）&mappingCode= 兜底 */
 router.get('/market/boards/funds', async (ctx) => {

@@ -110,18 +110,72 @@ async function fetchIndustryFunds({sectorCode, mappingCode} = {}) {
   return data.data
 }
 
+function toYieldMap(raw) {
+  const out = {}
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out
+  const keys = Object.keys(raw)
+  for (let i = 0; i < keys.length; i++) {
+    const key = String(keys[i] || '').padStart(6, '0')
+    const n = Number(raw[keys[i]])
+    if (/^\d{6}$/.test(key) && Number.isFinite(n)) out[key] = n
+  }
+  return out
+}
+
 async function fetchIndustryFundYields(codes = []) {
   const list = (codes || [])
     .map((c) => String(c || '').padStart(6, '0'))
     .filter((c) => /^\d{6}$/.test(c))
   if (!list.length) return {}
-  const data = await request({
-    url: '/api/market/boards/funds/yields',
-    method: 'POST',
-    data: {codes: list},
-  })
-  assertOk(data)
-  return (data && data.data) || {}
+  let map = {}
+  try {
+    const data = await request({
+      url: '/api/market/boards/funds/yields',
+      method: 'POST',
+      data: {codes: list},
+    })
+    assertOk(data)
+    map = toYieldMap(data && data.data)
+  } catch (e) {
+    // POST 被网关丢掉 body 时改走 GET
+  }
+  if (Object.keys(map).length < list.length) {
+    try {
+      const data = await request({
+        url: '/api/market/boards/funds/yields',
+        data: {codes: list.join(',')},
+      })
+      assertOk(data)
+      map = Object.assign(map, toYieldMap(data && data.data))
+    } catch (e) {
+      // 旧代理无 GET，下面再用 quotes 补
+    }
+  }
+  const missing = list.filter((code) => map[code] == null)
+  for (let i = 0; i < missing.length; i += 6) {
+    const chunk = missing.slice(i, i + 6)
+    try {
+      const data = await request({
+        url: '/api/funds/quotes',
+        method: 'POST',
+        data: {
+          type: 'watch',
+          funds: chunk.map((code) => ({code, name: '', type: 'watch'})),
+        },
+      })
+      assertOk(data)
+      const quotes = (data.data && data.data.quotes) || []
+      for (let j = 0; j < quotes.length; j++) {
+        const q = quotes[j]
+        const pct = q.realtimePercent ?? q.estimateGrowth ?? q.percent
+        if (pct == null || !Number.isFinite(Number(pct))) continue
+        map[String(q.code || '').padStart(6, '0')] = Number(pct)
+      }
+    } catch (e) {
+      break
+    }
+  }
+  return map
 }
 
 async function fetchGold() {

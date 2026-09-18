@@ -750,17 +750,18 @@ async function attachScalesAndSort(items) {
   }
 }
 
-/** 列表先按规模出来；涨跌只带缓存命中，完整估值后台预热 + 客户端补拉 */
+/** 列表按规模出来，并补齐实时涨跌（与持仓卡片同源：估值分时末点） */
 async function attachScalesAndCachedYields(items) {
   const scaled = await attachScalesAndSort(items)
-  const yields = peekXiaobeiRealtimePercents(scaled.map((row) => row.code))
-  const next = scaled.map((row) => ({
-    ...row,
-    percent: yields.get(String(row.code).padStart(6, '0')) ?? null,
-  }))
-  const missing = next.filter((row) => row.percent == null).map((row) => row.code)
-  if (missing.length) getXiaobeiRealtimePercents(missing).catch(() => {})
-  return next
+  const codes = scaled.map((row) => row.code)
+  const cached = peekXiaobeiRealtimePercents(codes)
+  const missing = codes.filter((code) => !cached.has(String(code).padStart(6, '0')))
+  const live = missing.length ? await getXiaobeiRealtimePercents(missing) : new Map()
+  return scaled.map((row) => {
+    const key = String(row.code).padStart(6, '0')
+    const percent = cached.get(key) ?? live.get(key) ?? null
+    return {...row, percent}
+  })
 }
 
 export async function getIndustryFundYields(codes) {

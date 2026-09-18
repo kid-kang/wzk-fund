@@ -226,6 +226,7 @@
 }
 
 .sf-code {
+  flex-shrink: 0;
   font-size: 20rpx;
   font-weight: 500;
   letter-spacing: 0.08em;
@@ -240,6 +241,7 @@
 }
 
 .sf-pct {
+  flex-shrink: 0;
   font-size: 20rpx;
   font-weight: 650;
   letter-spacing: 0.02em;
